@@ -1,0 +1,46 @@
+{
+  "version": "1.0",
+  "name": "Custom Safe Programs Example",
+  "description": "Example of user-maintained safe programs list - add your trusted programs here",
+  "last_updated": "2026-03-30",
+  "programs": [
+    {
+      "address": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
+      "name": "Jupiter Aggregator v6",
+      "category": "defi",
+      "description": "Jupiter swap aggregator - widely used and audited DEX aggregator"
+    },
+    {
+      "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+      "name": "Orca Whirlpools",
+      "category": "defi",
+      "description": "Orca concentrated liquidity pools"
+    },
+    {
+      "address": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+      "name": "Raydium AMM v4",
+      "category": "defi",
+      "description": "Raydium automated market maker"
+    },
+    {
+      "address": "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY",
+      "name": "Phoenix",
+      "category": "defi",
+      "description": "Phoenix decentralized limit order book"
+    },
+    {
+      "address": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "name": "Lifinity",
+      "category": "defi",
+      "description": "Lifinity DEX"
+    }
+  ],
+  "notes": [
+    "This is an EXAMPLE file showing how to create a custom safe programs list",
+    "Copy this file and modify it to include YOUR trusted programs",
+    "Use with: ./scan-wallet.sh WALLET --safe-programs-file path/to/your-custom-list.json",
+    "The custom list will be MERGED with the default safe programs",
+    "Only add programs you trust - this affects risk calculations",
+    "Verify program addresses on Solana explorers before adding"
+  ]
+}

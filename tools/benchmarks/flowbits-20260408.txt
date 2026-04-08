@@ -1,0 +1,188 @@
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /home/geoff-whittington/projects/securecheck/sol-shield/reference/auth-api/Cargo.toml
+workspace: /home/geoff-whittington/projects/securecheck/sol-shield/Cargo.toml
+warning: profiles for the non root package will be ignored, specify profiles at the workspace root:
+package:   /home/geoff-whittington/projects/securecheck/sol-shield/reference/gateway/Cargo.toml
+workspace: /home/geoff-whittington/projects/securecheck/sol-shield/Cargo.toml
+   Compiling parapet-core v0.1.0 (/home/geoff-whittington/projects/securecheck/sol-shield/core)
+    Finished `bench` profile [optimized] target(s) in 1m 04s
+     Running benches/flowbits_performance.rs (target/release/deps/flowbits_performance-56224802d17d3a6a)
+Gnuplot not found, using plotters backend
+Benchmarking per_wallet_operations/set
+Benchmarking per_wallet_operations/set: Warming up for 3.0000 s
+Benchmarking per_wallet_operations/set: Collecting 100 samples in estimated 5.0001 s (48M iterations)
+Benchmarking per_wallet_operations/set: Analyzing
+per_wallet_operations/set
+                        time:   [109.47 ns 113.67 ns 119.10 ns]
+Found 12 outliers among 100 measurements (12.00%)
+  8 (8.00%) high mild
+  4 (4.00%) high severe
+Benchmarking per_wallet_operations/increment
+Benchmarking per_wallet_operations/increment: Warming up for 3.0000 s
+Benchmarking per_wallet_operations/increment: Collecting 100 samples in estimated 5.0011 s (21M iterations)
+Benchmarking per_wallet_operations/increment: Analyzing
+per_wallet_operations/increment
+                        time:   [192.81 ns 195.53 ns 198.69 ns]
+Found 10 outliers among 100 measurements (10.00%)
+  8 (8.00%) high mild
+  2 (2.00%) high severe
+Benchmarking per_wallet_operations/is_set
+Benchmarking per_wallet_operations/is_set: Warming up for 3.0000 s
+Benchmarking per_wallet_operations/is_set: Collecting 100 samples in estimated 5.0001 s (60M iterations)
+Benchmarking per_wallet_operations/is_set: Analyzing
+per_wallet_operations/is_set
+                        time:   [81.015 ns 82.191 ns 83.751 ns]
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+Benchmarking per_wallet_operations/get_counter
+Benchmarking per_wallet_operations/get_counter: Warming up for 3.0000 s
+Benchmarking per_wallet_operations/get_counter: Collecting 100 samples in estimated 5.0002 s (56M iterations)
+Benchmarking per_wallet_operations/get_counter: Analyzing
+per_wallet_operations/get_counter
+                        time:   [96.123 ns 100.74 ns 105.84 ns]
+Found 11 outliers among 100 measurements (11.00%)
+  6 (6.00%) high mild
+  5 (5.00%) high severe
+
+Benchmarking global_operations/set_global
+Benchmarking global_operations/set_global: Warming up for 3.0000 s
+Benchmarking global_operations/set_global: Collecting 100 samples in estimated 5.0000 s (60M iterations)
+Benchmarking global_operations/set_global: Analyzing
+global_operations/set_global
+                        time:   [80.897 ns 83.550 ns 86.915 ns]
+Found 16 outliers among 100 measurements (16.00%)
+  4 (4.00%) high mild
+  12 (12.00%) high severe
+Benchmarking global_operations/increment_global
+Benchmarking global_operations/increment_global: Warming up for 3.0000 s
+Benchmarking global_operations/increment_global: Collecting 100 samples in estimated 5.0005 s (33M iterations)
+Benchmarking global_operations/increment_global: Analyzing
+global_operations/increment_global
+                        time:   [137.51 ns 139.67 ns 142.42 ns]
+Found 3 outliers among 100 measurements (3.00%)
+  1 (1.00%) high mild
+  2 (2.00%) high severe
+Benchmarking global_operations/is_set_global
+Benchmarking global_operations/is_set_global: Warming up for 3.0000 s
+Benchmarking global_operations/is_set_global: Collecting 100 samples in estimated 5.0002 s (74M iterations)
+Benchmarking global_operations/is_set_global: Analyzing
+global_operations/is_set_global
+                        time:   [57.213 ns 57.752 ns 58.427 ns]
+Found 12 outliers among 100 measurements (12.00%)
+  9 (9.00%) high mild
+  3 (3.00%) high severe
+Benchmarking global_operations/get_counter_global
+Benchmarking global_operations/get_counter_global: Warming up for 3.0000 s
+Benchmarking global_operations/get_counter_global: Collecting 100 samples in estimated 5.0002 s (84M iterations)
+Benchmarking global_operations/get_counter_global: Analyzing
+global_operations/get_counter_global
+                        time:   [60.936 ns 62.932 ns 65.026 ns]
+Found 6 outliers among 100 measurements (6.00%)
+  4 (4.00%) high mild
+  2 (2.00%) high severe
+
+Benchmarking scaling/wallets/10
+Benchmarking scaling/wallets/10: Warming up for 3.0000 s
+Benchmarking scaling/wallets/10: Collecting 100 samples in estimated 5.0005 s (50M iterations)
+Benchmarking scaling/wallets/10: Analyzing
+scaling/wallets/10      time:   [90.878 ns 93.033 ns 95.413 ns]
+Found 11 outliers among 100 measurements (11.00%)
+  6 (6.00%) high mild
+  5 (5.00%) high severe
+Benchmarking scaling/wallets/100
+Benchmarking scaling/wallets/100: Warming up for 3.0000 s
+Benchmarking scaling/wallets/100: Collecting 100 samples in estimated 5.0002 s (43M iterations)
+Benchmarking scaling/wallets/100: Analyzing
+scaling/wallets/100     time:   [89.745 ns 91.660 ns 93.676 ns]
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) high mild
+  5 (5.00%) high severe
+Benchmarking scaling/wallets/1000
+Benchmarking scaling/wallets/1000: Warming up for 3.0000 s
+Benchmarking scaling/wallets/1000: Collecting 100 samples in estimated 5.0005 s (50M iterations)
+Benchmarking scaling/wallets/1000: Analyzing
+scaling/wallets/1000    time:   [89.508 ns 90.446 ns 91.499 ns]
+Benchmarking scaling/global_keys/100
+Benchmarking scaling/global_keys/100: Warming up for 3.0000 s
+Benchmarking scaling/global_keys/100: Collecting 100 samples in estimated 5.0004 s (43M iterations)
+Benchmarking scaling/global_keys/100: Analyzing
+scaling/global_keys/100 time:   [138.46 ns 147.71 ns 157.69 ns]
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+Benchmarking scaling/global_keys/1000
+Benchmarking scaling/global_keys/1000: Warming up for 3.0000 s
+Benchmarking scaling/global_keys/1000: Collecting 100 samples in estimated 5.0001 s (41M iterations)
+Benchmarking scaling/global_keys/1000: Analyzing
+scaling/global_keys/1000
+                        time:   [117.11 ns 118.58 ns 120.33 ns]
+Found 5 outliers among 100 measurements (5.00%)
+  3 (3.00%) high mild
+  2 (2.00%) high severe
+Benchmarking scaling/global_keys/10000
+Benchmarking scaling/global_keys/10000: Warming up for 3.0000 s
+Benchmarking scaling/global_keys/10000: Collecting 100 samples in estimated 5.0004 s (41M iterations)
+Benchmarking scaling/global_keys/10000: Analyzing
+scaling/global_keys/10000
+                        time:   [118.62 ns 120.20 ns 122.25 ns]
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Benchmarking variable_interpolation/no_variables
+Benchmarking variable_interpolation/no_variables: Warming up for 3.0000 s
+Benchmarking variable_interpolation/no_variables: Collecting 100 samples in estimated 5.0000 s (369M iterations)
+Benchmarking variable_interpolation/no_variables: Analyzing
+variable_interpolation/no_variables
+                        time:   [13.233 ns 13.627 ns 14.139 ns]
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) high mild
+  5 (5.00%) high severe
+Benchmarking variable_interpolation/single_variable
+Benchmarking variable_interpolation/single_variable: Warming up for 3.0000 s
+Benchmarking variable_interpolation/single_variable: Collecting 100 samples in estimated 5.0009 s (28M iterations)
+Benchmarking variable_interpolation/single_variable: Analyzing
+variable_interpolation/single_variable
+                        time:   [163.26 ns 171.91 ns 183.21 ns]
+Found 18 outliers among 100 measurements (18.00%)
+  6 (6.00%) high mild
+  12 (12.00%) high severe
+Benchmarking variable_interpolation/multiple_variables
+Benchmarking variable_interpolation/multiple_variables: Warming up for 3.0000 s
+Benchmarking variable_interpolation/multiple_variables: Collecting 100 samples in estimated 5.0006 s (11M iterations)
+Benchmarking variable_interpolation/multiple_variables: Analyzing
+variable_interpolation/multiple_variables
+                        time:   [432.25 ns 441.60 ns 452.75 ns]
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) high mild
+  5 (5.00%) high severe
+
+Benchmarking realistic_scenarios/ai_agent_velocity
+Benchmarking realistic_scenarios/ai_agent_velocity: Warming up for 3.0000 s
+Benchmarking realistic_scenarios/ai_agent_velocity: Collecting 100 samples in estimated 5.0018 s (13M iterations)
+Benchmarking realistic_scenarios/ai_agent_velocity: Analyzing
+realistic_scenarios/ai_agent_velocity
+                        time:   [329.37 ns 337.07 ns 346.16 ns]
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+Benchmarking realistic_scenarios/enterprise_lateral_movement
+Benchmarking realistic_scenarios/enterprise_lateral_movement: Warming up for 3.0000 s
+Benchmarking realistic_scenarios/enterprise_lateral_movement: Collecting 100 samples in estimated 5.0017 s (9.7M iterations)
+Benchmarking realistic_scenarios/enterprise_lateral_movement: Analyzing
+realistic_scenarios/enterprise_lateral_movement
+                        time:   [470.88 ns 490.04 ns 510.67 ns]
+Found 15 outliers among 100 measurements (15.00%)
+  2 (2.00%) high mild
+  13 (13.00%) high severe
+Benchmarking realistic_scenarios/ai_agent_exfiltration
+Benchmarking realistic_scenarios/ai_agent_exfiltration: Warming up for 3.0000 s
+Benchmarking realistic_scenarios/ai_agent_exfiltration: Collecting 100 samples in estimated 5.0020 s (6.4M iterations)
+Benchmarking realistic_scenarios/ai_agent_exfiltration: Analyzing
+realistic_scenarios/ai_agent_exfiltration
+                        time:   [557.75 ns 560.93 ns 564.29 ns]
+Found 5 outliers among 100 measurements (5.00%)
+  3 (3.00%) high mild
+  2 (2.00%) high severe
+

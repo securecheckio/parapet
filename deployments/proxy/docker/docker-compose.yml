@@ -1,0 +1,160 @@
+version: '3.8'
+
+services:
+  # Redis - Shared state for escalations, caching, and rate limiting
+  redis:
+    image: redis:7-alpine
+    container_name: parapet-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - parapet-network
+
+  # Parapet RPC Proxy - Transaction analysis and blocking
+  proxy:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile
+    container_name: parapet-proxy
+    ports:
+      - "8899:8899"
+    environment:
+      # Upstream Solana RPC
+      - UPSTREAM_RPC_URL=${UPSTREAM_RPC_URL:-https://api.mainnet-beta.solana.com}
+      
+      # Redis for caching and escalations
+      - REDIS_URL=redis://redis:6379
+      
+      # Proxy configuration
+      - PROXY_PORT=8899
+      - DEFAULT_BLOCK_THRESHOLD=${DEFAULT_BLOCK_THRESHOLD:-70}
+      
+      # Escalation configuration
+      - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-true}
+      - ESCALATION_APPROVER_WALLET=${ESCALATION_APPROVER_WALLET}
+      - ESCALATION_API_URL=http://api:3001
+      
+      # API Keys for analyzers
+      - HELIUS_API_KEY=${HELIUS_API_KEY:-}
+      - JUPITER_API_KEY=${JUPITER_API_KEY:-}
+      - OTTERSEC_API_KEY=${OTTERSEC_API_KEY:-}
+      
+      # Rate limiting (Rugcheck is 15/min, use 10/min for safety)
+      - RUGCHECK_RATE_LIMIT=${RUGCHECK_RATE_LIMIT:-10/60}
+      - HELIUS_RATE_LIMIT=${HELIUS_RATE_LIMIT:-20/60}
+      - JUPITER_RATE_LIMIT=${JUPITER_RATE_LIMIT:-60/60}
+      - OTTERSEC_RATE_LIMIT=${OTTERSEC_RATE_LIMIT:-30/60}
+      
+      # Rules
+      - RULES_PATH=${RULES_PATH:-/app/rules/presets/default.json}
+      
+      # Logging
+      - RUST_LOG=${RUST_LOG:-info,sol_shield_proxy=debug}
+    
+    volumes:
+      - ../../proxy/rules:/app/rules:ro
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8899/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    
+    networks:
+      - parapet-network
+
+  # Parapet API - Escalation management and rule management
+  api:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.api
+    container_name: parapet-api
+    ports:
+      - "3001:3001"
+    environment:
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379
+      
+      # Solana RPC
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      
+      # Authorized wallets for rule management (comma-separated)
+      - AUTHORIZED_WALLETS=${AUTHORIZED_WALLETS:-}
+      
+      # External API Keys for Analyzers (same as proxy)
+      - HELIUS_API_KEY=${HELIUS_API_KEY:-}
+      - JUPITER_API_KEY=${JUPITER_API_KEY:-}
+      - OTTERSEC_API_KEY=${OTTERSEC_API_KEY:-}
+      
+      # Rate limiting
+      - RUGCHECK_RATE_LIMIT=${RUGCHECK_RATE_LIMIT:-10/60}
+      - HELIUS_RATE_LIMIT=${HELIUS_RATE_LIMIT:-20/60}
+      - JUPITER_RATE_LIMIT=${JUPITER_RATE_LIMIT:-60/60}
+      - OTTERSEC_RATE_LIMIT=${OTTERSEC_RATE_LIMIT:-30/60}
+      
+      # Rules path
+      - RULES_PATH=/app/rules/presets/default.json
+      
+      # Logging
+      - RUST_LOG=${RUST_LOG:-info,sol_shield_api=debug}
+    
+    volumes:
+      - ../../proxy/rules:/app/rules:ro
+      - ../../dashboard:/app/dashboard:ro
+    
+    depends_on:
+      redis:
+        condition: service_healthy
+    
+    restart: unless-stopped
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    
+    networks:
+      - parapet-network
+
+  # Dashboard - Web UI for escalation management (served by nginx)
+  dashboard:
+    image: nginx:alpine
+    container_name: parapet-dashboard
+    ports:
+      - "8080:80"
+    volumes:
+      - ../../dashboard/index.html:/usr/share/nginx/html/index.html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks:
+      - parapet-network
+
+networks:
+  parapet-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+    driver: local

@@ -1,0 +1,121 @@
+# Parapet RPC Proxy Configuration
+# Copy to config.toml and customize for your deployment
+# Environment variables can override any setting
+
+[server]
+port = 8899
+bind_address = "0.0.0.0"
+
+[upstream]
+# REQUIRED: Set via UPSTREAM_RPC_URL env var or here
+url = "https://api.mainnet-beta.solana.com"
+
+# Rate limiting
+max_concurrent = 10
+delay_ms = 100
+
+# Timeouts & Retries (Production Hardening)
+timeout_secs = 30
+max_retries = 3
+retry_base_delay_ms = 100
+
+# Circuit Breaker (Prevents Cascading Failures)
+circuit_breaker_threshold = 5
+circuit_breaker_timeout_secs = 60
+
+[network]
+network = "mainnet-beta"
+
+[security]
+default_blocking_threshold = 70
+rules_path = "./rules/presets/comprehensive-protection.json"
+# rule_action_override = "alert"  # Uncomment to override all rule actions
+
+# Optional: Block specific programs by ID
+# blocked_programs = [
+#   "Program111111111111111111111111111111111111",
+#   "Program222222222222222222222222222222222222"
+# ]
+
+[auth]
+# Options: "none", "api_key", "wallet_allowlist"
+mode = "none"
+
+# For api_key mode: comma-separated keys or set via API_KEYS env var
+# api_keys = "sk_prod_abc123,sk_prod_def456"
+
+# For wallet_allowlist mode: list of allowed wallet addresses
+# allowed_wallets = [
+#   "wallet1address...",
+#   "wallet2address..."
+# ]
+
+[usage]
+enabled = false
+default_requests_per_month = 100000
+
+[redis]
+# Optional but recommended for multi-instance deployments
+# Enables shared caching and usage tracking
+# url = "redis://localhost:6379"
+
+[wasm]
+analyzers_path = "./analyzers"
+# analyzer_config = "./analyzer-config.json"
+
+[escalations]
+enabled = false
+# approver_wallet = "your_wallet_address_here"
+
+[rule_feeds]
+# Automatic rule updates from community sources
+enabled = false
+poll_interval = 3600        # Seconds between polls
+default_min_interval = 300  # Min seconds between requests to same source
+
+# Example sources (uncomment to enable)
+# [[rule_feeds.sources]]
+# url = "https://rules.securecheck.io/community.json"
+# name = "SecureCheck Community"
+# priority = 1
+# min_interval = 300
+
+# [[rule_feeds.sources]]
+# url = "https://rules.example.com/custom.json"
+# name = "Custom Rules"
+# priority = 2
+# min_interval = 600
+
+# ============================================================================
+# DEPLOYMENT NOTES
+# ============================================================================
+
+# Production Deployment:
+# 1. Copy this file to config.toml
+# 2. Set UPSTREAM_RPC_URL (required)
+# 3. Enable Redis for multi-instance deployments
+# 4. Configure authentication (api_key or wallet_allowlist)
+# 5. Set rules_path to your ruleset
+# 6. Override sensitive values with environment variables
+
+# Environment Variable Overrides:
+# Any setting can be overridden with environment variables:
+# - PROXY_PORT
+# - UPSTREAM_RPC_URL (required if not in TOML)
+# - REDIS_URL
+# - RULES_PATH
+# - UPSTREAM_TIMEOUT_SECS
+# - UPSTREAM_CIRCUIT_BREAKER_THRESHOLD
+# - etc.
+
+# Multi-Instance Deployment:
+# - All instances MUST share the same Redis (REDIS_URL)
+# - All instances should use the same rules configuration
+# - Circuit breaker operates independently per instance
+# - Shared cache eliminates duplicate API calls
+
+# Performance Tuning:
+# - max_concurrent: Higher = more throughput (respect RPC limits)
+# - delay_ms: Lower = faster (watch for rate limits)
+# - timeout_secs: Balance patience vs failure detection
+# - circuit_breaker_threshold: Lower = faster failover, more sensitive

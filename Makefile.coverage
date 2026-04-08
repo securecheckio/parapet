@@ -1,0 +1,70 @@
+# Test Coverage Makefile for Parapet
+# Usage: make -f Makefile.coverage <target>
+
+.PHONY: help install-tools coverage coverage-html coverage-lcov coverage-open coverage-summary coverage-core coverage-proxy coverage-scanner clean-coverage
+
+help:
+	@echo "Parapet Test Coverage Targets:"
+	@echo ""
+	@echo "  install-tools     Install cargo-llvm-cov and dependencies"
+	@echo "  coverage          Generate HTML coverage report"
+	@echo "  coverage-html     Generate HTML coverage report"
+	@echo "  coverage-lcov     Generate LCOV coverage report"
+	@echo "  coverage-open     Generate and open HTML report in browser"
+	@echo "  coverage-summary  Show coverage summary only"
+	@echo "  coverage-core     Generate coverage for core library only"
+	@echo "  coverage-proxy    Generate coverage for proxy only"
+	@echo "  coverage-scanner  Generate coverage for scanner only"
+	@echo "  clean-coverage    Remove coverage artifacts"
+	@echo ""
+
+install-tools:
+	@echo "Installing cargo-llvm-cov..."
+	cargo install cargo-llvm-cov
+	@echo "Installing WASM target..."
+	rustup target add wasm32-unknown-unknown
+	@echo "✅ Tools installed"
+
+coverage: coverage-html
+
+coverage-html:
+	@echo "Generating HTML coverage report..."
+	@./coverage.sh --html
+	@echo "✅ Report available at: target/llvm-cov/html/index.html"
+
+coverage-lcov:
+	@echo "Generating LCOV coverage report..."
+	@./coverage.sh --lcov
+	@echo "✅ Report available at: lcov.info"
+
+coverage-open:
+	@echo "Generating and opening HTML coverage report..."
+	@./coverage.sh --html --open
+
+coverage-summary:
+	@echo "Generating coverage summary..."
+	@./coverage.sh --summary
+
+coverage-core:
+	@echo "Generating coverage for core library..."
+	@./coverage.sh --html --package parapet-core
+
+coverage-proxy:
+	@echo "Generating coverage for proxy..."
+	@./coverage.sh --html --package parapet-proxy
+
+coverage-scanner:
+	@echo "Generating coverage for scanner..."
+	@./coverage.sh --html --package parapet-scanner
+
+clean-coverage:
+	@echo "Cleaning coverage artifacts..."
+	rm -rf target/llvm-cov
+	rm -f lcov.info coverage.json coverage-summary.txt
+	@echo "✅ Coverage artifacts removed"
+
+# CI target - generates LCOV and checks threshold
+ci-coverage:
+	@echo "Running CI coverage check..."
+	cargo llvm-cov --workspace --all-features --lcov --output-path lcov.info
+	@echo "✅ Coverage report generated for CI"

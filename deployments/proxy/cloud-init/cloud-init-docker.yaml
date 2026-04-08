@@ -1,0 +1,213 @@
+#cloud-config
+# Parapet Docker Deployment (Optimized)
+# Easy deployment for open-source users with improved performance
+
+package_update: true
+package_upgrade: true
+
+runcmd:
+  # Ensure Docker is running
+  - systemctl start docker
+  - systemctl enable docker
+  
+  # Create directory for configuration
+  - mkdir -p /opt/parapet
+  
+  # Create .env file
+  - |
+    cat > /opt/parapet/.env <<EOF
+    UPSTREAM_RPC_URL=${upstream_rpc_url}
+    PROXY_PORT=${proxy_port}
+    ENABLE_RATE_LIMITING=${enable_rate_limiting}
+    DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
+    WHITELISTED_WALLETS=${whitelisted_wallets}
+    RUST_LOG=info,sol_shield_proxy=debug
+    EOF
+  
+  # Pull latest Docker image from GitHub Container Registry
+  - docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  
+  # Create systemd service for Docker container with optimized settings
+  - |
+    cat > /etc/systemd/system/parapet.service <<EOF
+    [Unit]
+    Description=Parapet RPC Proxy (Docker - Optimized)
+    After=docker.service
+    Requires=docker.service
+    
+    [Service]
+    Type=simple
+    Restart=always
+    RestartSec=10
+    ExecStartPre=-/usr/bin/docker stop parapet-rpc-proxy
+    ExecStartPre=-/usr/bin/docker rm parapet-rpc-proxy
+    ExecStart=/usr/bin/docker run --name parapet-rpc-proxy \\
+      --env-file /opt/parapet/.env \\
+      --network host \\
+      --log-opt max-size=50m \\
+      --log-opt max-file=3 \\
+      --memory=1500m \\
+      --memory-swap=1500m \\
+      --cpus=1.8 \\
+      --restart unless-stopped \\
+      ghcr.io/securecheckio/parapet-rpc-proxy:latest
+    ExecStop=/usr/bin/docker stop parapet-rpc-proxy
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+  
+  # Enable and start service
+  - systemctl daemon-reload
+  - systemctl enable parapet
+  - systemctl start parapet
+  
+  # Setup log rotation for Docker logs
+  - |
+    cat > /etc/logrotate.d/parapet <<EOF
+    /var/lib/docker/containers/*/*.log {
+        daily
+        missingok
+        rotate 7
+        compress
+        delaycompress
+        notifempty
+        copytruncate
+    }
+    EOF
+  
+  %{~ if enable_https ~}
+  # Install Caddy for automatic HTTPS
+  - apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt update
+  - apt install -y caddy
+  
+  # Configure Caddy with automatic Let's Encrypt and IP restrictions
+  - |
+    cat > /etc/caddy/Caddyfile <<EOF
+    ${domain_name} {
+        # IP whitelist for RPC access
+        @allowed_ips {
+            remote_ip ${https_allowed_ips}
+        }
+        
+        handle @allowed_ips {
+            reverse_proxy localhost:${proxy_port}
+            
+            # CORS headers for RPC access
+            header {
+                Access-Control-Allow-Origin *
+                Access-Control-Allow-Methods "GET, POST, OPTIONS"
+                Access-Control-Allow-Headers "Content-Type"
+            }
+        }
+        
+        handle {
+            respond "Access denied from your IP address" 403
+        }
+        
+        # Let's Encrypt email
+        tls ${email}
+    }
+    EOF
+  
+  # Start Caddy
+  - systemctl enable caddy
+  - systemctl restart caddy
+  
+  # Wait for Let's Encrypt certificate
+  - sleep 10
+  %{~ endif ~}
+
+write_files:
+  - path: /opt/parapet/deployment-info.txt
+    content: |
+      Deployment Mode: Docker (Optimized)
+      - Network: host mode (eliminates NAT overhead)
+      - Memory limit: 1.5GB
+      - CPU limit: 1.8 cores
+      - Log rotation: 50MB x 3 files
+      - Performance: ~2-5% overhead vs native
+      
+      Benefits:
+      - Easy deployment and updates
+      - Portable across environments
+      - Dependency isolation
+      - Good for open-source distribution
+  
+  - path: /usr/local/bin/solshield-stats
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Parapet log statistics helper
+      
+      TIMEFRAME="$${1:-1 hour ago}"
+      
+      echo "Parapet Statistics (since $TIMEFRAME)"
+      echo "========================================"
+      
+      LOGS=$(journalctl -u parapet --since "$TIMEFRAME" --no-pager 2>/dev/null)
+      
+      if [ -z "$LOGS" ]; then
+        echo "No logs found. Is the service running?"
+        echo "Check: systemctl status parapet"
+        exit 1
+      fi
+      
+      BLOCKS=$(echo "$LOGS" | grep -c "BLOCKED by rule" || echo 0)
+      ALERTS=$(echo "$LOGS" | grep -c "Transaction ALERT" || echo 0)
+      PASSES=$(echo "$LOGS" | grep -c "No rules matched" || echo 0)
+      TOTAL=$((BLOCKS + ALERTS + PASSES))
+      
+      echo ""
+      echo "Total transactions:     $TOTAL"
+      echo "  ✅ Passed:            $PASSES"
+      echo "  ⚠️  Alerted:          $ALERTS"  
+      echo "  🚫 Blocked:           $BLOCKS"
+      echo ""
+      
+      if [ $TOTAL -gt 0 ]; then
+        BLOCK_PCT=$(awk "BEGIN {printf \"%.1f\", ($BLOCKS/$TOTAL)*100}")
+        ALERT_PCT=$(awk "BEGIN {printf \"%.1f\", ($ALERTS/$TOTAL)*100}")
+        echo "Block rate:             $BLOCK_PCT%"
+        echo "Alert rate:             $ALERT_PCT%"
+      fi
+      
+      echo ""
+      echo "Top 5 Triggered Rules:"
+      echo "----------------------"
+      echo "$LOGS" | grep "Rule matched:" | sed 's/.*Rule matched: \([^(]*\).*/\1/' | sort | uniq -c | sort -rn | head -5
+      
+      echo ""
+      echo "Recent Errors (last 3):"
+      echo "-----------------------"
+      echo "$LOGS" | grep "ERROR" | tail -3
+      
+      echo ""
+      echo "Run 'journalctl -u parapet -f' for real-time logs"
+  
+  - path: /usr/local/bin/solshield-watch
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Watch Parapet security events in real-time
+      
+      echo "Watching Parapet security events..."
+      echo "Press Ctrl+C to exit"
+      echo ""
+      
+      journalctl -u parapet -f -n 0 \
+        | grep --line-buffered -E "BLOCKED|ALERT|Authentication failed|Rate limit exceeded" \
+        | while read line; do
+          if echo "$line" | grep -q "BLOCKED"; then
+            echo -e "\033[0;31m$line\033[0m"  # Red for blocks
+          elif echo "$line" | grep -q "ALERT"; then
+            echo -e "\033[0;33m$line\033[0m"  # Yellow for alerts
+          else
+            echo "$line"
+          fi
+        done
+
+final_message: "Parapet (Docker-Optimized) deployment complete! RPC endpoint: %{~ if enable_https ~}https://${domain_name}%{~ else ~}http://$(curl -s ifconfig.me):${proxy_port}%{~ endif ~}"

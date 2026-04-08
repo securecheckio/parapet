@@ -1,0 +1,67 @@
+# Parapet - Rule Management & Consent Configuration
+
+# ============================================
+# Rule Management API (Foundation)
+# ============================================
+[rule_management]
+enabled = true
+api_port = 3001
+api_host = "0.0.0.0"
+
+# Wallets authorized to create/modify/delete rules remotely
+authorized_rule_managers = [
+    "EXAMPLE_OPERATOR_WALLET",
+    "EXAMPLE_ADMIN_WALLET"
+]
+
+# Per-wallet permissions
+[[rule_manager]]
+wallet = "EXAMPLE_OPERATOR_WALLET"
+can_create_rules = true
+can_delete_rules = true
+can_modify_static = false  # Cannot change rules.json via API
+max_dynamic_rules = 100
+
+# ============================================
+# Consent Mechanism (Feature Layer)
+# ============================================
+[consent]
+enabled = true
+default_require_consent_above = 70
+default_hard_block_above = 90
+
+# WebSocket server for real-time notifications
+[consent.websocket]
+enabled = true
+path = "/ws/escalations"
+
+# External notifications (optional backup if no dashboard connected)
+[consent.notifications]
+enabled = false  # WebSocket is primary, external is backup
+
+# Plugin system for custom notification providers
+# Users can implement EscalationNotifier trait and register providers
+# Example (requires implementation):
+# [[notification_provider]]
+# type = "webhook"
+# url = "https://my-server.com/solshield-webhook"
+
+# ============================================
+# Wallet-Specific Consent Policies
+# ============================================
+
+# Example: AI agent with human operator
+[[consent_policy]]
+wallet = "EXAMPLE_AGENT_WALLET"
+allowed_approvers = ["EXAMPLE_OPERATOR_WALLET"]  # Must be in rule_managers
+require_consent_above = 70
+hard_block_above = 85
+allow_self_approval = false
+
+# Example: Personal user (self-approval)
+[[consent_policy]]
+wallet = "EXAMPLE_USER_WALLET"
+allowed_approvers = ["EXAMPLE_USER_WALLET"]
+require_consent_above = 75
+hard_block_above = 95
+allow_self_approval = true

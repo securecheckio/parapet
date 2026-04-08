@@ -1,0 +1,60 @@
+[package]
+name = "rpc-gateway"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# OSS RPC proxy (imports from sibling repo)
+parapet-proxy = { path = "../../proxy" }
+parapet-core = { path = "../../core" }
+
+# Web server
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.5", features = ["cors"] }
+
+# Async runtime
+tokio = { version = "1.0", features = ["full"] }
+async-trait = "0.1"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Database
+sqlx = { version = "0.8", features = ["runtime-tokio", "postgres", "uuid", "chrono", "macros", "migrate"] }
+
+# Cache and rate limiting
+redis = { version = "0.24", features = ["tokio-comp"] }
+
+# Authentication
+bcrypt = "0.15"
+sha2 = "0.10"
+
+# Utility
+anyhow = "1.0"
+thiserror = "1.0"
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+log = "0.4"
+env_logger = "0.10"
+dotenvy = "0.15"
+
+# Solana (for wallet verification)
+bs58 = "0.5"
+solana-sdk = "2.3.0"
+
+# HTTP client (for push notifications)
+reqwest = { version = "0.12", features = ["json"] }
+
+[profile.release]
+# Strip debug symbols for smaller binaries
+strip = true
+# Optimize for size while maintaining performance
+opt-level = 3
+# Enable Link Time Optimization for better optimization across crates
+lto = true
+# Reduce number of codegen units for better optimization (slower compile, smaller binary)
+codegen-units = 1
+# Panic strategy: abort instead of unwind (smaller binary, faster panics)
+panic = "abort"

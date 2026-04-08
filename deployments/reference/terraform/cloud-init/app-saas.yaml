@@ -1,0 +1,274 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - curl
+  - git
+  - build-essential
+  - pkg-config
+  - libssl-dev
+  - postgresql-client
+  - redis-tools
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+
+write_files:
+  - path: /opt/securecheck/.env
+    content: |
+      # Database
+      DATABASE_URL=postgresql://${db_user}:${db_password}@${db_host}:${db_port}/${db_name}
+      
+      # Redis
+      REDIS_URL=redis://%{if redis_password != ""}:${redis_password}@%{endif}${redis_host}:${redis_port}
+      
+      # RPC Proxy
+      UPSTREAM_RPC_URL=${upstream_rpc_url}
+      PROXY_PORT=8899
+      
+      # Auth API
+      AUTH_API_PORT=3001
+      
+      # Payment System
+      PAYMENTS_ENABLED=${payments_enabled}
+      
+      # Payment Token
+      PAYMENT_TOKEN_MINT=${payment_token_mint}
+      PAYMENT_TOKEN_NAME=${payment_token_name}
+      PAYMENT_TOKEN_SYMBOL=${payment_token_symbol}
+      PAYMENT_TOKEN_LOGO=${payment_token_logo}
+      PAYMENT_TOKEN_DECIMALS=${payment_token_decimals}
+      
+      # Future: USDC for advanced features
+      USDC_TOKEN_MINT=${usdc_token_mint}
+      
+      # Treasury
+      TREASURY_WALLET=${treasury_wallet}
+      
+      # Credits Pricing (token amounts in lamports, 6 decimals)
+      CREDITS_PRICE_SMALL=${credits_price_small}
+      CREDITS_PRICE_MEDIUM=${credits_price_medium}
+      CREDITS_PRICE_LARGE=${credits_price_large}
+      CREDITS_PRICE_XLARGE=${credits_price_xlarge}
+      
+      # Credits Amounts (requests granted)
+      CREDITS_AMOUNT_SMALL=${credits_amount_small}
+      CREDITS_AMOUNT_MEDIUM=${credits_amount_medium}
+      CREDITS_AMOUNT_LARGE=${credits_amount_large}
+      CREDITS_AMOUNT_XLARGE=${credits_amount_xlarge}
+      
+      # Logging
+      RUST_LOG=info,reverse_proxy=debug,auth_api=debug,sol_shield_rpc_proxy=info
+    permissions: '0600'
+
+  - path: /etc/nginx/sites-available/securecheck
+    content: |
+      # RPC endpoint
+      server {
+          listen 80;
+          server_name ${rpc_subdomain}.${domain};
+
+          location / {
+              proxy_pass http://127.0.0.1:8899;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_cache_bypass $http_upgrade;
+              
+              # Timeouts for long-running requests
+              proxy_connect_timeout 60s;
+              proxy_send_timeout 60s;
+              proxy_read_timeout 60s;
+          }
+      }
+
+      # Auth API endpoint
+      server {
+          listen 80;
+          server_name ${api_subdomain}.${domain};
+
+          location / {
+              proxy_pass http://127.0.0.1:3001;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              proxy_cache_bypass $http_upgrade;
+          }
+      }
+    permissions: '0644'
+
+  - path: /etc/systemd/system/securecheck-rpc.service
+    content: |
+      [Unit]
+      Description=SecureCheck RPC Proxy
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=securecheck
+      WorkingDirectory=/opt/securecheck/reverse-proxy
+      EnvironmentFile=/opt/securecheck/.env
+      ExecStart=/opt/securecheck/reverse-proxy/target/release/reverse-proxy
+      Restart=always
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    permissions: '0644'
+
+  - path: /etc/systemd/system/securecheck-auth.service
+    content: |
+      [Unit]
+      Description=SecureCheck Auth API
+      After=network.target
+
+      [Service]
+      Type=simple
+      User=securecheck
+      WorkingDirectory=/opt/securecheck/auth-api
+      EnvironmentFile=/opt/securecheck/.env
+      ExecStart=/opt/securecheck/auth-api/target/release/auth-api
+      Restart=always
+      RestartSec=10
+      StandardOutput=journal
+      StandardError=journal
+
+      [Install]
+      WantedBy=multi-user.target
+    permissions: '0644'
+
+  - path: /opt/securecheck/deploy.sh
+    content: |
+      #!/bin/bash
+      set -e
+      
+      echo "Deploying SecureCheck SaaS..."
+      
+      # Install Rust if not present
+      if ! command -v cargo &> /dev/null; then
+          echo "Installing Rust..."
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          source $HOME/.cargo/env
+      fi
+      
+      # Install sqlx-cli if not present
+      if ! command -v sqlx &> /dev/null; then
+          echo "Installing sqlx-cli..."
+          cargo install sqlx-cli --no-default-features --features postgres
+      fi
+      
+      # Clone or update repo
+      if [ ! -d "/opt/securecheck/securecheck-saas" ]; then
+          echo "Cloning repository..."
+          git clone ${github_repo} /opt/securecheck/securecheck-saas
+          cd /opt/securecheck/securecheck-saas
+          git checkout ${github_branch}
+      else
+          echo "Updating repository..."
+          cd /opt/securecheck/securecheck-saas
+          git fetch origin
+          git checkout ${github_branch}
+          git pull origin ${github_branch}
+      fi
+      
+      # Also clone OSS repo (needed as dependency)
+      if [ ! -d "/opt/securecheck/parapet" ]; then
+          echo "Cloning OSS engine repository..."
+          git clone https://github.com/securecheckio/parapet.git /opt/securecheck/parapet
+      else
+          echo "Updating OSS engine repository..."
+          cd /opt/securecheck/parapet
+          git pull origin main
+      fi
+      
+      # Build auth-api
+      echo "Building auth-api..."
+      cd /opt/securecheck/securecheck-saas/auth-api
+      cargo build --release
+      
+      # Build reverse-proxy
+      echo "Building reverse-proxy..."
+      cd /opt/securecheck/securecheck-saas/reverse-proxy
+      cargo build --release
+      
+      # Run migrations with sqlx
+      echo "Running database migrations..."
+      cd /opt/securecheck/securecheck-saas
+      DATABASE_URL=postgresql://${db_user}:${db_password}@${db_host}:${db_port}/${db_name} cargo sqlx migrate run --source ./migrations
+      
+      # Restart services
+      echo "Restarting services..."
+      systemctl restart securecheck-auth
+      systemctl restart securecheck-rpc
+      
+      echo "Deployment complete!"
+    permissions: '0755'
+
+runcmd:
+  # Create securecheck user
+  - useradd -r -s /bin/bash -d /opt/securecheck securecheck
+  - mkdir -p /opt/securecheck
+  - chown -R securecheck:securecheck /opt/securecheck
+
+  # Setup local PostgreSQL (if db_host is localhost)
+  - |
+    if [ "${db_host}" = "localhost" ]; then
+      apt-get install -y postgresql postgresql-contrib
+      systemctl enable postgresql
+      systemctl start postgresql
+      sudo -u postgres psql -c "CREATE USER ${db_user} WITH PASSWORD '${db_password}';"
+      sudo -u postgres psql -c "CREATE DATABASE ${db_name} OWNER ${db_user};"
+      sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${db_name} TO ${db_user};"
+    fi
+
+  # Setup local Redis (if redis_host is localhost)
+  - |
+    if [ "${redis_host}" = "localhost" ]; then
+      apt-get install -y redis-server
+      %{if redis_password != ""}
+      echo "requirepass ${redis_password}" >> /etc/redis/redis.conf
+      %{endif}
+      systemctl enable redis-server
+      systemctl restart redis-server
+    fi
+
+  # Install Rust for root (for initial build)
+  - curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+  - source /root/.cargo/env
+
+  # Install Rust for securecheck user
+  - sudo -u securecheck curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sudo -u securecheck sh -s -- -y
+
+  # Run initial deployment
+  - sudo -u securecheck bash /opt/securecheck/deploy.sh
+
+  # Setup nginx
+  - ln -sf /etc/nginx/sites-available/securecheck /etc/nginx/sites-enabled/
+  - rm -f /etc/nginx/sites-enabled/default
+  - nginx -t && systemctl restart nginx
+
+  # Enable services
+  - systemctl enable securecheck-auth
+  - systemctl enable securecheck-rpc
+  - systemctl start securecheck-auth
+  - systemctl start securecheck-rpc
+
+  # Setup SSL with Let's Encrypt (if domain is configured)
+  - |
+    if [ -n "${domain}" ]; then
+      certbot --nginx -d ${rpc_subdomain}.${domain} -d ${api_subdomain}.${domain} --non-interactive --agree-tos --email admin@${domain} || true
+    fi
+
+final_message: "SecureCheck SaaS deployment complete! Services available at ${rpc_subdomain}.${domain}:8899 and ${api_subdomain}.${domain}:3001"

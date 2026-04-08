@@ -1,0 +1,125 @@
+[
+  {
+    "version": "1.0",
+    "id": "enterprise-lateral-movement",
+    "name": "Enterprise Lateral Movement Detection",
+    "description": "Detects when same recipient receives from 3+ internal wallets in 1 hour (coordinated breach)",
+    "enabled": true,
+    "tags": ["enterprise", "critical", "lateral-movement", "phase2"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
+          {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
+        ]
+      },
+      "flowbits": {
+        "scope": "global",
+        "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
+        "ttl_seconds": 3600
+      },
+      "message": "🚨 Enterprise: Lateral movement detected - recipient received from 3+ wallets in 1h - possible coordinated breach"
+    },
+    "metadata": {
+      "attack_type": "lateral_movement",
+      "false_positive_risk": "low",
+      "tuning_note": "Allowlist legitimate shared recipients (e.g., company treasury, exchange hot wallets)",
+      "variable_bindings": {
+        "recipient": "system:sol_recipients[0]"
+      },
+      "drift_protocol_reference": "This pattern would detect coordinated wallet compromises similar to Drift Protocol attack"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "enterprise-token-drain-velocity",
+    "name": "Enterprise Token Drain Velocity",
+    "description": "Detects unusual token transfer velocity (10+ transfers of same token in 15 min across all wallets)",
+    "enabled": true,
+    "tags": ["enterprise", "critical", "token-drain", "phase2"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_transfer", "operator": "equals", "value": true},
+          {"field": "flowbit_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
+        ]
+      },
+      "flowbits": {
+        "scope": "global",
+        "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
+        "ttl_seconds": 900
+      },
+      "message": "🚨 Enterprise: Unusual token transfer velocity - 10+ transfers in 15 min - possible mass compromise"
+    },
+    "metadata": {
+      "attack_type": "coordinated_token_drain",
+      "false_positive_risk": "low",
+      "tuning_note": "Adjust threshold based on organization's normal trading volume",
+      "variable_bindings": {
+        "mint": "token_instructions:mints[0]"
+      }
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "track-nonce-advancement",
+    "name": "Track Nonce Advancement",
+    "description": "Tracks when durable nonces are advanced (no alert)",
+    "enabled": true,
+    "tags": ["enterprise", "tracker", "nonce", "phase2"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "system:advances_nonce",
+        "operator": "equals",
+        "value": true
+      },
+      "flowbits": {
+        "scope": "global",
+        "set": ["nonce_advanced:{system:nonce_account}"],
+        "ttl_seconds": 1800
+      },
+      "message": ""
+    },
+    "metadata": {
+      "note": "Tracker rule - sets flowbit with 30-min TTL for nonce staleness detection",
+      "phase": "2"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "enterprise-nonce-staleness",
+    "name": "Enterprise Durable Nonce Staleness",
+    "description": "Blocks high-value transfers using stale durable nonces (>30 min old or never tracked)",
+    "enabled": true,
+    "tags": ["enterprise", "critical", "nonce-staleness", "phase2", "drift-protocol"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "system:uses_durable_nonce", "operator": "equals", "value": true},
+          {"field": "system:max_sol_transfer", "operator": "greater_than", "value": 1000000000},
+          {"field": "flowbit_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
+        ]
+      },
+      "message": "🚨 Enterprise: Stale nonce detected (30+ min old or never tracked) on high-value transfer - DRIFT PROTOCOL ATTACK PATTERN"
+    },
+    "metadata": {
+      "attack_type": "stale_durable_nonce",
+      "false_positive_risk": "low",
+      "tuning_note": "Adjust TTL (30 min) and transfer threshold (1 SOL) based on organization's workflow",
+      "variable_bindings": {
+        "nonce_account": "system:nonce_account"
+      },
+      "drift_protocol_exploit": {
+        "date": "April 2026",
+        "amount": "$270M",
+        "description": "Attackers used pre-signed durable nonces with authority change instructions",
+        "existing_mitigation": "drift-exploit-protection.json already blocks core Drift patterns (fingerprint-based, pattern-based, log-based)",
+        "flowbits_enhancement": "This rule adds time-based defense-in-depth by blocking stale nonces (>30 min old) on high-value transfers"
+      }
+    }
+  }
+]

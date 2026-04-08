@@ -1,0 +1,187 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - docker-compose
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+  - ufw
+  - postgresql-client
+  - redis-tools
+
+write_files:
+  - path: /root/docker-compose.yml
+    content: |
+      version: '3.8'
+      
+      services:
+        postgres:
+          image: postgres:15-alpine
+          restart: always
+          environment:
+            POSTGRES_DB: ${db_name}
+            POSTGRES_USER: ${db_user}
+            POSTGRES_PASSWORD: ${db_password}
+          volumes:
+            - postgres_data:/var/lib/postgresql/data
+          ports:
+            - "5432:5432"
+          healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ${db_user}"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        
+        redis:
+          image: redis:7-alpine
+          restart: always
+          command: redis-server --requirepass ${redis_password}
+          volumes:
+            - redis_data:/data
+          ports:
+            - "6379:6379"
+          healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 10s
+            timeout: 3s
+            retries: 5
+        
+        rpc-proxy:
+          image: ghcr.io/securecheck/rpc-proxy:latest
+          restart: always
+          environment:
+            UPSTREAM_RPC_URL: ${upstream_rpc_url}
+            REDIS_URL: redis://:${redis_password}@redis:6379
+            PROXY_PORT: 8899
+            RUST_LOG: info
+            ENABLE_USAGE_TRACKING: "true"
+          ports:
+            - "8899:8899"
+          depends_on:
+            redis:
+              condition: service_healthy
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8899/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+        
+        web-app:
+          image: ghcr.io/securecheck/web-app:latest
+          restart: always
+          environment:
+            DATABASE_URL: postgresql://${db_user}:${db_password}@postgres:5432/${db_name}
+            REDIS_URL: redis://:${redis_password}@redis:6379
+            NEXTAUTH_URL: https://${domain}
+            NODE_ENV: production
+          ports:
+            - "3000:3000"
+          depends_on:
+            postgres:
+              condition: service_healthy
+            redis:
+              condition: service_healthy
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+      
+      volumes:
+        postgres_data:
+        redis_data:
+
+  - path: /etc/nginx/sites-available/securecheck
+    content: |
+      # RPC Proxy
+      server {
+          listen 80;
+          server_name ${rpc_subdomain}.${domain};
+          
+          location / {
+              proxy_pass http://localhost:8899;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+      
+      # Web App
+      server {
+          listen 80;
+          server_name ${domain};
+          
+          location / {
+              proxy_pass http://localhost:3000;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+          }
+      }
+
+  - path: /root/deploy.sh
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      set -e
+      
+      echo "🚀 Deploying SecureCheck (Single Droplet)"
+      
+      cd /root
+      
+      # Start services
+      docker-compose pull
+      docker-compose up -d
+      
+      # Wait for database
+      echo "⏳ Waiting for database..."
+      until docker-compose exec -T postgres pg_isready -U ${db_user}; do
+        sleep 2
+      done
+      
+      # Run migrations
+      echo "📦 Running database migrations..."
+      docker-compose exec -T web-app npx prisma migrate deploy
+      
+      echo "✅ Deployment complete!"
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker root
+  
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 8899/tcp
+  - ufw --force enable
+  
+  # Configure nginx
+  - ln -sf /etc/nginx/sites-available/securecheck /etc/nginx/sites-enabled/
+  - rm -f /etc/nginx/sites-enabled/default
+  - systemctl restart nginx
+  
+  # Pull and start containers
+  - cd /root && /root/deploy.sh
+  
+  # Setup SSL (after DNS propagation)
+  - sleep 60
+  - certbot --nginx -d ${domain} -d ${rpc_subdomain}.${domain} --non-interactive --agree-tos --email admin@${domain} || true
+
+final_message: "SecureCheck single droplet deployment complete!"

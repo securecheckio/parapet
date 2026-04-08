@@ -1,0 +1,44 @@
+{
+  "name": "@securecheck/sentinel",
+  "version": "0.1.0",
+  "description": "Guardian agent that sacrifices itself to test suspicious sites - captures and analyzes malicious transactions before they can harm you",
+  "main": "dist/index.js",
+  "bin": {
+    "sentinel": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts"
+  },
+  "keywords": [
+    "solana",
+    "security",
+    "guardian",
+    "sentinel",
+    "wallet",
+    "protection",
+    "phishing",
+    "analysis"
+  ],
+  "author": "SecureCheck",
+  "license": "MIT",
+  "dependencies": {
+    "@phantom/browser-injected-sdk": "^1.0.7",
+    "@solana/web3.js": "^1.95.0",
+    "commander": "^12.0.0",
+    "openai": "^4.67.0",
+    "playwright": "^1.43.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "@types/node": "^20.11.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3",
+    "walletqa": "^1.0.0-beta.19"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,47 @@
+# cargo-llvm-cov configuration
+# See: https://github.com/taiki-e/cargo-llvm-cov
+
+[workspace]
+# Include all workspace members
+members = true
+
+[coverage]
+# Minimum coverage threshold (percentage)
+threshold = 70.0
+
+# Exclude patterns (regex)
+exclude = [
+    # Test files
+    "tests/*",
+    "*/tests/*",
+    # Example files
+    "examples/*",
+    "*/examples/*",
+    # Generated code
+    "target/*",
+    # Benchmark files
+    "benches/*",
+    "*/benches/*",
+]
+
+# Exclude specific files
+exclude-files = [
+    # External wallet QA files
+    "sentinel/.walletqa/*",
+]
+
+[report]
+# Output formats
+html = true
+lcov = true
+
+# HTML report options
+html-dir = "target/llvm-cov/html"
+
+# LCOV report options
+lcov-path = "lcov.info"
+
+[test]
+# Test options
+all-features = true
+verbose = true

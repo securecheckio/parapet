@@ -1,0 +1,114 @@
+[
+  {
+    "version": "1.0",
+    "id": "unlimited-delegation",
+    "name": "Unlimited Delegation Alert",
+    "description": "Detects unlimited token approvals (u64::MAX) which can indicate drain attacks",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "delegation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "delegation_is_unlimited",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️  Unlimited token delegation detected (u64::MAX)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "false_positive_rate": 0.001,
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "blocked-programs",
+    "name": "Known Malicious Program",
+    "description": "Blocks transactions involving known malicious programs (signature-based)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "blocklist", "signature"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 Known malicious program detected on Helius blocklist"
+    },
+    "metadata": {
+      "severity": "critical",
+      "false_positive_rate": 0.0,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-risk-score",
+    "name": "Critical Risk Pattern Alert",
+    "description": "Detects transactions with critical risk score from analyzer",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "risk"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 90
+      },
+      "message": "⚠️  Critical risk score from analyzer (>= 90)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 50
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "multiple-delegations",
+    "name": "Multiple Delegations Alert",
+    "description": "Warns when transaction has 3+ token approvals",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "delegation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "delegation_count",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "⚠️  Multiple token approvals detected (3+)"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 30
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "authority-changes",
+    "name": "Authority Changes Alert",
+    "description": "Warns when transaction attempts to change token/account authority",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "authority"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "authority_changes",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️  Authority change detected"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 25
+    }
+  }
+]

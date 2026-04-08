@@ -1,0 +1,129 @@
+{
+  "version": "2.0",
+  "name": "Known Safe Solana Programs",
+  "description": "List of verified safe system and widely-used programs that are excluded from risk calculations",
+  "last_updated": "2026-03-30",
+  "feed_url": "https://api.securecheck.sh/v1/safe-programs/feed.json",
+  "programs": [
+    {
+      "address": "11111111111111111111111111111111",
+      "name": "System Program",
+      "category": "system",
+      "description": "Core Solana system program for account creation and SOL transfers"
+    },
+    {
+      "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "name": "Token Program",
+      "category": "token",
+      "description": "SPL Token program for fungible tokens"
+    },
+    {
+      "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "name": "Token-2022 Program",
+      "category": "token",
+      "description": "Next generation token program with advanced features"
+    },
+    {
+      "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "name": "Associated Token Program",
+      "category": "token",
+      "description": "Program for creating associated token accounts"
+    },
+    {
+      "address": "ComputeBudget111111111111111111111111111111",
+      "name": "Compute Budget Program",
+      "category": "system",
+      "description": "Program for setting compute unit limits and prices"
+    },
+    {
+      "address": "Vote111111111111111111111111111111111111111",
+      "name": "Vote Program",
+      "category": "system",
+      "description": "Validator vote program"
+    },
+    {
+      "address": "Sysvar1111111111111111111111111111111111111",
+      "name": "Sysvar Program",
+      "category": "system",
+      "description": "System variables access"
+    },
+    {
+      "address": "Config1111111111111111111111111111111111111",
+      "name": "Config Program",
+      "category": "system",
+      "description": "Configuration program"
+    },
+    {
+      "address": "Stake11111111111111111111111111111111111111",
+      "name": "Stake Program",
+      "category": "system",
+      "description": "SOL staking program"
+    },
+    {
+      "address": "BPFLoader2111111111111111111111111111111111",
+      "name": "BPF Loader 2",
+      "category": "system",
+      "description": "Legacy BPF program loader"
+    },
+    {
+      "address": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "name": "BPF Loader Upgradeable",
+      "category": "system",
+      "description": "Upgradeable BPF program loader"
+    },
+    {
+      "address": "Ed25519SigVerify111111111111111111111111111",
+      "name": "Ed25519 Signature Verification",
+      "category": "system",
+      "description": "Ed25519 signature verification program"
+    },
+    {
+      "address": "KeccakSecp256k11111111111111111111111111111",
+      "name": "Keccak Secp256k1",
+      "category": "system",
+      "description": "Keccak and Secp256k1 operations"
+    },
+    {
+      "address": "AddressLookupTab1e1111111111111111111111111",
+      "name": "Address Lookup Table",
+      "category": "system",
+      "description": "Address lookup table program for versioned transactions"
+    },
+    {
+      "address": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+      "name": "Memo Program v1",
+      "category": "utility",
+      "description": "Program for adding memos to transactions"
+    },
+    {
+      "address": "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo",
+      "name": "Memo Program v2",
+      "category": "utility",
+      "description": "Updated memo program"
+    },
+    {
+      "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+      "name": "Metaplex Token Metadata",
+      "category": "nft",
+      "description": "Metaplex NFT metadata program"
+    },
+    {
+      "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "name": "Token Extensions Program",
+      "category": "token",
+      "description": "Token program with extensions"
+    }
+  ],
+  "categories": {
+    "system": "Core Solana system programs",
+    "token": "Token and fungible asset programs",
+    "nft": "NFT and digital asset programs",
+    "utility": "Utility programs for common operations"
+  },
+  "notes": [
+    "This is the default list of known-safe programs maintained by Parapet",
+    "Users can create custom lists by copying this file and adding/removing programs",
+    "Programs in this list are excluded from unknown program risk calculations",
+    "Exercise caution when adding programs - only include widely-verified safe programs"
+  ]
+}

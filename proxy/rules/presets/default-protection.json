@@ -1,0 +1,56 @@
+[
+  {
+    "version": "1.0",
+    "id": "unlimited-delegation",
+    "name": "Block Unlimited Delegations",
+    "description": "Blocks unlimited token approvals (u64::MAX)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "delegation_is_unlimited",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Transaction blocked: unlimited delegation detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "blocked-programs",
+    "name": "Block Malicious Programs",
+    "description": "Blocks transactions involving blocklisted programs",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Transaction blocked: malicious program detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-risk",
+    "name": "Block Critical Risk",
+    "description": "Blocks transactions with critical risk score >= 90",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "risk_score",
+        "operator": ">=",
+        "value": 90
+      },
+      "message": "Transaction blocked: critical risk score"
+    }
+  }
+]

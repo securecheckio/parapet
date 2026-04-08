@@ -1,0 +1,161 @@
+[
+  {
+    "version": "1.0",
+    "id": "unlimited-delegation",
+    "name": "Unlimited Delegation Alert",
+    "description": "Detects unlimited token approvals (u64::MAX) which can indicate drain attacks",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "delegation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "delegation_is_unlimited",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️  Unlimited token delegation detected (u64::MAX)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "false_positive_rate": 0.001,
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "blocked-programs",
+    "name": "Known Malicious Program",
+    "description": "Blocks transactions involving known malicious programs (signature-based)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "blocklist", "signature"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 Known malicious program detected on Helius blocklist"
+    },
+    "metadata": {
+      "severity": "critical",
+      "false_positive_rate": 0.0,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-risk-score",
+    "name": "Critical Risk Pattern Alert",
+    "description": "Detects transactions with critical risk score from analyzer",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "risk"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 90
+      },
+      "message": "⚠️  Critical risk score from analyzer (>= 90)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 50
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "multiple-delegations",
+    "name": "Multiple Delegations Alert",
+    "description": "Warns when transaction has 3+ token approvals",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "delegation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "delegation_count",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "⚠️  Multiple token approvals detected (3+)"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 30
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "authority-changes-suspicious",
+    "name": "Authority Changes - Suspicious Program",
+    "description": "Alerts only when truly unknown/suspicious programs (no OtterSec verification AND no Helius identity) attempt authority changes",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "authority", "verification"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {"field": "authority_changes", "operator": "equals", "value": true},
+          {"field": "ottersec:all_programs_verified", "operator": "equals", "value": false},
+          {"field": "helius_identity:other_classifications", "operator": "equals", "value": []}
+        ]
+      },
+      "message": "⚠️  Authority change by program with NO verification or identity"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 40,
+      "comment": "Only alerts when program has neither OtterSec verification NOR Helius identity - truly unknown programs"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "scammer-interaction",
+    "name": "Known Scammer Interaction",
+    "description": "Alerts when transaction involves addresses tagged as scammers",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "scam", "helius"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "helius_identity:other_classifications",
+        "operator": "contains",
+        "value": "scammer"
+      },
+      "message": "🚨 Transaction involves known scammer address"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "suspicious-interaction",
+    "name": "Suspicious Address Interaction",
+    "description": "Warns about interactions with suspicious addresses",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "suspicious", "helius"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "helius_identity:other_classifications",
+        "operator": "contains",
+        "value": "suspicious"
+      },
+      "message": "⚠️  Transaction involves suspicious address"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 40
+    }
+  }
+]

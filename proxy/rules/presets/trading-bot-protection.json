@@ -1,0 +1,159 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-non-core-programs",
+    "name": "Block Non-Core Programs",
+    "description": "For trading bots - only allow core Solana programs by default",
+    "enabled": true,
+    "tags": ["bot", "allowlist"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "complexity:non_core_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Transaction uses non-core programs (configure allowlist in separate rules)"
+    },
+    "metadata": {
+      "note": "Combine with program-allowlist.json to allow specific DEXes/protocols"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-any-delegation",
+    "name": "Block All Token Delegations",
+    "description": "Bots should never delegate tokens",
+    "enabled": true,
+    "tags": ["bot", "delegation"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Token delegation detected (bots should never approve)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-authority-changes",
+    "name": "Block Authority Changes",
+    "description": "Bots should never change account authority",
+    "enabled": true,
+    "tags": ["bot", "authority"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:has_set_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Authority change detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-account-creation",
+    "name": "Block Account Creation",
+    "description": "Bots should not create accounts",
+    "enabled": true,
+    "tags": ["bot", "accounts"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:creates_accounts",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Account creation detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "limit-sol-transfer",
+    "name": "Limit SOL Transfers",
+    "description": "Bots should only transfer small amounts for fees",
+    "enabled": true,
+    "tags": ["bot", "sol-transfer"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 100000000
+      },
+      "message": "🚨 BLOCKED: SOL transfer exceeds bot limit (0.1 SOL)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-freeze-operations",
+    "name": "Block Freeze/Thaw Operations",
+    "description": "Bots should never interact with freeze authority",
+    "enabled": true,
+    "tags": ["bot", "freeze"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "any": [
+          {"field": "token_instructions:has_freeze", "operator": "equals", "value": true},
+          {"field": "token_instructions:has_thaw", "operator": "equals", "value": true}
+        ]
+      },
+      "message": "🚨 BLOCKED: Freeze/thaw operation detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-mint-burn",
+    "name": "Block Mint/Burn Operations",
+    "description": "Bots should only trade, not create/destroy tokens",
+    "enabled": true,
+    "tags": ["bot", "supply"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:modifies_supply",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Token supply modification detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-complexity",
+    "name": "Block High Complexity Transactions",
+    "description": "Bots should only execute simple swap transactions",
+    "enabled": true,
+    "tags": ["bot", "complexity"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "complexity:complexity_score",
+        "operator": "greater_than",
+        "value": 50
+      },
+      "message": "🚨 BLOCKED: Transaction too complex for bot safety threshold"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-blocked-programs",
+    "name": "Block Malicious Programs",
+    "description": "Always block known malicious programs",
+    "enabled": true,
+    "tags": ["bot", "blocklist"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Known malicious program detected"
+    }
+  }
+]

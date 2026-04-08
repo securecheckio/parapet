@@ -1,0 +1,55 @@
+{
+  "name": "@securecheck/solana-agent-kit-plugin",
+  "version": "0.1.0",
+  "description": "Parapet security plugin for Solana Agent Kit - real-time transaction analysis and token security checks",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Tests coming soon\" && exit 0"
+  },
+  "keywords": [
+    "solana",
+    "agent-kit",
+    "security",
+    "blockchain",
+    "rugcheck",
+    "transaction-analysis",
+    "ai-agent",
+    "plugin"
+  ],
+  "author": "SecureCheck",
+  "license": "Apache-2.0",
+  "peerDependencies": {
+    "solana-agent-kit": "^2.0.0"
+  },
+  "dependencies": {
+    "@solana/web3.js": "^1.95.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/securecheckio/securecheck"
+  },
+  "bugs": {
+    "url": "https://github.com/securecheckio/securecheck/issues"
+  },
+  "homepage": "https://github.com/securecheckio/securecheck#readme"
+}

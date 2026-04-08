@@ -1,0 +1,131 @@
+[
+  {
+    "version": "1.0",
+    "id": "test-block-delegation",
+    "name": "Block Token Delegations",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:delegation_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Token delegation detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-unlimited-delegation",
+    "name": "Block Unlimited Delegations",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:delegation_is_unlimited",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Unlimited delegation detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-authority-changes",
+    "name": "Block Authority Changes",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:authority_changes",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "Authority change detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-blocked-programs",
+    "name": "Block Malicious Programs",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Blocked program detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-high-risk",
+    "name": "Block High Risk Transactions",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 80
+      },
+      "message": "High risk score detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-excessive-signers",
+    "name": "Block Excessive Signers",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "basic:signers_count",
+        "operator": "greater_than",
+        "value": 10
+      },
+      "message": "Too many signers"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-large-transfers",
+    "name": "Block Large SOL Transfers",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "basic:amount",
+            "operator": "greater_than",
+            "value": 100
+          },
+          {
+            "field": "basic:has_instructions",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "Large SOL transfer detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "test-alert-many-writable",
+    "name": "Alert on Many Writable Accounts",
+    "enabled": true,
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "basic:writable_accounts_count",
+        "operator": "greater_than",
+        "value": 20
+      },
+      "message": "Many writable accounts"
+    }
+  }
+]

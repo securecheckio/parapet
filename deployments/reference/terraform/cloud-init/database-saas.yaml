@@ -1,0 +1,54 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - postgresql
+  - postgresql-contrib
+  - redis-server
+
+write_files:
+  - path: /etc/postgresql/14/main/pg_hba.conf
+    content: |
+      # TYPE  DATABASE        USER            ADDRESS                 METHOD
+      local   all             postgres                                peer
+      local   all             all                                     peer
+      host    all             all             10.0.0.0/8              md5
+      host    all             all             127.0.0.1/32            md5
+      host    all             all             ::1/128                 md5
+    permissions: '0640'
+    append: false
+
+  - path: /etc/redis/redis.conf
+    content: |
+      bind 0.0.0.0
+      protected-mode yes
+      port 6379
+      %{if redis_password != ""}requirepass ${redis_password}%{endif}
+      maxmemory 256mb
+      maxmemory-policy allkeys-lru
+      save 900 1
+      save 300 10
+      save 60 10000
+    permissions: '0644'
+    append: false
+
+runcmd:
+  # Configure PostgreSQL to listen on private network
+  - sed -i "s/#listen_addresses = 'localhost'/listen_addresses = '*'/g" /etc/postgresql/14/main/postgresql.conf
+  - systemctl restart postgresql
+
+  # Create database and user
+  - sudo -u postgres psql -c "CREATE USER ${db_user} WITH PASSWORD '${db_password}';"
+  - sudo -u postgres psql -c "CREATE DATABASE ${db_name} OWNER ${db_user};"
+  - sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE ${db_name} TO ${db_user};"
+
+  # Configure and restart Redis
+  - systemctl restart redis-server
+  - systemctl enable redis-server
+
+  # Enable PostgreSQL
+  - systemctl enable postgresql
+
+final_message: "Database server ready! PostgreSQL on port 5432, Redis on port 6379"

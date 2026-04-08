@@ -1,0 +1,54 @@
+# Rust
+target/
+**/target/
+**/*.rs.bk
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Output files (forensic audit trails) - runtime data directories only
+/output/
+**/output-*.log
+json-ls-*.log
+
+# Custom rules (per-deployment, not version controlled)
+**/rules/custom/
+**/custom-rules.json
+
+# Test coverage
+coverage/
+*.lcov
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# Documentation (tracked separately or generated)
+*.md
+!README.md
+!QUICKSTART.md
+!docs/**/*.md

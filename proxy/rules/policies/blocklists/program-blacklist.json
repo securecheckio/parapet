@@ -1,0 +1,69 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-malicious-programs",
+    "name": "Block Known Malicious Programs",
+    "description": "Blocks transactions involving known scam/malicious programs",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "blocklist"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "any": [
+          {
+            "field": "program_ids",
+            "operator": "contains",
+            "value": "ProgramId1xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          {
+            "field": "program_ids",
+            "operator": "contains",
+            "value": "ProgramId2xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          {
+            "field": "program_ids",
+            "operator": "contains",
+            "value": "ProgramId3xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        ]
+      },
+      "message": "🚫 BLOCKED: Transaction involves known malicious program"
+    },
+    "metadata": {
+      "severity": "critical",
+      "last_updated": "2026-03-22"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allowlist-only",
+    "name": "Allow Only Programs on Allowlist",
+    "description": "Example: Only allow Jupiter, Raydium, Orca (customize this list)",
+    "author": "your-name",
+    "enabled": false,
+    "tags": ["allowlist"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "not": {
+          "all": [
+            {
+              "field": "program_ids",
+              "operator": "in",
+              "value": [
+                "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB",
+                "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+              ]
+            }
+          ]
+        }
+      },
+      "message": "🚫 Only allowed DEXs permitted (Jupiter, Raydium, Orca)"
+    },
+    "metadata": {
+      "note": "Disabled by default - enable and customize program list for your needs"
+    }
+  }
+]

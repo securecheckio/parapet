@@ -1,0 +1,48 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - docker.io
+  - ufw
+
+write_files:
+  - path: /root/docker-compose.yml
+    content: |
+      version: '3.8'
+      
+      services:
+        web-app:
+          image: ghcr.io/securecheck/web-app:latest
+          restart: always
+          environment:
+            DATABASE_URL: postgresql://${db_user}:${db_password}@${db_host}:5432/${db_name}
+            REDIS_URL: redis://:${redis_password}@${redis_host}:6379
+            NODE_ENV: production
+          ports:
+            - "0.0.0.0:3000:3000"
+          healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+runcmd:
+  - systemctl enable docker
+  - systemctl start docker
+  
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow from 10.0.0.0/8 to any port 3000 proto tcp
+  - ufw --force enable
+  
+  # Start web app
+  - cd /root && docker-compose pull && docker-compose up -d
+  
+  # Run migrations
+  - sleep 30
+  - docker-compose exec -T web-app npx prisma migrate deploy || true
+
+final_message: "Web app droplet ready!"

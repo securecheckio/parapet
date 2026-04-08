@@ -1,0 +1,69 @@
+[package]
+name = "parapet-scanner"
+version = "0.1.0"
+edition = "2021"
+authors = ["SecureCheck Team"]
+license = "MIT"
+
+[dependencies]
+# Reuse parapet-core for analyzers and rules with all third-party analyzers enabled
+parapet-core = { path = "../core", features = ["helius", "ottersec", "jupiter", "rugcheck", "program-analysis"] }
+
+# RPC client (matching versions from txfilter proven to work)
+solana-client = "2.3"
+solana-sdk = "2.3"
+solana-transaction-status = "2.3"
+solana-account-decoder = "2.3"
+spl-token = "8.0"
+
+# Utilities (reuse workspace versions)
+tokio = { workspace = true }
+anyhow = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+log = { workspace = true }
+bincode = { workspace = true }
+base64 = { workspace = true }
+chrono = { version = "0.4", features = ["serde"] }
+async-trait = "0.1"
+bs58.workspace = true
+
+[[bin]]
+name = "wallet-scanner"
+path = "src/bin/wallet-scanner.rs"
+
+[[bin]]
+name = "program-analyzer"
+path = "src/bin/program-analyzer.rs"
+
+[[bin]]
+name = "update-safe-lists"
+path = "src/bin/update-safe-lists.rs"
+
+[[bin]]
+name = "tx-check"
+path = "src/bin/tx-check.rs"
+
+[dependencies.clap]
+version = "4.5"
+features = ["derive"]
+
+[dependencies.colored]
+version = "2.1"
+
+[dependencies.env_logger]
+workspace = true
+
+[dependencies.reqwest]
+version = "0.11"
+features = ["json"]
+
+[features]
+default = ["program-analysis", "reqwest"]
+program-analysis = ["parapet-core/program-analysis"]
+ai-analysis = ["parapet-core/ai-analysis"]
+reqwest = []
+debug-fields = []
+
+[dev-dependencies]
+env_logger = { workspace = true }
