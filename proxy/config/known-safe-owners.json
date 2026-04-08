@@ -1,0 +1,60 @@
+{
+  "version": "1.0",
+  "name": "Known Safe Program Owners/Signers",
+  "description": "List of trusted program deployers and upgrade authorities. Programs deployed/owned by these addresses are considered safe.",
+  "last_updated": "2026-03-30",
+  "feed_url": "https://api.securecheck.sh/v1/safe-owners/feed.json",
+  "owners": [
+    {
+      "address": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "name": "BPF Loader Upgradeable",
+      "type": "system",
+      "description": "Solana's upgradeable BPF loader - manages program deployments"
+    },
+    {
+      "address": "11111111111111111111111111111111",
+      "name": "System Program",
+      "type": "system",
+      "description": "Core Solana system program authority"
+    }
+  ],
+  "organizations": [
+    {
+      "name": "Solana Labs",
+      "description": "Core Solana protocol developers",
+      "addresses": [
+        "SoLanaLabs111111111111111111111111111111111"
+      ],
+      "verified": true
+    },
+    {
+      "name": "Metaplex Foundation",
+      "description": "NFT infrastructure on Solana",
+      "addresses": [
+        "meta3c863KN6CX6HXzfBxxG4YfMpUB"
+      ],
+      "verified": true,
+      "note": "Add actual Metaplex deployer addresses after verification"
+    },
+    {
+      "name": "Jito Labs",
+      "description": "MEV and staking infrastructure",
+      "addresses": [],
+      "verified": true,
+      "note": "Add Jito deployer addresses after verification"
+    }
+  ],
+  "categories": {
+    "system": "Solana core system authorities",
+    "protocol": "Major protocol deployers",
+    "defi": "Verified DeFi protocol developers",
+    "nft": "NFT platform developers"
+  },
+  "notes": [
+    "This list controls trust based on WHO deployed or owns a program",
+    "Programs with these owners/upgrade authorities are considered safe",
+    "Exercise extreme caution when adding addresses - compromised owner = compromised trust",
+    "Verify addresses through multiple sources before adding",
+    "Organizations section groups related deployer addresses"
+  ]
+}

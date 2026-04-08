@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  # Parapet RPC Proxy
+  parapet-proxy:
+    build:
+      context: ../../proxy
+      dockerfile: Dockerfile
+    container_name: parapet-proxy
+    restart: unless-stopped
+    ports:
+      - "8899:8899"
+    environment:
+      - UPSTREAM_RPC_URL=${UPSTREAM_RPC_URL:-https://api.mainnet-beta.solana.com}
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=info
+    volumes:
+      - ../../proxy/config.toml:/app/config.toml:ro
+      - ../../proxy/rules:/app/rules:ro
+    depends_on:
+      - redis
+    networks:
+      - parapet
+
+  # Parapet API
+  parapet-api:
+    build:
+      context: ../../api
+      dockerfile: Dockerfile
+    container_name: parapet-api
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - RUST_LOG=info
+    volumes:
+      - ../../api/config.toml:/app/config.toml:ro
+    depends_on:
+      - redis
+    networks:
+      - parapet
+
+  # Redis (for activity feed & escalations)
+  redis:
+    image: redis:7-alpine
+    container_name: parapet-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - parapet
+
+  # Caddy (HTTPS Reverse Proxy)
+  caddy:
+    image: caddy:2-alpine
+    container_name: parapet-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"     # HTTP (for Let's Encrypt challenge)
+      - "443:443"   # HTTPS
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - caddy-logs:/var/log/caddy
+    networks:
+      - parapet
+    depends_on:
+      - parapet-proxy
+      - parapet-api
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:
+  caddy-logs:
+
+networks:
+  parapet:
+    driver: bridge

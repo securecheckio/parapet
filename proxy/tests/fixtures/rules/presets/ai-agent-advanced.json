@@ -1,0 +1,99 @@
+[
+  {
+    "version": "1.0",
+    "id": "track-exfiltration-transfers",
+    "name": "Track Exfiltration Transfers",
+    "description": "Increments per-recipient transfer counter (no alert)",
+    "enabled": true,
+    "tags": ["ai-agent", "tracker", "exfiltration"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "system:has_sol_transfer", "operator": "equals", "value": true}
+        ]
+      },
+      "flowbits": {
+        "scope": "perwallet",
+        "increment": ["transfers_to:{system:sol_recipients[0]}"],
+        "ttl_seconds": 86400
+      },
+      "message": ""
+    },
+    "metadata": {
+      "note": "Tracker rule — increments before the block rule reads the counter"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "ai-agent-gradual-exfiltration",
+    "name": "AI Agent Gradual Exfiltration",
+    "description": "Detects repeated transfers to the same recipient (4+ in 24h) indicating gradual fund exfiltration",
+    "enabled": true,
+    "tags": ["ai-agent", "critical", "exfiltration", "phase2"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
+          {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
+        ]
+      },
+      "message": "🚨 AI Agent: Repeated transfers to same recipient (4+ in 24h) - possible gradual exfiltration"
+    },
+    "metadata": {
+      "attack_type": "gradual_exfiltration",
+      "false_positive_risk": "low",
+      "tuning_note": "Allowlist legitimate recipients (e.g., exchange deposit addresses)",
+      "variable_bindings": {
+        "recipient": "system:sol_recipients[0]"
+      }
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "ai-agent-unknown-program-interaction",
+    "name": "AI Agent Unknown Program Interaction",
+    "description": "Alerts when agent repeatedly interacts with unknown/unverified programs (3+ in 7 days)",
+    "enabled": true,
+    "tags": ["ai-agent", "high", "program-interaction", "phase2"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {"field": "basic:program_ids", "operator": "not_in", "value": [
+            "11111111111111111111111111111111",
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+            "So11111111111111111111111111111111111111112"
+          ]},
+          {"field": "flowbit:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
+        ]
+      },
+      "flowbits": {
+        "scope": "perwallet",
+        "increment": ["program_interaction:{basic:program_ids[0]}"],
+        "ttl_seconds": 604800
+      },
+      "message": "⚠️ AI Agent: Repeated interaction with unknown program - investigate before allowing"
+    },
+    "metadata": {
+      "attack_type": "suspicious_program_interaction",
+      "false_positive_risk": "medium",
+      "tuning_note": "Maintain allowlist of known safe programs (DEXs, lending protocols, etc.)",
+      "variable_bindings": {
+        "program_id": "basic:program_ids[0]"
+      },
+      "known_safe_programs": [
+        "System Program (11111111111111111111111111111111)",
+        "Token Program (TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA)",
+        "Associated Token Program (ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL)",
+        "Jupiter Aggregator (JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4)",
+        "Orca Whirlpool (whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc)",
+        "Wrapped SOL (So11111111111111111111111111111111111111112)"
+      ]
+    }
+  }
+]

@@ -1,0 +1,58 @@
+name: Test & Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+      
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+      
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+      
+      - name: Run clippy (release mode)
+        run: cargo clippy --all-targets --all-features --release
+      
+      - name: Install WASM target
+        run: rustup target add wasm32-unknown-unknown
+      
+      - name: Build WASM mock
+        run: cd core/tests/wasm_mock && cargo build --target wasm32-unknown-unknown --release
+      
+      - name: Run tests (release mode)
+        run: cargo test --workspace --all-features --release --verbose
+      
+      - name: Build release binaries
+        run: cargo build --workspace --release --verbose
+      
+      # Docker images are built by the release workflow on version tags
+      # See .github/workflows/release.yml for production Docker builds

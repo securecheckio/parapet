@@ -1,0 +1,48 @@
+[
+  {
+    "version": "1.0",
+    "id": "enterprise-nonce-usage-tracker",
+    "name": "Enterprise Durable Nonce Usage Tracker",
+    "description": "Tracks durable nonce usage for staleness detection (no alert)",
+    "enabled": true,
+    "tags": ["enterprise", "tracker", "nonce"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "system:uses_durable_nonce",
+        "operator": "equals",
+        "value": true
+      },
+      "flowbits": {
+        "set": ["nonce_used_recently"],
+        "ttl_seconds": 86400
+      },
+      "message": ""
+    },
+    "metadata": {
+      "note": "Foundation for Phase 2 nonce staleness detection",
+      "phase": "1"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "enterprise-nonce-usage-alert",
+    "name": "Enterprise Durable Nonce Usage Alert",
+    "description": "Informational alert when durable nonces are used",
+    "enabled": false,
+    "tags": ["enterprise", "info", "nonce"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:uses_durable_nonce",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "ℹ️ Enterprise: Durable nonce detected - transaction has indefinite validity"
+    },
+    "metadata": {
+      "note": "Optional informational alert - disabled by default to reduce noise",
+      "drift_protocol_reference": "April 2026 - $270M exploit using stale durable nonces"
+    }
+  }
+]

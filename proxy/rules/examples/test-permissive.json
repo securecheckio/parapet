@@ -1,0 +1,26 @@
+{
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "test-block-critical-only",
+      "name": "Test: Only Block Critical Issues",
+      "description": "Permissive rules for testing - only blocks obvious attacks",
+      "action": "block",
+      "conditions": {
+        "any": [
+          {
+            "field": "security.delegation_is_unlimited",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "security.risk_score",
+            "operator": "greater_than_or_equal",
+            "value": 95
+          }
+        ]
+      },
+      "message": "Critical security issue detected"
+    }
+  ]
+}

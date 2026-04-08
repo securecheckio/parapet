@@ -1,0 +1,41 @@
+# Caddyfile for Parapet HTTPS Proxy
+# Replace YOUR_DOMAIN with your actual domain (e.g., rpc.yourcompany.com)
+
+{
+    # Global options
+    email your-email@example.com  # For Let's Encrypt notifications
+}
+
+# RPC Proxy (main service)
+YOUR_DOMAIN {
+    reverse_proxy localhost:8899
+    
+    # Enable CORS for web3 wallets
+    header {
+        Access-Control-Allow-Origin "*"
+        Access-Control-Allow-Methods "POST, GET, OPTIONS"
+        Access-Control-Allow-Headers "Content-Type, Authorization"
+    }
+    
+    # Handle OPTIONS preflight
+    @options method OPTIONS
+    handle @options {
+        respond 200
+    }
+    
+    # Logging
+    log {
+        output file /var/log/caddy/rpc-proxy.log
+        format json
+    }
+}
+
+# API (optional - for dashboard)
+api.YOUR_DOMAIN {
+    reverse_proxy localhost:3001
+}
+
+# Dashboard (optional)
+dashboard.YOUR_DOMAIN {
+    reverse_proxy localhost:8080
+}

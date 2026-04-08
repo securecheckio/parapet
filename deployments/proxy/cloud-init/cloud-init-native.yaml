@@ -1,0 +1,278 @@
+#cloud-config
+# Parapet Native Binary Deployment
+# Maximum performance for production environments
+
+package_update: true
+package_upgrade: true
+
+packages:
+  - ca-certificates
+  - curl
+  - jq
+
+# Create dedicated user for security
+users:
+  - name: solshield
+    system: true
+    shell: /usr/sbin/nologin
+    home: /opt/parapet
+
+runcmd:
+  # Create application directory
+  - mkdir -p /opt/parapet
+  - chown solshield:solshield /opt/parapet
+  
+  # Download latest release binary from GitHub
+  - |
+    echo "Downloading Parapet latest release..."
+    LATEST_RELEASE=$(curl -s https://api.github.com/repos/securecheckio/parapet/releases/latest | jq -r .tag_name)
+    
+    # Download tarball
+    curl -L -o /tmp/parapet.tar.gz \
+      "https://github.com/securecheckio/parapet/releases/download/$LATEST_RELEASE/parapet-rpc-proxy-linux-x86_64.tar.gz"
+    
+    # Extract binary
+    tar -xzf /tmp/parapet.tar.gz -C /tmp/
+    
+    echo "Downloaded Parapet $LATEST_RELEASE"
+  
+  # Fallback: build from source if download fails
+  - |
+    if [ ! -f /tmp/parapet-rpc-proxy ]; then
+      echo "Binary download failed, building from source..."
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+      source $HOME/.cargo/env
+      cd /tmp
+      git clone https://github.com/securecheckio/parapet.git
+      cd parapet
+      cargo build --release -p parapet-rpc-proxy
+      cp target/release/parapet-rpc-proxy /tmp/parapet-rpc-proxy
+    fi
+  
+  # Install binary
+  - chmod +x /tmp/parapet-rpc-proxy
+  - mv /tmp/parapet-rpc-proxy /opt/parapet/parapet-proxy
+  - chown solshield:solshield /opt/parapet/parapet-proxy
+  
+  # Verify binary
+  - file /opt/parapet/parapet-proxy
+  - /opt/parapet/parapet-proxy --version || echo "Binary installed successfully"
+  
+  # Create environment file
+  - |
+    cat > /opt/parapet/.env <<EOF
+    UPSTREAM_RPC_URL=${upstream_rpc_url}
+    PROXY_PORT=${proxy_port}
+    ENABLE_RATE_LIMITING=${enable_rate_limiting}
+    DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
+    WHITELISTED_WALLETS=${whitelisted_wallets}
+    RUST_LOG=info,sol_shield_proxy=debug
+    EOF
+  - chown solshield:solshield /opt/parapet/.env
+  - chmod 600 /opt/parapet/.env
+  
+  # Create systemd service with security hardening
+  - |
+    cat > /etc/systemd/system/parapet.service <<EOF
+    [Unit]
+    Description=Parapet RPC Proxy (Native Binary)
+    After=network-online.target
+    Wants=network-online.target
+    
+    [Service]
+    Type=simple
+    User=solshield
+    Group=solshield
+    WorkingDirectory=/opt/parapet
+    
+    # Load environment variables
+    EnvironmentFile=/opt/parapet/.env
+    
+    # Execute binary
+    ExecStart=/opt/parapet/parapet-proxy
+    
+    # Automatic restart on failure
+    Restart=always
+    RestartSec=5
+    
+    # Security hardening
+    NoNewPrivileges=true
+    PrivateTmp=true
+    ProtectSystem=strict
+    ProtectHome=true
+    ReadWritePaths=/opt/parapet
+    ProtectKernelTunables=true
+    ProtectKernelModules=true
+    ProtectControlGroups=true
+    RestrictRealtime=true
+    RestrictNamespaces=true
+    LockPersonality=true
+    MemoryDenyWriteExecute=false
+    RestrictAddressFamilies=AF_INET AF_INET6
+    
+    # Resource limits
+    LimitNOFILE=65536
+    LimitNPROC=512
+    
+    # Logging
+    StandardOutput=journal
+    StandardError=journal
+    SyslogIdentifier=parapet
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+  
+  # Enable and start service
+  - systemctl daemon-reload
+  - systemctl enable parapet
+  - systemctl start parapet
+  
+  # Wait for service to start
+  - sleep 5
+  
+  # Setup log rotation for journal logs
+  - |
+    cat > /etc/logrotate.d/parapet <<EOF
+    /var/log/journal {
+        daily
+        missingok
+        rotate 7
+        compress
+        delaycompress
+        notifempty
+    }
+    EOF
+  
+  %{~ if enable_https ~}
+  # Install Caddy for automatic HTTPS
+  - apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt update
+  - apt install -y caddy
+  
+  # Configure Caddy with automatic Let's Encrypt and IP restrictions
+  - |
+    cat > /etc/caddy/Caddyfile <<EOF
+    ${domain_name} {
+        # IP whitelist for RPC access
+        @allowed_ips {
+            remote_ip ${https_allowed_ips}
+        }
+        
+        handle @allowed_ips {
+            reverse_proxy localhost:${proxy_port}
+            
+            # CORS headers for RPC access
+            header {
+                Access-Control-Allow-Origin *
+                Access-Control-Allow-Methods "GET, POST, OPTIONS"
+                Access-Control-Allow-Headers "Content-Type"
+            }
+        }
+        
+        handle {
+            respond "Access denied from your IP address" 403
+        }
+        
+        # Let's Encrypt email
+        tls ${email}
+    }
+    EOF
+  
+  # Start Caddy
+  - systemctl enable caddy
+  - systemctl restart caddy
+  
+  # Wait for Let's Encrypt certificate
+  - sleep 10
+  %{~ endif ~}
+
+write_files:
+  - path: /opt/parapet/deployment-info.txt
+    content: |
+      Deployment Mode: Native Binary
+      - Direct execution on host (no container overhead)
+      - Systemd security hardening enabled
+      - Dedicated solshield user (non-root)
+      - Resource limits: 65536 file descriptors, 512 processes
+      - Performance: Maximum (~2-5% faster than Docker)
+      
+      Benefits:
+      - Lowest possible latency
+      - Direct hardware access
+      - Minimal memory overhead
+      - Best for high-throughput production
+  
+  - path: /usr/local/bin/solshield-stats
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Parapet log statistics helper
+      
+      TIMEFRAME="$${1:-1 hour ago}"
+      
+      echo "Parapet Statistics (since $TIMEFRAME)"
+      echo "========================================"
+      
+      LOGS=$(journalctl -u parapet --since "$TIMEFRAME" --no-pager 2>/dev/null)
+      
+      if [ -z "$LOGS" ]; then
+        echo "No logs found. Is the service running?"
+        echo "Check: systemctl status parapet"
+        exit 1
+      fi
+      
+      BLOCKS=$(echo "$LOGS" | grep -c "BLOCKED by rule" || echo 0)
+      ALERTS=$(echo "$LOGS" | grep -c "Transaction ALERT" || echo 0)
+      PASSES=$(echo "$LOGS" | grep -c "No rules matched" || echo 0)
+      TOTAL=$((BLOCKS + ALERTS + PASSES))
+      
+      echo ""
+      echo "Total transactions:     $TOTAL"
+      echo "  ✅ Passed:            $PASSES"
+      echo "  ⚠️  Alerted:          $ALERTS"
+      echo "  🚫 Blocked:           $BLOCKS"
+      echo ""
+      
+      if [ $TOTAL -gt 0 ]; then
+        BLOCK_PCT=$(awk "BEGIN {printf \"%.1f\", ($BLOCKS/$TOTAL)*100}")
+        ALERT_PCT=$(awk "BEGIN {printf \"%.1f\", ($ALERTS/$TOTAL)*100}")
+        echo "Block rate:             $BLOCK_PCT%"
+        echo "Alert rate:             $ALERT_PCT%"
+      fi
+      
+      echo ""
+      echo "Top 5 Triggered Rules:"
+      echo "----------------------"
+      echo "$LOGS" | grep "Rule matched:" | sed 's/.*Rule matched: \([^(]*\).*/\1/' | sort | uniq -c | sort -rn | head -5
+      
+      echo ""
+      echo "Recent Errors:"
+      echo "--------------"
+      echo "$LOGS" | grep "ERROR" | tail -5
+  
+  - path: /usr/local/bin/solshield-watch
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # Watch Parapet security events in real-time
+      
+      echo "Watching Parapet security events..."
+      echo "Press Ctrl+C to exit"
+      echo ""
+      
+      journalctl -u parapet -f -n 0 \
+        | grep --line-buffered -E "BLOCKED|ALERT|Authentication failed|Rate limit exceeded" \
+        | while read line; do
+          if echo "$line" | grep -q "BLOCKED"; then
+            echo -e "\033[0;31m$line\033[0m"  # Red for blocks
+          elif echo "$line" | grep -q "ALERT"; then
+            echo -e "\033[0;33m$line\033[0m"  # Yellow for alerts
+          else
+            echo "$line"
+          fi
+        done
+
+final_message: "Parapet (Native Binary) deployment complete! RPC endpoint: %{~ if enable_https ~}https://${domain_name}%{~ else ~}http://$(curl -s ifconfig.me):${proxy_port}%{~ endif ~}"

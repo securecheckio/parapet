@@ -1,0 +1,64 @@
+{
+  "version": "1.0",
+  "rules": [
+    {
+      "id": "test-block-unlimited-delegation",
+      "name": "Test: Block Unlimited Delegations",
+      "action": "block",
+      "conditions": {
+        "field": "security.delegation_is_unlimited",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Unlimited delegation detected"
+    },
+    {
+      "id": "test-require-verified-programs",
+      "name": "Test: Require All Programs Verified",
+      "action": "block",
+      "conditions": {
+        "field": "ottersec.has_unverified_programs",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Transaction uses unverified programs"
+    },
+    {
+      "id": "test-block-unknown-addresses",
+      "name": "Test: Block Unknown Addresses",
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "basic.account_creations",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "New account creation detected"
+    },
+    {
+      "id": "test-high-risk-score",
+      "name": "Test: Block High Risk Transactions",
+      "action": "block",
+      "conditions": {
+        "field": "security.risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 70
+      },
+      "message": "High risk transaction"
+    },
+    {
+      "id": "test-rate-limiting",
+      "name": "Test: Alert on Multiple Instructions",
+      "action": "alert",
+      "conditions": {
+        "field": "basic.instruction_count",
+        "operator": "greater_than",
+        "value": 5
+      },
+      "message": "Complex transaction with many instructions"
+    }
+  ]
+}

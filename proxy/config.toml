@@ -1,0 +1,26 @@
+[server]
+bind_address = "0.0.0.0:8899"
+upstream_rpc_url = "https://api.devnet.solana.com"
+
+[network]
+network = "devnet"
+
+[redis]
+url = "redis://localhost:6379"
+
+[escalations]
+enabled = true
+approver_wallet = "DfaQ3MBiL9ighEyVpu9zt9efjWiBRq8sdJQCnawQpR7N"
+api_url = "http://localhost:3001"
+
+[rules]
+path = "./rules/examples/test-complete.json"
+
+[security]
+default_block_threshold = 30  # Very strict to trigger blocks
+
+[activity_feed]
+enabled = true
+min_risk_score = 0         # Show all transactions (including risk score 0)
+max_events_per_wallet = 100 # Keep last 100 events per wallet
+ttl_seconds = 86400        # 24 hours

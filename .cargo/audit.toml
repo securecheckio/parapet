@@ -1,0 +1,12 @@
+# cargo-audit configuration for Parapet
+# Issues that cannot be fixed due to Solana SDK dependencies
+
+[advisories]
+# Ignore vulnerabilities in Solana SDK transitive dependencies
+# These will be fixed when Solana updates their dependencies
+ignore = [
+    "RUSTSEC-2022-0093",  # ed25519-dalek oracle attack - Solana SDK dependency
+    "RUSTSEC-2024-0344",  # curve25519-dalek timing attack - Solana SDK dependency
+    "RUSTSEC-2026-0098",  # rustls-webpki constraints - old rustls in dependency tree
+    "RUSTSEC-2026-0099",  # rustls-webpki wildcards - old rustls in dependency tree
+]

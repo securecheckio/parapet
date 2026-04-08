@@ -1,0 +1,44 @@
+[package]
+name = "parapet-mcp-server"
+version = "1.0.0"
+edition = "2021"
+authors = ["SecureCheck Team"]
+license = "MIT"
+description = "MCP server for Parapet wallet and program security scanning"
+
+[[bin]]
+name = "parapet-mcp"
+path = "src/main.rs"
+
+# Also expose as a library for shared MCP tool implementations
+[lib]
+name = "parapet_mcp_server"
+path = "src/lib.rs"
+
+[dependencies]
+# Parapet scanner library with all features
+parapet-scanner = { path = "../scanner" }
+parapet-core = { path = "../core", features = ["helius", "ottersec", "jupiter", "program-analysis", "rugcheck"] }
+
+# Solana dependencies
+solana-client = "2.3"
+solana-sdk = "2.3"
+
+# Async runtime
+tokio = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# Error handling and logging
+anyhow = { workspace = true }
+log = { workspace = true }
+env_logger = { workspace = true }
+
+# HTTP client for verification checks
+reqwest = { version = "0.11", features = ["json"] }
+
+[features]
+default = ["reqwest"]
+reqwest = []

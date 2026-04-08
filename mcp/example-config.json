@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "parapet": {
+      "command": "/path/to/parapet-mcp",
+      "env": {
+        "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com",
+        "HELIUS_API_KEY": "your-helius-api-key-here",
+        "RUST_LOG": "info"
+      }
+    }
+  }
+}

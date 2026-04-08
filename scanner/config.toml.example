@@ -1,0 +1,170 @@
+# Parapet Wallet Scanner Configuration
+# Copy to config.toml and customize for your environment
+# Environment variables can override any setting
+
+[scanner]
+# Maximum number of transactions to analyze per scan
+max_transactions = 100
+
+# Time window in days to scan back
+days = 30
+
+# Delay between RPC requests in milliseconds (0 = auto-calculated)
+rpc_delay_ms = 0
+
+# Default output format: "pretty", "json", or "brief"
+format = "pretty"
+
+[network]
+# Solana network: "mainnet-beta", "devnet", or "testnet"
+network = "mainnet-beta"
+
+# RPC endpoint URL (can also use PARAPET_RPC_URL or --rpc-url)
+# rpc_url = "https://api.mainnet-beta.solana.com"
+
+[security]
+# Path to security rules JSON file (auto-discovers if not set)
+# Searches for wallet-scan-enhanced.json or bot-essentials.json
+# rules_path = "./proxy/rules/presets/wallet-scan-enhanced.json"
+
+# Path to custom known-safe programs JSON file
+# Merges with built-in safe list
+# safe_programs_file = "./custom-safe-programs.json"
+
+# Minimum severity to revoke: "critical", "high", "medium", or "low"
+severity_threshold = "high"
+
+[third_party]
+# Third-Party Analyzer API Keys
+# Note: These analyzers must be enabled at compile-time via Cargo features
+# Build with: cargo build --features "rugcheck,helius,jupiter,ottersec"
+
+[third_party.helius]
+# Required for Helius analyzers (identity, transfer, funding)
+# Get key from: https://www.helius.dev/
+# api_key = "your_helius_api_key_here"
+
+# Rate limit: format "requests/seconds" (e.g., "20/60" = 20 requests per 60 seconds)
+# Env var equivalent: HELIUS_RATE_LIMIT=20/60
+rate_limit = "20/60"
+
+[third_party.ottersec]
+# Required for OtterSec program verification
+# Get key from: https://osec.io/
+# api_key = "your_ottersec_api_key_here"
+
+# Rate limit: format "requests/seconds"
+# Env var equivalent: OTTERSEC_RATE_LIMIT=30/60
+rate_limit = "30/60"
+
+[third_party.jupiter]
+# Optional for Jupiter token metadata (works without key)
+# Get key from: https://station.jup.ag/
+# api_key = "your_jupiter_api_key_here"
+
+# Rate limit: format "requests/seconds"
+# Env var equivalent: JUPITER_RATE_LIMIT=60/60
+rate_limit = "60/60"
+
+[third_party.rugcheck]
+# Optional for Rugcheck token risk analysis
+# FREE tier works without API key, paid tier provides higher limits
+# Get key from: https://rugcheck.xyz/
+# api_key = "your_rugcheck_api_key_here"
+
+# Rate limit: format "requests/seconds"
+# Free tier: "10/60", Paid tier: "100/60" or higher
+# Env var equivalent: RUGCHECK_RATE_LIMIT=10/60
+rate_limit = "10/60"
+
+# Cache TTL in seconds (how long to cache Rugcheck results)
+# Env var equivalent: RUGCHECK_CACHE_TTL=600
+cache_ttl = 600
+
+[ai]
+# AI-powered program analysis (requires program-analysis feature at compile time)
+# Supports OpenAI, Anthropic/Claude, Groq, and other OpenAI-compatible providers
+# Used for deep program bytecode analysis (Tier 3 analysis)
+
+# API key for AI provider
+# Env var equivalent: AI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY
+# api_key = "your_api_key_here"
+
+# API base URL (provider endpoint)
+# Env var equivalent: AI_BASE_URL
+# Examples:
+#   OpenAI:     https://api.openai.com/v1
+#   Anthropic:  https://api.anthropic.com/v1
+#   Groq:       https://api.groq.com/openai/v1
+#   Nano GPT:   https://api.nano-gpt.com/v1
+# base_url = "https://api.openai.com/v1"
+
+# Model to use for analysis
+# Env var equivalent: AI_MODEL
+# Examples:
+#   OpenAI:     gpt-4, gpt-4-turbo, gpt-3.5-turbo
+#   Anthropic:  claude-3-5-sonnet-20241022, claude-3-opus-20240229
+#   Groq:       llama-3.1-70b-versatile, mixtral-8x7b-32768
+# model = "gpt-4"
+
+# Maximum tokens for AI response
+# Env var equivalent: AI_MAX_TOKENS
+max_tokens = 4000
+
+# Temperature (0.0-1.0, lower = more deterministic)
+# Env var equivalent: AI_TEMPERATURE
+temperature = 0.1
+
+# ============================================================================
+# USAGE NOTES
+# ============================================================================
+
+# Quick Start:
+# 1. Copy this file: cp config.toml.example config.toml
+# 2. Add your API keys (required: Helius, OtterSec)
+# 3. Build with analyzers: cargo build --release --features "rugcheck,helius,jupiter,ottersec"
+# 4. Run: cargo run --release -p parapet-scanner --bin wallet-scanner -- WALLET_ADDRESS
+
+# Environment Variable Overrides:
+# Any setting can be overridden with environment variables:
+# - CONFIG_PATH or SCANNER_CONFIG_PATH (path to this file)
+# - HELIUS_API_KEY
+# - OTTERSEC_API_KEY
+# - JUPITER_API_KEY
+# - RUGCHECK_API_KEY
+# - AI_API_KEY (or OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+# - AI_BASE_URL
+# - AI_MODEL
+# - AI_MAX_TOKENS
+# - AI_TEMPERATURE
+# - RULES_PATH
+# - PARAPET_RPC_URL
+# - HELIUS_RATE_LIMIT (format: "20/60")
+# - OTTERSEC_RATE_LIMIT (format: "30/60")
+# - RUGCHECK_RATE_LIMIT (format: "10/60")
+# - RUGCHECK_CACHE_TTL (integer seconds)
+#
+# Format: Use SCREAMING_SNAKE_CASE for env vars
+# Example: [third_party.helius].api_key -> HELIUS_API_KEY
+# Example: [ai].api_key -> AI_API_KEY
+# Note: Rate limits use "requests/seconds" format: "20/60" not just "20"
+
+# Config File Priority:
+# 1. Command-line argument: --config /path/to/config.toml
+# 2. Environment variable: SCANNER_CONFIG_PATH or CONFIG_PATH
+# 3. Current directory: ./config.toml
+# 4. Scanner directory: ./scanner/config.toml
+# 5. Default values (no API keys, limited functionality)
+
+# API Key Security:
+# - NEVER commit config.toml with real API keys to git
+# - Use environment variables for production deployments
+# - Use .env files for local development (add to .gitignore)
+# - Restrict file permissions: chmod 600 config.toml
+
+# Minimal Configuration (no API keys):
+# You can use the scanner without API keys, but functionality is limited:
+# - Rugcheck and Jupiter work without keys (lower rate limits)
+# - Helius and OtterSec require keys
+# - Use bot-essentials.json rules instead of wallet-scan-enhanced.json
+# - Expect more false positives without enrichment data

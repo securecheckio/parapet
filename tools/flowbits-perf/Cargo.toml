@@ -1,0 +1,19 @@
+[package]
+name = "flowbits-perf"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Criterion benchmarks for parapet_core flowbits (FlowbitStateManager)."
+
+[dependencies]
+parapet-core = { path = "../../core" }
+solana-sdk = "2.3"
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bench]]
+name = "flowbits_perf"
+harness = false

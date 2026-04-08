@@ -1,0 +1,62 @@
+[workspace]
+resolver = "2"
+members = [
+    "core",
+    "proxy",
+    "scanner",
+    "api",
+    "mcp",
+    "tools/rpc-perf",
+    "tools/flowbits-perf",
+]
+exclude = [
+    "core/tests/wasm_mock",
+]
+
+[workspace.dependencies.blake3]
+version = "1.5.4"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["SecureCheck Team"]
+license = "MIT"
+repository = "https://github.com/securecheckio/parapet"
+
+[workspace.dependencies]
+# Core dependencies shared across workspace
+tokio = { version = "1.35", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+log = "0.4"
+env_logger = "0.11"
+
+# Solana
+solana-sdk = "4.0"
+solana-transaction-status = "4.0"
+
+# Async/HTTP
+axum = "0.7"
+reqwest = { version = "0.11", features = ["json"] }
+tower-http = { version = "0.5", features = ["cors", "compression-full"] }
+
+# Redis
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+
+# Misc
+bs58 = "0.5"
+base64 = "0.21"
+bincode = "1.3"
+
+[profile.release]
+# Strip debug symbols for smaller binaries
+strip = true
+# Optimize for size while maintaining performance
+opt-level = 3
+# Enable Link Time Optimization for better optimization across crates
+lto = true
+# Reduce number of codegen units for better optimization (slower compile, smaller binary)
+codegen-units = 1
+# Panic strategy: abort instead of unwind (smaller binary, faster panics)
+panic = "abort"

@@ -1,0 +1,69 @@
+# Rust
+target/
+**/target/
+**/*.rs.bk
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Config files: only *.example is versioned; copy to local TOML
+config.toml
+proxy/config.toml
+proxy/analyzers.toml
+scanner/config.toml
+api/config.toml
+
+# Dashboard: build artifacts and dependencies
+dashboard/dist/
+dashboard/node_modules/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Output files (forensic audit trails) - runtime data directories only
+/output/
+**/output-*.log
+json-ls-*.log
+
+# Custom rules (per-deployment, not version controlled)
+**/rules/custom/
+**/custom-rules.json
+
+# Test coverage
+coverage/
+*.lcov
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+*.exe
+parapet
+
+# Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.backup
+
+# Documentation (tracked separately or generated)
+*.md
+!README.md
+!QUICKSTART.md
+!docs/**/*.md
+!proxy/README.md
+!proxy/rules/README.md
+!mcp/resources/*.md

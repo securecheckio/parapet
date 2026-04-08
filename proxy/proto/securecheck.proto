@@ -1,0 +1,289 @@
+syntax = "proto3";
+
+package securecheck.v1;
+
+// SecureCheck Security Event Streaming Service
+// Provides real-time forensic audit trail for transaction analysis
+service SecurityEventStream {
+  // Stream all security events (blocks, alerts, analysis results)
+  rpc StreamEvents(StreamEventsRequest) returns (stream TransactionEvent);
+  
+  // Query historical events (for audit/compliance)
+  rpc QueryEvents(QueryEventsRequest) returns (QueryEventsResponse);
+  
+  // Get real-time risk assessment for a transaction
+  rpc AssessTransaction(AssessTransactionRequest) returns (RiskAssessment);
+}
+
+// ============================================================================
+// Stream Configuration
+// ============================================================================
+
+message StreamEventsRequest {
+  // Filter by event type
+  repeated EventType event_types = 1;
+  
+  // Filter by risk level
+  repeated RiskLevel risk_levels = 2;
+  
+  // Filter by user/wallet
+  optional string user_id = 3;
+  optional string wallet = 4;
+  
+  // Include full analyzer fields (can be large)
+  bool include_analyzer_fields = 5;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_ALLOWED = 1;        // Transaction passed through
+  EVENT_TYPE_BLOCKED = 2;        // Silent block (never hit chain)
+  EVENT_TYPE_FAILED = 3;         // Reached chain but failed
+  EVENT_TYPE_REQUIRES_APPROVAL = 4;  // Waiting for manual review
+  EVENT_TYPE_SIMULATION = 5;     // Simulation-only (no send)
+}
+
+enum RiskLevel {
+  RISK_LEVEL_UNSPECIFIED = 0;
+  RISK_LEVEL_LOW = 1;
+  RISK_LEVEL_MEDIUM = 2;
+  RISK_LEVEL_HIGH = 3;
+  RISK_LEVEL_CRITICAL = 4;
+}
+
+// ============================================================================
+// Core Transaction Event (Forensic Audit Trail)
+// ============================================================================
+
+message TransactionEvent {
+  // Unique event ID
+  string event_id = 1;
+  
+  // Attribution (who/what)
+  Attribution attribution = 2;
+  
+  // Intent (what they tried to do)
+  Intent intent = 3;
+  
+  // Analysis (what we found)
+  Analysis analysis = 4;
+  
+  // Outcome (what happened)
+  Outcome outcome = 5;
+  
+  // Point-in-time proof (state at decision time)
+  PointInTimeState point_in_time_state = 6;
+  
+  // Human-readable translation
+  HumanReadable human_readable = 7;
+  
+  // Timestamp (RFC 3339)
+  string timestamp = 8;
+}
+
+// ============================================================================
+// Attribution (Identity & Context)
+// ============================================================================
+
+message Attribution {
+  // User identity (from AuthContext)
+  optional string user_id = 1;
+  optional string identity = 2;
+  
+  // Wallet address
+  string wallet = 3;
+  
+  // Client metadata
+  optional string ip_address = 4;
+  optional string user_agent = 5;
+  optional string session_id = 6;
+  
+  // Auth tier/scopes
+  optional string tier = 7;
+  repeated string scopes = 8;
+}
+
+// ============================================================================
+// Intent (Expected Action)
+// ============================================================================
+
+message Intent {
+  // RPC method called
+  string method = 1;  // "sendTransaction", "simulateTransaction"
+  
+  // Expected action (human-readable)
+  optional string expected_action = 2;  // "Swap 10 SOL → 150 USDC"
+  
+  // Destination description
+  optional string destination = 3;  // "Binance Hot Wallet"
+  
+  // Program invoked
+  repeated string programs = 4;  // ["JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB"]
+  
+  // Program names (human-readable)
+  repeated string program_names = 5;  // ["Jupiter Aggregator v4"]
+}
+
+// ============================================================================
+// Analysis (Security Assessment)
+// ============================================================================
+
+message Analysis {
+  // Risk metrics
+  uint32 risk_score = 1;  // 0-100
+  RiskLevel risk_level = 2;
+  
+  // Issues found
+  repeated string issues = 3;
+  
+  // Rules triggered
+  repeated RuleMatch rule_matches = 4;
+  
+  // Analyzer fields (optional, can be large)
+  map<string, string> analyzer_fields = 5;
+  
+  // Analyzers used
+  repeated string analyzers = 6;  // ["basic", "security", "helius_identity"]
+}
+
+message RuleMatch {
+  string rule_id = 1;
+  string rule_name = 2;
+  string action = 3;  // "block", "alert", "allow"
+  string reason = 4;
+  map<string, string> matched_fields = 5;
+}
+
+// ============================================================================
+// Outcome (Result)
+// ============================================================================
+
+message Outcome {
+  EventType event_type = 1;
+  
+  // If allowed/failed
+  optional string signature = 2;  // Transaction signature (if reached chain)
+  optional uint64 slot = 3;
+  
+  // If blocked
+  optional string block_reason = 4;
+  
+  // If requires approval
+  optional string approval_id = 5;
+  optional string approval_url = 6;
+}
+
+// ============================================================================
+// Point-in-Time State (Compliance Proof)
+// ============================================================================
+
+message PointInTimeState {
+  // Simulation metadata at decision time
+  optional SimulationMetadata simulation = 1;
+  
+  // Account states at decision time
+  repeated AccountSnapshot accounts = 2;
+  
+  // Blocklist/allowlist state
+  repeated string active_blocklists = 3;
+  repeated string active_allowlists = 4;
+  
+  // Policy version
+  string rules_version = 5;
+  string engine_version = 6;
+}
+
+message SimulationMetadata {
+  bool success = 1;
+  optional string error = 2;
+  uint64 compute_units = 3;
+  repeated string logs = 4;
+}
+
+message AccountSnapshot {
+  string address = 1;
+  uint64 lamports = 2;
+  optional string owner = 3;
+  bool is_writable = 4;
+  bool is_signer = 5;
+}
+
+// ============================================================================
+// Human-Readable Translation
+// ============================================================================
+
+message HumanReadable {
+  // Plain English summary
+  string summary = 1;  // "John Doe attempted to swap 10 SOL to USDC via Jupiter"
+  
+  // Detailed description
+  string description = 2;
+  
+  // Action classification
+  string action_type = 3;  // "swap", "stake", "transfer", "delegate"
+  
+  // Protocol name
+  optional string protocol = 4;  // "Jupiter", "Marinade", "Orca"
+  
+  // Amount (formatted)
+  optional string amount = 5;  // "10.5 SOL"
+  
+  // Token symbols
+  repeated string tokens = 6;  // ["SOL", "USDC"]
+  
+  // Risk explanation (for non-technical users)
+  optional string risk_explanation = 7;
+}
+
+// ============================================================================
+// Risk Assessment (Real-time Query)
+// ============================================================================
+
+message AssessTransactionRequest {
+  // Raw transaction (base64 or base58)
+  string transaction = 1;
+  
+  // Encoding
+  string encoding = 2;  // "base64" or "base58"
+  
+  // Optional user context
+  optional string user_id = 3;
+  optional string wallet = 4;
+}
+
+message RiskAssessment {
+  uint32 risk_score = 1;
+  RiskLevel risk_level = 2;
+  repeated string issues = 3;
+  string recommendation = 4;  // "ALLOW", "REVIEW", "BLOCK"
+  map<string, string> analyzer_fields = 5;
+}
+
+// ============================================================================
+// Historical Query
+// ============================================================================
+
+message QueryEventsRequest {
+  // Time range
+  optional string start_time = 1;  // RFC 3339
+  optional string end_time = 2;
+  
+  // Filters
+  repeated EventType event_types = 3;
+  repeated RiskLevel risk_levels = 4;
+  optional string user_id = 5;
+  optional string wallet = 6;
+  
+  // Pagination
+  uint32 page_size = 7;
+  optional string page_token = 8;
+  
+  // Output format hint (for formatters)
+  optional string output_format = 9;  // "json-ls", "iso20022", "xbrl-json", "1099-da"
+}
+
+message QueryEventsResponse {
+  repeated TransactionEvent events = 1;
+  optional string next_page_token = 2;
+  uint64 total_count = 3;
+}

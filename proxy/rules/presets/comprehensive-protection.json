@@ -1,0 +1,417 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-unlimited-delegation",
+    "name": "Block Unlimited Token Delegations",
+    "description": "Prevents unlimited token approvals (u64::MAX) - most common drain attack",
+    "enabled": true,
+    "tags": ["critical", "delegation", "drain-attack"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Unlimited token delegation (u64::MAX) - common drain attack pattern"
+    },
+    "metadata": {
+      "attack_type": "unlimited_approval",
+      "severity": "critical",
+      "false_positive_rate": 0.001
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-freeze-with-approval",
+    "name": "Block Freeze + Approval Combo",
+    "description": "Prevents freeze authority abuse combined with token approval",
+    "enabled": true,
+    "tags": ["critical", "combo-attack", "freeze"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_freeze", "operator": "equals", "value": true},
+          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0}
+        ]
+      },
+      "message": "🚨 BLOCKED: Freeze + Approval combination - attacker can freeze your approved tokens"
+    },
+    "metadata": {
+      "attack_type": "freeze_combo",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-burn-with-approval",
+    "name": "Block Burn + Approval Combo",
+    "description": "Prevents burn operations combined with approvals",
+    "enabled": true,
+    "tags": ["critical", "combo-attack", "burn"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_burn", "operator": "equals", "value": true},
+          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0}
+        ]
+      },
+      "message": "🚨 BLOCKED: Burn + Approval combination - your tokens could be destroyed"
+    },
+    "metadata": {
+      "attack_type": "burn_combo",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-net-delegation-increase",
+    "name": "Block Net Delegation Increase",
+    "description": "Blocks transactions that add more approvals than they revoke",
+    "enabled": true,
+    "tags": ["critical", "delegation"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:net_delegation_change",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Net increase in token delegations detected"
+    },
+    "metadata": {
+      "attack_type": "delegation_increase",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-revoke-only",
+    "name": "Pass Revoke-Only Transactions",
+    "description": "Explicitly allows revoke operations (security improvement)",
+    "enabled": true,
+    "tags": ["safe", "revoke"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_revoke", "operator": "equals", "value": true},
+          {"field": "token_instructions:approve_count", "operator": "equals", "value": 0},
+          {"field": "token_instructions:net_delegation_change", "operator": "less_than", "value": 0}
+        ]
+      },
+      "message": "✅ SAFE: Revoking token delegation (security improvement)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-any-burn",
+    "name": "Alert on Token Burns",
+    "description": "Warns when transaction will permanently destroy tokens",
+    "enabled": true,
+    "tags": ["high", "burn"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_burn",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Token burn detected - your tokens will be permanently destroyed!"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-freeze-operation",
+    "name": "Alert on Freeze/Thaw Operations",
+    "description": "Warns when freeze or thaw operations are detected",
+    "enabled": true,
+    "tags": ["high", "freeze"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "any": [
+          {"field": "token_instructions:has_freeze", "operator": "equals", "value": true},
+          {"field": "token_instructions:has_thaw", "operator": "equals", "value": true}
+        ]
+      },
+      "message": "⚠️ WARNING: Account freeze/thaw operation - can prevent transfers"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-mint-operation",
+    "name": "Alert on Token Minting",
+    "description": "Warns when new tokens are being minted (supply inflation)",
+    "enabled": true,
+    "tags": ["medium", "supply"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_mint",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Token minting detected - supply will increase"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-large-sol-transfer",
+    "name": "Block Large SOL Transfers",
+    "description": "Blocks native SOL transfers over 5 SOL",
+    "enabled": true,
+    "tags": ["high", "sol-transfer", "drain"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
+      },
+      "message": "🚨 BLOCKED: Large SOL transfer (> 5 SOL) - verify recipient address"
+    },
+    "metadata": {
+      "threshold_sol": 5.0
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-sol-transfer",
+    "name": "Alert on SOL Transfers",
+    "description": "Warns on SOL transfers over 0.1 SOL",
+    "enabled": true,
+    "tags": ["medium", "sol-transfer"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 100000000
+      },
+      "message": "⚠️ WARNING: Transferring SOL (> 0.1 SOL)"
+    },
+    "metadata": {
+      "threshold_sol": 0.1
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-account-creation-spam",
+    "name": "Block Account Creation Spam",
+    "description": "Prevents creation of excessive accounts (rent drain attack)",
+    "enabled": true,
+    "tags": ["high", "spam", "rent-drain"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:account_creation_count",
+        "operator": "greater_than",
+        "value": 20
+      },
+      "message": "🚨 BLOCKED: Excessive account creation (> 20) - spam/rent drain attack"
+    },
+    "metadata": {
+      "attack_type": "rent_drain"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-account-creation",
+    "name": "Alert on Multiple Account Creation",
+    "description": "Warns when creating 3+ accounts (rent costs)",
+    "enabled": true,
+    "tags": ["medium", "accounts"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:account_creation_count",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "⚠️ WARNING: Creating 3+ accounts - will cost ~0.006+ SOL in rent"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-complexity-unknown",
+    "name": "Block Complex Unknown Programs",
+    "description": "Blocks complex transactions with multiple unknown programs",
+    "enabled": true,
+    "tags": ["high", "complexity", "obfuscation"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "complexity:non_core_program_count", "operator": "greater_than", "value": 2},
+          {"field": "complexity:complexity_score", "operator": "greater_than", "value": 70}
+        ]
+      },
+      "message": "🚨 BLOCKED: Complex transaction with 3+ unknown programs - potential obfuscation"
+    },
+    "metadata": {
+      "attack_type": "obfuscation"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-high-complexity",
+    "name": "Alert on High Complexity",
+    "description": "Warns when complexity score exceeds threshold",
+    "enabled": true,
+    "tags": ["medium", "complexity"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:is_complex_transaction",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Complex transaction detected - review carefully before signing"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-account-confusion",
+    "name": "Alert on Potential Account Confusion",
+    "description": "Warns on many writable non-signer accounts (missing signer check vulnerability)",
+    "enabled": true,
+    "tags": ["high", "account-confusion", "signer-check"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:potential_authority_mismatch",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Many writable accounts without signatures - potential missing signer check vulnerability"
+    },
+    "metadata": {
+      "vulnerability": "missing_signer_check",
+      "reference": "Wormhole exploit 2022"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-dangerous-instruction-combo",
+    "name": "Block Dangerous Instruction Combinations",
+    "description": "Blocks suspicious instruction combinations detected by analyzer",
+    "enabled": true,
+    "tags": ["critical", "combo-attack"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:dangerous_operation_combo",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Dangerous instruction combination detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-blocked-programs",
+    "name": "Block Known Malicious Programs",
+    "description": "Blocks transactions involving programs on blocklist",
+    "enabled": true,
+    "tags": ["critical", "blocklist"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Transaction involves known malicious program"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-critical-risk-score",
+    "name": "Block Critical Risk Transactions",
+    "description": "Blocks transactions with risk score >= 90",
+    "enabled": true,
+    "tags": ["critical", "risk-score"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 90
+      },
+      "message": "🚨 BLOCKED: Critical risk score (>= 90) - multiple suspicious indicators"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-authority-changes",
+    "name": "Alert on Authority Changes",
+    "description": "Warns when transaction modifies token/account authority",
+    "enabled": true,
+    "tags": ["medium", "authority"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_set_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Authority change detected - ownership will be modified"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-drift-nonce-custom-program-outflow",
+    "name": "Block Drift-Style: Durable Nonce + Custom Program + Outflow",
+    "description": "Blocks durable nonce transactions targeting a non-core custom program that also contain fund outflows in the same transaction. Low false positive rate - this combination is rare in legitimate use.",
+    "enabled": true,
+    "tags": ["critical", "drift", "durable-nonce", "custom-program", "outflow"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          { "field": "system:uses_durable_nonce", "operator": "equals", "value": true },
+          { "field": "complexity:non_core_program_count", "operator": "greater_than", "value": 0 },
+          {
+            "any": [
+              { "field": "system:has_sol_transfer", "operator": "equals", "value": true },
+              { "field": "token_instructions:has_transfer", "operator": "equals", "value": true }
+            ]
+          }
+        ]
+      },
+      "message": "BLOCKED: Durable nonce + custom program + fund outflow - Drift-style combined exploit pattern detected"
+    },
+    "metadata": {
+      "attack_type": "drift_exploit_with_drain",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "false_positive_rate": 0.005
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-drift-nonce-custom-program",
+    "name": "Alert: Durable Nonce Targeting Custom Program",
+    "description": "Alerts on any durable nonce transaction targeting a non-core custom program. Catches the Drift attack pre-signing step (admin takeover tx had no outflow). Will fire on legitimate multisig/governance workflows - operators should review and allowlist known-safe programs. Weight 60 contributes toward the blocking threshold.",
+    "enabled": true,
+    "tags": ["high", "drift", "durable-nonce", "custom-program"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          { "field": "system:uses_durable_nonce", "operator": "equals", "value": true },
+          { "field": "complexity:non_core_program_count", "operator": "greater_than", "value": 0 }
+        ]
+      },
+      "message": "ALERT: Durable nonce transaction targeting non-core custom program - review for Drift-style pre-signed exploit (allowlist known-safe programs to suppress)"
+    },
+    "metadata": {
+      "attack_type": "drift_presign",
+      "severity": "high",
+      "weight": 60
+    }
+  }
+]

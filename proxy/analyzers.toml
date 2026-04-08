@@ -1,0 +1,58 @@
+# Analyzer Configuration
+# Enable/disable analyzers without rebuilding the proxy
+# Set enabled = false to disable an analyzer
+
+[analyzers.basic]
+enabled = true
+description = "Basic transaction analysis (size, accounts, instructions)"
+
+[analyzers.core_security]
+enabled = true
+description = "Core security checks (unlimited delegations, blocked programs)"
+
+[analyzers.token_instructions]
+enabled = true
+description = "SPL Token instruction analysis"
+
+[analyzers.system_program]
+enabled = true
+description = "System Program instruction analysis"
+
+[analyzers.program_complexity]
+enabled = true
+description = "Program complexity and risk scoring"
+
+[analyzers.transaction_logs]
+enabled = true
+description = "Transaction log analysis"
+
+[analyzers.instruction_data]
+enabled = true
+description = "Instruction discriminator fingerprinting"
+
+[analyzers.instruction_padding]
+enabled = true
+description = "Instruction padding attack detection"
+
+[analyzers.helius_identity]
+enabled = true
+description = "Helius program identity and reputation"
+requires_api_key = "HELIUS_API_KEY"
+
+[analyzers.ottersec_verified]
+enabled = true
+description = "OtterSec cryptographic verification"
+
+[analyzers.jupiter_token]
+enabled = false  # Disabled by default - requires feature flag
+description = "Jupiter token safety verification"
+requires_feature = "jupiter"
+
+[analyzers.token_mint]
+enabled = false  # Disabled by default - requires feature flag
+description = "Token mint metadata analysis"
+requires_feature = "token-mint"
+
+[analyzers.rugcheck]
+enabled = false  # Disabled by default - external API
+description = "Rugcheck scam detection"

@@ -1,0 +1,158 @@
+{
+  "name": "instruction-padding-protection",
+  "description": "Detects and blocks instruction padding attacks where malicious actors add excessive trailing bytes to bypass security checks. Uses statistical anomaly detection to minimize false positives while catching padding-based exploits.",
+  "version": "1.0.0",
+  "rules": [
+    {
+      "id": "padding-critical-excessive",
+      "name": "Critical: Excessive Instruction Padding",
+      "action": "block",
+      "risk_level": "critical",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "greater_than",
+            "value": 512
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction contains excessive padding ({{padding:max_padding_bytes}} bytes). This pattern is commonly used in padding attacks to bypass security checks.",
+      "metadata": {
+        "category": "instruction_padding_attack",
+        "severity": "critical",
+        "attack_vector": "instruction_data_manipulation"
+      }
+    },
+    {
+      "id": "padding-high-repeated-pattern",
+      "name": "High: Repeated Padding Pattern Detected",
+      "action": "block",
+      "risk_level": "high",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:has_repeated_padding",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction contains repeated padding pattern (e.g., 0x00 or 0xFF bytes). This suggests a malicious attempt to hide or obfuscate instruction data.",
+      "metadata": {
+        "category": "instruction_padding_attack",
+        "severity": "high",
+        "attack_vector": "data_obfuscation"
+      }
+    },
+    {
+      "id": "padding-high-ratio",
+      "name": "High: Suspicious Padding Ratio",
+      "action": "block",
+      "risk_level": "high",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_ratio",
+            "operator": "greater_than",
+            "value": 10.0
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction padding ratio ({{padding:max_padding_ratio}}x) exceeds safe threshold. The instruction data is significantly larger than expected for its type.",
+      "metadata": {
+        "category": "instruction_padding_attack",
+        "severity": "high",
+        "attack_vector": "size_anomaly"
+      }
+    },
+    {
+      "id": "padding-medium-multiple-suspicious",
+      "name": "Medium: Multiple Instructions with Suspicious Padding",
+      "action": "alert",
+      "risk_level": "medium",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:suspicious_instruction_count",
+            "operator": "greater_than",
+            "value": 1
+          }
+        ]
+      },
+      "message": "Warning: Transaction contains {{padding:suspicious_instruction_count}} instructions with suspicious padding. Review the transaction details carefully before proceeding.",
+      "metadata": {
+        "category": "instruction_padding_attack",
+        "severity": "medium",
+        "attack_vector": "multiple_anomalies"
+      }
+    },
+    {
+      "id": "padding-low-single-moderate",
+      "name": "Low: Single Instruction with Moderate Padding",
+      "action": "alert",
+      "risk_level": "low",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "greater_than",
+            "value": 256
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "less_than_or_equal",
+            "value": 512
+          }
+        ]
+      },
+      "message": "Advisory: Instruction contains moderate padding ({{padding:max_padding_bytes}} bytes). This may be legitimate (e.g., Token-2022 extensions) but warrants review.",
+      "metadata": {
+        "category": "instruction_padding_attack",
+        "severity": "low",
+        "attack_vector": "size_anomaly"
+      }
+    }
+  ],
+  "analyzers_required": [
+    "padding"
+  ],
+  "notes": [
+    "This ruleset protects against instruction padding attacks while minimizing false positives.",
+    "Token-2022 extensions are allowed up to 512 bytes of additional data.",
+    "Anchor instructions are allowed up to 512 bytes total size.",
+    "Repeated byte patterns (0x00, 0xFF) are flagged as highly suspicious.",
+    "Padding ratio checks catch attacks that add proportionally excessive data."
+  ],
+  "false_positive_mitigation": [
+    "Token-2022 extensions (TransferFee, Metadata, etc.) are explicitly allowed",
+    "Reasonable buffers are provided for legitimate variability",
+    "Statistical thresholds are based on real-world transaction patterns",
+    "Only extreme anomalies trigger blocks; moderate cases trigger warnings"
+  ],
+  "references": [
+    "https://github.com/solana-labs/solana/issues/33786",
+    "https://exvul.com/blog/anchor-one-byte-discriminator-event-dispatch",
+    "https://github.com/solana-program/instruction-padding"
+  ]
+}

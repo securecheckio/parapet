@@ -1,0 +1,12 @@
+# Configuration files with API keys
+config.toml
+.env
+.env.local
+
+# Build artifacts
+target/
+*.rdb
+
+# Test output
+test-results/
+*.log

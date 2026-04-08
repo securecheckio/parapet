@@ -1,0 +1,123 @@
+#cloud-config
+
+package_update: true
+package_upgrade: true
+
+runcmd:
+  # Ensure Docker is running
+  - systemctl start docker
+  - systemctl enable docker
+  
+  # Create directory for configuration
+  - mkdir -p /opt/parapet
+  
+  # Create .env file
+  - |
+    cat > /opt/parapet/.env <<EOF
+    UPSTREAM_RPC_URL=${upstream_rpc_url}
+    PROXY_PORT=${proxy_port}
+    ENABLE_RATE_LIMITING=${enable_rate_limiting}
+    DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
+    ALLOWED_WALLETS=${allowlisted_wallets}
+    RUST_LOG=info,sol_shield_proxy=debug
+    EOF
+  
+  # Pull latest Docker image from GitHub Container Registry
+  - docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  
+  # Create systemd service for Docker container
+  - |
+    cat > /etc/systemd/system/parapet.service <<EOF
+    [Unit]
+    Description=Parapet RPC Proxy (Docker)
+    After=docker.service
+    Requires=docker.service
+    
+    [Service]
+    Type=simple
+    Restart=always
+    RestartSec=10
+    ExecStartPre=-/usr/bin/docker stop parapet-rpc-proxy
+    ExecStartPre=-/usr/bin/docker rm parapet-rpc-proxy
+    ExecStart=/usr/bin/docker run --name parapet-rpc-proxy \\
+      --env-file /opt/parapet/.env \\
+      -p ${proxy_port}:${proxy_port} \\
+      --restart unless-stopped \\
+      ghcr.io/securecheckio/parapet-rpc-proxy:latest
+    ExecStop=/usr/bin/docker stop parapet-rpc-proxy
+    
+    [Install]
+    WantedBy=multi-user.target
+    EOF
+  
+  # Enable and start service
+  - systemctl daemon-reload
+  - systemctl enable parapet
+  - systemctl start parapet
+  
+  # Setup log rotation
+  - |
+    cat > /etc/logrotate.d/parapet <<EOF
+    /var/log/parapet/*.log {
+        daily
+        missingok
+        rotate 7
+        compress
+        delaycompress
+        notifempty
+        create 0644 root root
+    }
+    EOF
+  
+  %{~ if enable_https ~}
+  # Install Caddy for automatic HTTPS
+  - apt install -y debian-keyring debian-archive-keyring apt-transport-https curl
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' | gpg --dearmor -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
+  - curl -1sLf 'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' | tee /etc/apt/sources.list.d/caddy-stable.list
+  - apt update
+  - apt install -y caddy
+  
+  # Configure Caddy with automatic Let's Encrypt and IP restrictions
+  - |
+    cat > /etc/caddy/Caddyfile <<EOF
+    ${domain_name} {
+        # IP allowlist for RPC access
+        @allowed_ips {
+            remote_ip ${https_allowed_ips}
+        }
+        
+        handle @allowed_ips {
+            reverse_proxy localhost:${proxy_port}
+            
+            # CORS headers for RPC access
+            header {
+                Access-Control-Allow-Origin *
+                Access-Control-Allow-Methods "GET, POST, OPTIONS"
+                Access-Control-Allow-Headers "Content-Type"
+            }
+        }
+        
+        handle {
+            respond "Access denied from your IP address" 403
+        }
+        
+        # Let's Encrypt email
+        tls ${email}
+    }
+    EOF
+  
+  # Start Caddy
+  - systemctl enable caddy
+  - systemctl restart caddy
+  
+  # Wait for Let's Encrypt certificate
+  - sleep 10
+  %{~ endif ~}
+
+write_files:
+  - path: /root/.profile
+    append: true
+    content: |
+      export PATH="$HOME/.cargo/bin:$PATH"
+
+final_message: "Parapet deployment complete! RPC endpoint: %{~ if enable_https ~}https://${domain_name}%{~ else ~}http://$(curl -s ifconfig.me):${proxy_port}%{~ endif ~}"
