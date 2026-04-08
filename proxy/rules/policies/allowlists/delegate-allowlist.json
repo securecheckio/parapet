@@ -1,0 +1,133 @@
+[
+  {
+    "version": "1.0",
+    "id": "allow-jupiter-delegate",
+    "name": "Allow Delegation to Jupiter",
+    "description": "Allow token approvals specifically to Jupiter aggregator",
+    "enabled": true,
+    "tags": ["allowlist", "delegation", "jupiter"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_approve", "operator": "equals", "value": true},
+          {"field": "token_instructions:delegate_addresses", "operator": "contains", "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"}
+        ]
+      },
+      "message": "✅ ALLOWED: Delegation to Jupiter v6"
+    },
+    "metadata": {
+      "program": "Jupiter v6",
+      "program_id": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-raydium-delegate",
+    "name": "Allow Delegation to Raydium",
+    "description": "Allow token approvals specifically to Raydium AMM",
+    "enabled": true,
+    "tags": ["allowlist", "delegation", "raydium"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_approve", "operator": "equals", "value": true},
+          {"field": "token_instructions:delegate_addresses", "operator": "contains", "value": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"}
+        ]
+      },
+      "message": "✅ ALLOWED: Delegation to Raydium AMM"
+    },
+    "metadata": {
+      "program": "Raydium AMM",
+      "program_id": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-orca-delegate",
+    "name": "Allow Delegation to Orca",
+    "description": "Allow token approvals specifically to Orca Whirlpool",
+    "enabled": true,
+    "tags": ["allowlist", "delegation", "orca"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_approve", "operator": "equals", "value": true},
+          {"field": "token_instructions:delegate_addresses", "operator": "contains", "value": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"}
+        ]
+      },
+      "message": "✅ ALLOWED: Delegation to Orca Whirlpool"
+    },
+    "metadata": {
+      "program": "Orca Whirlpool",
+      "program_id": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-delegation-to-unknown",
+    "name": "Block Delegation to Non-Allowlisted",
+    "description": "Block any delegation that isn't to an explicitly allowed address",
+    "enabled": false,
+    "tags": ["allowlist", "delegation", "strict"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_approve", "operator": "equals", "value": true},
+          {
+            "not": {
+              "field": "token_instructions:delegate_addresses",
+              "operator": "in",
+              "value": [
+                "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+                "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+              ]
+            }
+          }
+        ]
+      },
+      "message": "🚨 BLOCKED: Delegation to non-allowlisted address"
+    },
+    "metadata": {
+      "note": "Enable for strict allowlist mode. Add your trusted delegate addresses to the value array."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-delegation-to-new-address",
+    "name": "Alert on Any Delegation",
+    "description": "Warn whenever delegation happens (even to known addresses)",
+    "enabled": true,
+    "tags": ["alert", "delegation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_approve",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Token delegation detected - review delegate address carefully"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-unlimited-to-any",
+    "name": "Block Unlimited Delegations",
+    "description": "Block unlimited approvals regardless of delegate",
+    "enabled": true,
+    "tags": ["critical", "delegation"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Unlimited delegation (u64::MAX) detected"
+    }
+  }
+]

@@ -1,0 +1,90 @@
+[
+  {
+    "version": "1.0",
+    "id": "rpc-perf-block-large-sol-transfer",
+    "name": "Block Large SOL Transfer",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
+      },
+      "message": "rpc-perf: block (SOL transfer > 5 SOL)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "rpc-perf-block-unlimited-approve",
+    "name": "Block Unlimited Token Delegation",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "rpc-perf: block (unlimited SPL approve)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "rpc-perf-block-freeze-combo",
+    "name": "Block Freeze + Approval Combo",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_freeze", "operator": "equals", "value": true},
+          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0}
+        ]
+      },
+      "message": "rpc-perf: block (freeze + approve combo)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "rpc-perf-alert-memo",
+    "name": "Alert on Memo Program",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "metadata": { "weight": 20 },
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "program_ids",
+        "operator": "contains",
+        "value": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+      },
+      "message": "rpc-perf: alert (memo ix present)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "rpc-perf-pass-revoke-only",
+    "name": "Pass Revoke-Only Transactions",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "token_instructions:has_revoke", "operator": "equals", "value": true},
+          {"field": "token_instructions:approve_count", "operator": "equals", "value": 0}
+        ]
+      },
+      "message": "rpc-perf: pass (revoke-only)"
+    }
+  }
+]

@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # Parapet API with MCP server
+  parapet-api:
+    build:
+      context: ../..
+      dockerfile: deployment/docker/Dockerfile.api
+    ports:
+      - "3001:3001"
+    environment:
+      # Redis configuration
+      - REDIS_URL=redis://redis:6379
+      
+      # Solana RPC
+      - SOLANA_RPC_URL=${SOLANA_RPC_URL:-https://api.mainnet-beta.solana.com}
+      
+      # Authorized wallets for rule management (comma-separated)
+      - AUTHORIZED_WALLETS=${AUTHORIZED_WALLETS:-}
+      
+      # MCP API Keys (comma-separated for multiple keys)
+      - MCP_API_KEYS=${MCP_API_KEYS}
+      
+      # External API Keys for Analyzers
+      - HELIUS_API_KEY=${HELIUS_API_KEY:-}
+      - JUPITER_API_KEY=${JUPITER_API_KEY:-}
+      - OTTERSEC_API_KEY=${OTTERSEC_API_KEY:-}
+      # Note: Rugcheck is FREE and requires no API key
+      
+      # MCP Rate Limiting (CRITICAL for avoiding 429 errors)
+      - MCP_MAX_CONCURRENT_SCANS=${MCP_MAX_CONCURRENT_SCANS:-2}
+      - MCP_SCANS_PER_HOUR_PER_KEY=${MCP_SCANS_PER_HOUR_PER_KEY:-10}
+      
+      # Per-Analyzer Rate Limits (Override defaults)
+      # CRITICAL: Rugcheck API limit is 15/min, we use 10/min for 33% safety buffer
+      - RUGCHECK_RATE_LIMIT=${RUGCHECK_RATE_LIMIT:-10/60}
+      - HELIUS_RATE_LIMIT=${HELIUS_RATE_LIMIT:-20/60}
+      - JUPITER_RATE_LIMIT=${JUPITER_RATE_LIMIT:-60/60}
+      - OTTERSEC_RATE_LIMIT=${OTTERSEC_RATE_LIMIT:-30/60}
+      
+      # Rules path
+      - RULES_PATH=/app/rules/presets/wallet-scan-enhanced.json
+      
+      # Logging
+      - RUST_LOG=${RUST_LOG:-info,sol_shield=debug}
+    
+    volumes:
+      # Mount rules directory
+      - ../../proxy/rules:/app/rules:ro
+    
+    depends_on:
+      - redis
+    
+    restart: unless-stopped
+    
+    networks:
+      - parapet-network
+
+  # Redis for caching and state management
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    restart: unless-stopped
+    networks:
+      - parapet-network
+
+networks:
+  parapet-network:
+    driver: bridge
+
+volumes:
+  redis-data:

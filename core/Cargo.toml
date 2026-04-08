@@ -1,0 +1,74 @@
+[package]
+name = "parapet-core"
+version = "0.1.0"
+edition = "2021"
+authors = ["SecureCheck Team"]
+description = "Fast transaction security analysis engine for Solana"
+license = "MIT"
+repository = "https://github.com/securecheckio/parapet"
+keywords = ["solana", "security", "blockchain", "drain-detection"]
+categories = ["cryptography::cryptocurrencies"]
+
+[lib]
+name = "parapet_core"
+path = "src/lib.rs"
+
+[dependencies]
+# Solana
+solana-sdk = "2.3"
+solana-system-interface = "1.0"
+solana-client = { version = "2.3", optional = true }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+borsh = "0.10"
+toml = "0.8"
+
+# Utility
+anyhow = "1.0"
+thiserror = "1.0"
+log = "0.4"
+bs58 = "0.5"
+bincode = "1.3"
+sha2 = "0.10"
+regex = "1.10"
+
+# Async support
+async-trait = "0.1"
+futures = "0.3"
+tokio = { version = "1.0", features = ["rt", "macros", "sync", "time"] }
+redis = { version = "0.27", features = ["tokio-comp", "aio", "connection-manager"], optional = true }
+
+# Optional dependencies for external analyzers
+reqwest = { version = "0.11", features = ["json", "blocking"], optional = true }
+chrono = { version = "0.4", features = ["serde"], optional = true }
+
+# WASM runtime for dynamic analyzers
+wasmtime = { version = "25", optional = true }
+
+# Program analysis dependencies
+goblin = { version = "0.8", optional = true }
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["rt", "macros"] }
+serial_test = "3.0"
+criterion = "0.5"
+
+[[bench]]
+name = "flowbits_performance"
+harness = false
+
+[features]
+default = []
+# Declared for `check-cfg` / `unexpected_cfgs` (see `rules/dynamic.rs`).
+dynamic-rules = ["redis"]
+helius = ["reqwest", "chrono"]
+ottersec = ["reqwest"]
+jupiter = ["reqwest", "chrono"]
+rugcheck = ["reqwest"]
+token-mint = ["solana-client"]
+wasm-analyzers = ["wasmtime"]
+program-analysis = ["solana-client", "goblin", "chrono"]
+ai-analysis = ["program-analysis", "reqwest", "chrono"]
+all-analyzers = ["helius", "ottersec", "token-mint", "jupiter", "rugcheck"]

@@ -1,0 +1,117 @@
+// WASM Analyzer Template
+// Compile with: cargo build --target wasm32-unknown-unknown --release
+// This creates a .wasm file that can be loaded by sol-shield
+//
+// Config Access:
+//   Set: WASM_CONFIG_YOUR_KEY=value  (on host)
+//   Read: get_config_value("YOUR_KEY")  (in WASM)
+//
+// Only env vars with WASM_CONFIG_ prefix are exposed to WASM
+
+use std::collections::HashMap;
+
+// Host function to get config values (provided by sol-shield)
+#[link(wasm_import_module = "env")]
+extern "C" {
+    fn get_config(key_ptr: *const u8, key_len: i32, value_ptr: *mut u8) -> i32;
+}
+
+// Helper to safely call get_config
+fn get_config_value(key: &str) -> Option<String> {
+    let mut buffer = vec![0u8; 512]; // Max config value size
+    let value_len = unsafe {
+        get_config(key.as_ptr(), key.len() as i32, buffer.as_mut_ptr())
+    };
+    
+    if value_len > 0 {
+        buffer.truncate(value_len as usize);
+        String::from_utf8(buffer).ok()
+    } else {
+        None
+    }
+}
+
+// Memory allocator for WASM
+#[no_mangle]
+pub extern "C" fn allocate(size: i32) -> *mut u8 {
+    let mut buf = Vec::with_capacity(size as usize);
+    let ptr = buf.as_mut_ptr();
+    std::mem::forget(buf);
+    ptr
+}
+
+// Return the list of fields this analyzer provides
+#[no_mangle]
+pub extern "C" fn get_fields() -> i64 {
+    let fields = vec![
+        "custom_field_1".to_string(),
+        "custom_field_2".to_string(),
+        "risk_indicator".to_string(),
+    ];
+    
+    let json = serde_json::to_string(&fields).unwrap();
+    let bytes = json.into_bytes();
+    let len = bytes.len() as i32;
+    let ptr = bytes.as_ptr() as i32;
+    std::mem::forget(bytes);
+    
+    // Pack ptr and len into i64 (ptr in high 32 bits, len in low 32 bits)
+    ((ptr as i64) << 32) | (len as i64 & 0xFFFFFFFF)
+}
+
+// Return estimated latency in milliseconds
+#[no_mangle]
+pub extern "C" fn get_estimated_latency_ms() -> i64 {
+    5 // This analyzer takes ~5ms
+}
+
+// Analyze a transaction and return field values as JSON
+#[no_mangle]
+pub extern "C" fn analyze(tx_ptr: i32, tx_len: i32) -> i64 {
+    // Read transaction bytes from memory
+    let tx_bytes = unsafe {
+        std::slice::from_raw_parts(tx_ptr as *const u8, tx_len as usize)
+    };
+    
+    // Example: Access config values passed from host
+    // Host sets: WASM_CONFIG_HELIUS_API_KEY=abc123
+    // WASM reads: get_config_value("HELIUS_API_KEY")
+    let api_key = get_config_value("HELIUS_API_KEY");
+    let rpc_url = get_config_value("RPC_URL");
+    let has_config = api_key.is_some() || rpc_url.is_some();
+    
+    // Deserialize transaction (simplified - in real implementation, parse properly)
+    // For this template, we'll just create dummy results
+    let mut fields = HashMap::new();
+    
+    // Use config if available
+    fields.insert("has_config".to_string(), serde_json::json!(has_config));
+    
+    // Example: Check transaction size
+    let tx_size = tx_bytes.len();
+    fields.insert("custom_field_1".to_string(), serde_json::json!(tx_size));
+    
+    // Example: Simple pattern detection
+    let has_pattern = tx_bytes.contains(&0xFF);
+    fields.insert("custom_field_2".to_string(), serde_json::json!(has_pattern));
+    
+    // Example: Risk indicator based on size
+    let risk_indicator = if tx_size > 1000 { "high" } else { "low" };
+    fields.insert("risk_indicator".to_string(), serde_json::json!(risk_indicator));
+    
+    // Serialize result to JSON
+    let result_json = serde_json::to_string(&fields).unwrap();
+    let result_bytes = result_json.into_bytes();
+    let result_len = result_bytes.len() as i32;
+    let result_ptr = result_bytes.as_ptr() as i32;
+    std::mem::forget(result_bytes);
+    
+    // Pack ptr and len into i64 (ptr in high 32 bits, len in low 32 bits)
+    ((result_ptr as i64) << 32) | (result_len as i64 & 0xFFFFFFFF)
+}
+
+// Note: In a real WASM analyzer, you would:
+// 1. Properly deserialize the Solana transaction
+// 2. Implement your custom analysis logic
+// 3. Return meaningful field values
+// 4. Handle errors gracefully

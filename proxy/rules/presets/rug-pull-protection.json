@@ -1,0 +1,450 @@
+[
+  {
+    "version": "1.0",
+    "id": "jupiter-confirmed-suspicious",
+    "name": "Block Confirmed Suspicious Tokens",
+    "description": "Blocks tokens flagged as suspicious by Jupiter's analysis",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "rug-pull",
+      "jupiter"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:is_sus",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Token flagged as suspicious by Jupiter analysis"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100,
+      "based_on": "SolRugDetector research paper",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-critical-rug-pull",
+    "name": "Block Active Rug Pulls",
+    "description": "Blocks tokens showing critical rug pull indicators (holder exodus or liquidity drain)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "rug-pull",
+      "jupiter"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:has_critical_risk",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Active rug pull detected - massive holder exodus or liquidity drain in progress"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100,
+      "detection_types": [
+        "Type 2: Liquidity Withdrawal",
+        "Type 3: Pump-and-Dump"
+      ],
+      "paper_finding": "15,606 liquidity withdrawal + 60,402 pump-and-dump = 99% of rug pulls",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-holder-exodus",
+    "name": "Block on Massive Holder Exodus",
+    "description": "Blocks when 70%+ holders exit in 24h (pump-and-dump indicator)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "rug-pull",
+      "pump-and-dump"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:holder_change_24h",
+        "operator": "less_than",
+        "value": -70
+      },
+      "message": "\ud83d\udea8 BLOCKED: Massive holder exodus detected (-70%+ in 24h) - likely pump-and-dump"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 95,
+      "paper_threshold": "-73% holder decline indicates pump-and-dump",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-liquidity-drain",
+    "name": "Block on Liquidity Drainage",
+    "description": "Blocks when 80%+ liquidity removed in 24h (rug pull execution)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "rug-pull",
+      "liquidity"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:liquidity_change_24h",
+        "operator": "less_than",
+        "value": -80
+      },
+      "message": "\ud83d\udea8 BLOCKED: Liquidity drained (-80%+ in 24h) - rug pull in progress"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 95,
+      "detection_type": "Type 2: Liquidity Withdrawal",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-freeze-authority",
+    "name": "Block Tokens with Freeze Authority",
+    "description": "Blocks tokens that retain freeze authority (Type 1 rug pull)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "high",
+      "rug-pull",
+      "freeze-authority"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:freeze_authority_disabled",
+        "operator": "equals",
+        "value": false
+      },
+      "message": "\ud83d\udea8 BLOCKED: Token has freeze authority - can freeze your account at any time"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 90,
+      "detection_type": "Type 1: Freeze Authority Abuse",
+      "paper_finding": "461 freeze authority rug pulls detected",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-extreme-concentration",
+    "name": "Block Extreme Token Concentration",
+    "description": "Blocks tokens where top holders own >70% (centralized control)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "high",
+      "rug-pull",
+      "concentration"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:top_holders_percentage",
+        "operator": "greater_than",
+        "value": 70
+      },
+      "message": "\ud83d\udea8 BLOCKED: Extreme token concentration - top holders own >70% of supply"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 85,
+      "paper_finding": "Rug pulls show 34.8% top-10 concentration vs 30.4% legitimate",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-multiple-red-flags",
+    "name": "Block Multiple Rug Pull Indicators",
+    "description": "Blocks tokens with 3+ rug pull risk indicators",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "high",
+      "rug-pull",
+      "composite"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "jupiter:rug_pull_indicators",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "\ud83d\udea8 BLOCKED: Multiple rug pull indicators detected (3+ red flags)"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 90,
+      "indicators": [
+        "Freeze authority retained",
+        "High concentration (>50%)",
+        "Low organic score",
+        "Very new token (<24h)"
+      ],
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-high-concentration-warning",
+    "name": "Warn on High Concentration",
+    "description": "Alerts when top holders own >50% of supply",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "rug-pull",
+      "concentration"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "jupiter:top_holders_percentage",
+        "operator": "greater_than",
+        "value": 50
+      },
+      "message": "\u26a0\ufe0f WARNING: High token concentration - top holders own >50% of supply"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 50,
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-dev-concentration-warning",
+    "name": "Warn on High Dev Holdings",
+    "description": "Alerts when developer holds >30% of supply",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "rug-pull",
+      "concentration"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "jupiter:dev_balance_percentage",
+        "operator": "greater_than",
+        "value": 30
+      },
+      "message": "\u26a0\ufe0f WARNING: Developer holds >30% of token supply"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 50,
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-low-organic-score",
+    "name": "Warn on Low Organic Trading",
+    "description": "Alerts when token shows low organic trading activity (possible wash trading)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "rug-pull",
+      "wash-trading"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "jupiter:organic_score_label",
+        "operator": "equals",
+        "value": "low"
+      },
+      "message": "\u26a0\ufe0f WARNING: Low organic trading score - possible wash trading detected"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 45,
+      "note": "Wash trading is common in pump-and-dump schemes",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-very-new-token",
+    "name": "Caution on Very New Tokens",
+    "description": "Alerts on tokens less than 24 hours old (highest risk period)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "info",
+      "rug-pull",
+      "new-token"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "jupiter:is_very_new",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f CAUTION: Token less than 24 hours old - highest risk period for rug pulls"
+    },
+    "metadata": {
+      "severity": "low",
+      "weight": 30,
+      "paper_finding": "Median rug pull lifecycle = 0.0116 days (17 minutes)",
+      "note": "95.69% of rug pull activity occurs on day 1",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-few-organic-buyers",
+    "name": "Warn on Low Organic Buyer Count",
+    "description": "Alerts when token has very few organic buyers despite activity",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "rug-pull",
+      "wash-trading"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "jupiter:num_organic_buyers_24h",
+            "operator": "less_than",
+            "value": 10
+          },
+          {
+            "field": "jupiter:holder_count",
+            "operator": "greater_than",
+            "value": 20
+          }
+        ]
+      },
+      "message": "\u26a0\ufe0f WARNING: Very few organic buyers despite activity - possible coordinated manipulation"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 55,
+      "note": "Research shows organized syndicates create fake holder activity",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-low-holder-count",
+    "name": "Warn on Very Low Holder Count",
+    "description": "Alerts when token has suspiciously few holders",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "info",
+      "rug-pull"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "jupiter:holder_count",
+        "operator": "less_than",
+        "value": 10
+      },
+      "message": "\u26a0\ufe0f WARNING: Token has very few holders (median rug pull = 9 holders)"
+    },
+    "metadata": {
+      "severity": "low",
+      "weight": 25,
+      "paper_finding": "Rug pulls have median 9 holders vs 41,026 for legitimate tokens",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "jupiter-verified-bypass",
+    "name": "Allow Verified High-Quality Tokens",
+    "description": "Bypasses warnings for Jupiter-verified tokens with high organic score",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "verified"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "jupiter:is_verified",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "jupiter:organic_score_label",
+            "operator": "in",
+            "value": [
+              "high",
+              "medium"
+            ]
+          }
+        ]
+      },
+      "message": "\u2705 Verified token with good organic trading"
+    },
+    "metadata": {
+      "severity": "none",
+      "weight": 0,
+      "note": "This rule allows transactions to bypass other checks for trusted tokens",
+      "networks": [
+        "mainnet-beta"
+      ]
+    }
+  }
+]

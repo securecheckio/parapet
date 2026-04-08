@@ -1,0 +1,201 @@
+rule_id,rule_name,action,enabled,risk_count,risk_codes,file
+custom-allowlist-only,Allow Only Specific Programs,pass,False,2,"RISK-002,RISK-003",examples/custom-example.json
+test-block-delegation,Block Token Delegations,block,True,0,,examples/test-complete.json
+test-block-unlimited-delegation,Block Unlimited Delegations,block,True,0,,examples/test-complete.json
+test-block-authority-changes,Block Authority Changes,block,True,0,,examples/test-complete.json
+test-block-blocked-programs,Block Malicious Programs,block,True,0,,examples/test-complete.json
+test-block-high-risk,Block High Risk Transactions,block,True,0,,examples/test-complete.json
+test-block-excessive-signers,Block Excessive Signers,block,True,2,"RISK-002,RISK-003",examples/test-complete.json
+test-block-large-transfers,Block Large SOL Transfers,block,True,2,"RISK-002,RISK-003",examples/test-complete.json
+test-alert-many-writable,Alert on Many Writable Accounts,alert,True,2,"RISK-002,RISK-003",examples/test-complete.json
+example-auto-default,Auto - Smart Default (Recommended),alert,True,4,"RISK-005,RISK-007,RISK-044,RISK-045",examples/missing-field-examples.json
+example-fail-conservative,Fail - Conservative (Requires Data),alert,False,2,"RISK-044,RISK-045",examples/missing-field-examples.json
+example-pass-permissive,Pass - Permissive (Innocent Until Proven),block,False,3,"RISK-043,RISK-044,RISK-045",examples/missing-field-examples.json
+example-error-strict,Error - Strict Mode (Require Analyzer),block,False,0,,examples/missing-field-examples.json
+example-compound-conditions,Compound Conditions with Override,alert,False,3,"RISK-007,RISK-044,RISK-045",examples/missing-field-examples.json
+example-any-conditions,Any Conditions - Fallback Detection,alert,False,7,"RISK-007,RISK-044,RISK-045,RISK-047,RISK-048,RISK-051,RISK-052",examples/missing-field-examples.json
+allow-sol-to-treasury,Allow SOL to Treasury,pass,False,0,,policies/allowlists/recipient-allowlist.json
+block-sol-to-blacklist,Block SOL to Known Scam Addresses,block,True,0,,policies/allowlists/recipient-allowlist.json
+block-sol-to-unknown-large,Block Large SOL to Any Address,block,True,0,,policies/allowlists/recipient-allowlist.json
+alert-sol-transfer-any,Alert on All SOL Transfers,alert,True,0,,policies/allowlists/recipient-allowlist.json
+allow-jupiter-delegate,Allow Delegation to Jupiter,pass,True,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+allow-raydium-delegate,Allow Delegation to Raydium,pass,True,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+allow-orca-delegate,Allow Delegation to Orca,pass,True,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+block-delegation-to-unknown,Block Delegation to Non-Allowlisted,block,False,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+alert-delegation-to-new-address,Alert on Any Delegation,alert,True,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+block-unlimited-to-any,Block Unlimited Delegations,block,True,3,"RISK-008,RISK-010,RISK-013",policies/allowlists/delegate-allowlist.json
+allow-core-programs,Allow Core Solana Programs,pass,True,0,,policies/allowlists/program-allowlist.json
+allow-jupiter-v6,Allow Jupiter v6,pass,True,0,,policies/allowlists/program-allowlist.json
+allow-raydium,Allow Raydium AMM,pass,True,0,,policies/allowlists/program-allowlist.json
+allow-orca,Allow Orca Whirlpool,pass,True,0,,policies/allowlists/program-allowlist.json
+block-non-allowlisted,Block Non-Allowlisted Programs,block,False,0,,policies/allowlists/program-allowlist.json
+alert-non-core-programs,Alert on Non-Core Programs,alert,True,0,,policies/allowlists/program-allowlist.json
+allow-usdc-only,Allow USDC Transfers Only,block,False,1,RISK-013,policies/allowlists/token-mint-allowlist.json
+allow-stablecoins-only,Allow Stablecoins Only,block,False,1,RISK-013,policies/allowlists/token-mint-allowlist.json
+block-suspicious-mint,Block Known Scam Token Mints,block,True,1,RISK-013,policies/allowlists/token-mint-allowlist.json
+alert-multiple-mints,Alert on Multiple Token Types,alert,True,1,RISK-013,policies/allowlists/token-mint-allowlist.json
+prefer-transfer-checked,Prefer TransferChecked Instructions,alert,False,1,RISK-013,policies/allowlists/token-mint-allowlist.json
+block-malicious-programs,Block Known Malicious Programs,block,True,2,"RISK-002,RISK-003",policies/blocklists/program-blacklist.json
+allowlist-only,Allow Only Programs on Allowlist,block,False,2,"RISK-002,RISK-003",policies/blocklists/program-blacklist.json
+block-close-non-owned-account,Block Closing Non-Owned Accounts,block,True,1,RISK-013,policies/protections/ownership-protection.json
+block-transfer-from-non-owned,Block Transfers from Non-Owned Accounts,block,True,3,"RISK-008,RISK-010,RISK-013",policies/protections/ownership-protection.json
+block-authority-change-non-owned,Block Authority Changes on Non-Owned Accounts,block,True,3,"RISK-010,RISK-011,RISK-013",policies/protections/ownership-protection.json
+alert-approve-non-owned,Alert on Approving Non-Owned Tokens,alert,True,3,"RISK-008,RISK-010,RISK-013",policies/protections/ownership-protection.json
+block-multiple-non-owned-ops,Block Multiple Non-Owned Operations,block,True,1,RISK-013,policies/protections/ownership-protection.json
+block-deep-cpi-chains,Block Deep CPI Chains,block,True,3,"RISK-022,RISK-023,RISK-026",policies/protections/cpi-protection.json
+alert-deep-cpi-chains,Alert on Deep CPI Chains,alert,True,2,"RISK-023,RISK-026",policies/protections/cpi-protection.json
+block-unknown-cpi-programs,Block Unknown Programs in CPIs,block,False,3,"RISK-023,RISK-024,RISK-026",policies/protections/cpi-protection.json
+alert-unknown-cpi-programs,Alert on Unknown Programs in CPIs,alert,True,3,"RISK-023,RISK-024,RISK-026",policies/protections/cpi-protection.json
+block-high-cpi-risk,Block High CPI Risk Score,block,True,3,"RISK-023,RISK-025,RISK-026",policies/protections/cpi-protection.json
+alert-multiple-unknown-cpis,Alert on Multiple Unknown CPIs,alert,True,2,"RISK-023,RISK-026",policies/protections/cpi-protection.json
+block-authority-change-fingerprint,Block Authority Change Fingerprints,block,True,3,"RISK-027,RISK-029,RISK-030",policies/protections/instruction-data-protection.json
+alert-suspicious-instruction-pattern,Alert on Suspicious Instruction Patterns,alert,True,2,"RISK-029,RISK-030",policies/protections/instruction-data-protection.json
+alert-transaction-log-errors,Alert on Transaction Log Errors,alert,True,4,"RISK-031,RISK-032,RISK-033,RISK-034",policies/protections/instruction-data-protection.json
+block-multiple-suspicious-patterns,Block Multiple Suspicious Log Patterns,block,True,4,"RISK-031,RISK-032,RISK-033,RISK-034",policies/protections/instruction-data-protection.json
+max-trade-size,Maximum Trade Size,block,True,2,"RISK-002,RISK-003",policies/protections/spending-limits.json
+complex-transaction-warning,Complex Transaction Warning,alert,True,3,"RISK-001,RISK-002,RISK-003",policies/protections/spending-limits.json
+token2022-permanent-delegate-block,Block Permanent Delegate Tokens,block,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-transfer-hook-block,Block Transfer Hook Tokens,block,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-extreme-transfer-fee,Alert on Extreme Transfer Fees,alert,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-high-transfer-fee,Alert on High Transfer Fees,alert,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-default-frozen-state,Alert on Default Frozen Account State,alert,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-metadata-pointer-warning,Alert on Metadata Pointer,alert,True,0,,policies/protections/token-2022-extension-protection.json
+token2022-info-detection,Info: Token-2022 Detected,alert,False,0,,policies/protections/token-2022-extension-protection.json
+block-freezable-tokens,Block Tokens with Freeze Authority,block,False,4,"RISK-035,RISK-036,RISK-037,RISK-038",policies/protections/freeze-protection.json
+alert-freezable-tokens,Alert on Freezable Tokens,alert,True,4,"RISK-035,RISK-036,RISK-037,RISK-038",policies/protections/freeze-protection.json
+block-all-mints-freezable,Block if ALL Tokens Are Freezable,block,True,4,"RISK-035,RISK-036,RISK-037,RISK-038",policies/protections/freeze-protection.json
+block-freeze-authority-on-blocklist,Block if Freeze Authority is Known Scammer,block,True,4,"RISK-035,RISK-036,RISK-037,RISK-038",policies/protections/freeze-protection.json
+alert-multiple-risky-mints,Alert on Multiple Risky Tokens,alert,True,4,"RISK-035,RISK-036,RISK-037,RISK-038",policies/protections/freeze-protection.json
+require-ottersec-verification,Require OtterSec Verified Programs,block,True,0,,policies/protections/ottersec-verified-only.json
+warn-unverified-programs,Warn on Unverified Programs,alert,True,0,,policies/protections/ottersec-verified-only.json
+block-delegation-to-unverified,Block Delegations to Unverified Programs,block,True,2,"RISK-004,RISK-007",policies/protections/ottersec-verified-only.json
+require-verified-for-high-value,Require Verified Programs for High-Value Transactions,block,True,2,"RISK-002,RISK-003",policies/protections/ottersec-verified-only.json
+require-verified-for-critical-operations,Require Verification for Critical Operations,block,True,3,"RISK-004,RISK-005,RISK-007",policies/protections/ottersec-verified-only.json
+block-sol-balance-drain,Block Large SOL Balance Drain,block,True,0,,policies/protections/simulation-protection.json
+alert-sol-balance-decrease,Alert on SOL Balance Decrease,alert,True,0,,policies/protections/simulation-protection.json
+block-token-balance-drain,Block Token Balance Drain,block,True,0,,policies/protections/simulation-protection.json
+alert-token-balance-change,Alert on Token Balance Changes,alert,True,0,,policies/protections/simulation-protection.json
+block-high-compute-usage,Block Excessive Compute Usage,block,True,0,,policies/protections/simulation-protection.json
+alert-high-compute-usage,Alert on High Compute Usage,alert,True,0,,policies/protections/simulation-protection.json
+alert-intentional-failure,Alert on Intentional Simulation Failure,alert,True,0,,policies/protections/simulation-protection.json
+block-simulation-failure-with-drain,Block Simulation Failure with Balance Drain,block,True,0,,policies/protections/simulation-protection.json
+unlimited-delegation,Unlimited Delegation Alert,alert,True,2,"RISK-004,RISK-007",presets/bot-essentials.json
+blocked-programs,Known Malicious Program,block,True,2,"RISK-006,RISK-007",presets/bot-essentials.json
+critical-risk-score,Critical Risk Pattern Alert,alert,True,5,"RISK-007,RISK-047,RISK-048,RISK-051,RISK-052",presets/bot-essentials.json
+multiple-delegations,Multiple Delegations Alert,alert,True,2,"RISK-004,RISK-007",presets/bot-essentials.json
+authority-changes,Authority Changes Alert,alert,True,2,"RISK-005,RISK-007",presets/bot-essentials.json
+test-auto-behavior,Test: Auto Behavior (Smart Default),alert,True,4,"RISK-005,RISK-007,RISK-044,RISK-045",presets/test-missing-field-override.json
+test-fail-behavior,Test: Fail Behavior (Conservative),alert,True,4,"RISK-005,RISK-007,RISK-044,RISK-045",presets/test-missing-field-override.json
+test-pass-behavior,Test: Pass Behavior (Permissive),alert,True,3,"RISK-043,RISK-044,RISK-045",presets/test-missing-field-override.json
+unlimited-delegation,Block Unlimited Delegations,block,True,2,"RISK-004,RISK-007",presets/default-protection.json
+blocked-programs,Block Malicious Programs,block,True,2,"RISK-006,RISK-007",presets/default-protection.json
+critical-risk,Block Critical Risk,block,True,5,"RISK-007,RISK-047,RISK-048,RISK-051,RISK-052",presets/default-protection.json
+block-scammers,Block Known Scammer Addresses,block,True,3,"RISK-043,RISK-044,RISK-045",presets/anti-scam.json
+block-hackers,Block Known Hacker Addresses,block,True,2,"RISK-044,RISK-045",presets/anti-scam.json
+block-exploiters,Block Known Exploiter Addresses,block,True,2,"RISK-044,RISK-045",presets/anti-scam.json
+block-ruggers,Block Rug Pull Addresses,block,True,2,"RISK-044,RISK-045",presets/anti-scam.json
+alert-spam,Alert on Spam Addresses,alert,True,2,"RISK-044,RISK-045",presets/anti-scam.json
+warn-compromised-wallet,Warn if Signer Wallet is Flagged,alert,True,2,"RISK-044,RISK-045",presets/anti-scam.json
+block-all-malicious,Block All Known Malicious Categories,block,True,3,"RISK-043,RISK-044,RISK-045",presets/anti-scam.json
+block-unlimited-delegation,Block Unlimited Token Delegations,block,True,3,"RISK-008,RISK-010,RISK-013",presets/enhanced-security.json
+block-freeze-with-approval,Block Freeze + Approval Combo,block,True,4,"RISK-008,RISK-010,RISK-011,RISK-013",presets/enhanced-security.json
+block-burn-with-approval,Block Burn + Approval Combo,block,True,4,"RISK-008,RISK-010,RISK-012,RISK-013",presets/enhanced-security.json
+alert-any-burn,Alert on Token Burns,alert,True,2,"RISK-012,RISK-013",presets/enhanced-security.json
+alert-freeze-operation,Alert on Freeze Operations,alert,True,2,"RISK-010,RISK-013",presets/enhanced-security.json
+allow-revoke,Pass Revoke Operations,pass,True,3,"RISK-008,RISK-010,RISK-013",presets/enhanced-security.json
+block-net-delegation-increase,Block Net Delegation Increase,block,True,3,"RISK-008,RISK-010,RISK-013",presets/enhanced-security.json
+alert-mint-operation,Alert on Token Minting,alert,True,1,RISK-013,presets/enhanced-security.json
+block-large-sol-transfer,Block Large SOL Transfers,block,True,0,,presets/enhanced-security.json
+alert-sol-transfer,Alert on SOL Transfers,alert,True,0,,presets/enhanced-security.json
+block-account-spam,Block Account Creation Spam,block,True,0,,presets/enhanced-security.json
+alert-account-creation,Alert on Account Creation,alert,True,0,,presets/enhanced-security.json
+block-complex-non-core,Block Complex Non-Core Programs,block,True,0,,presets/enhanced-security.json
+alert-high-complexity,Alert on High Complexity,alert,True,0,,presets/enhanced-security.json
+alert-writable-non-signer,Alert on Writable Non-Signers,alert,True,0,,presets/enhanced-security.json
+block-dangerous-combo,Block Dangerous Operation Combinations,block,True,1,RISK-013,presets/enhanced-security.json
+block-blocked-programs,Block Known Malicious Programs,block,True,0,,presets/enhanced-security.json
+mainnet-usdc-large-transfer,Mainnet USDC Large Transfer,alert,True,1,RISK-013,presets/mainnet-usdc-example.json
+devnet-usdc-test,Devnet USDC Test Alert,alert,True,1,RISK-013,presets/mainnet-usdc-example.json
+critical-security-all-networks,Critical Security - All Networks,block,True,2,"RISK-004,RISK-007",presets/mainnet-usdc-example.json
+block-large-sol-transfer,Large SOL Transfer Block,block,True,0,,presets/demo-alerts.json
+alert-medium-sol-transfer,Medium SOL Transfer Alert,alert,True,0,,presets/demo-alerts.json
+alert-any-sol-transfer,Any SOL Transfer Alert,alert,True,0,,presets/demo-alerts.json
+unlimited-delegation,Unlimited Delegation Alert,block,True,2,"RISK-004,RISK-007",presets/demo-alerts.json
+blocked-programs,Known Malicious Program,block,True,2,"RISK-006,RISK-007",presets/demo-alerts.json
+alert-multiple-transfers,Multiple Transfer Alert,alert,True,0,,presets/demo-alerts.json
+alert-authority-changes,Authority Changes Alert,alert,True,5,"RISK-005,RISK-007,RISK-010,RISK-011,RISK-013",presets/demo-alerts.json
+alert-rapid-transactions,Rapid Transaction Pattern,alert,True,2,"RISK-002,RISK-003",presets/demo-alerts.json
+alert-token-freeze-detected,Token Freeze Authority Alert,alert,True,3,"RISK-010,RISK-011,RISK-013",presets/demo-alerts.json
+alert-token-mint-authority,Token Mint Authority Alert,alert,True,4,"RISK-008,RISK-010,RISK-011,RISK-013",presets/demo-alerts.json
+alert-high-risk-score,Elevated Risk Score Alert,alert,True,0,,presets/demo-alerts.json
+block-confirmed-rugpulls,Block Confirmed Rugpulls,block,True,5,"RISK-046,RISK-047,RISK-048,RISK-051,RISK-052",presets/rugcheck-example.json
+alert-freeze-authority-enabled,Alert on Freeze Authority Enabled,alert,True,6,"RISK-047,RISK-048,RISK-049,RISK-050,RISK-051,RISK-052",presets/rugcheck-example.json
+block-danger-level-tokens,Block Danger-Level Tokens,block,True,5,"RISK-046,RISK-047,RISK-048,RISK-051,RISK-052",presets/rugcheck-example.json
+alert-mint-authority-active,Alert on Active Mint Authority,alert,True,6,"RISK-047,RISK-048,RISK-049,RISK-050,RISK-051,RISK-052",presets/rugcheck-example.json
+block-presigned-authority-change,Block: Pre-signed Authority Change,block,True,3,"RISK-027,RISK-029,RISK-030",presets/drift-exploit-protection.json
+block-drift-nonce-custom-program-outflow,Block Drift-Style: Durable Nonce + Custom Program + Outflow,block,True,1,RISK-013,presets/drift-exploit-protection.json
+alert-drift-nonce-custom-program,Alert: Durable Nonce Targeting Custom Program,alert,True,0,,presets/drift-exploit-protection.json
+block-log-admin-change-with-nonce,Block: Admin Change Instruction in Logs + Durable Nonce,block,True,0,,presets/drift-exploit-protection.json
+block-unlimited-delegation,Block Unlimited Token Delegations,block,True,3,"RISK-008,RISK-010,RISK-013",presets/comprehensive-protection.json
+block-freeze-with-approval,Block Freeze + Approval Combo,block,True,4,"RISK-008,RISK-010,RISK-011,RISK-013",presets/comprehensive-protection.json
+block-burn-with-approval,Block Burn + Approval Combo,block,True,4,"RISK-008,RISK-010,RISK-012,RISK-013",presets/comprehensive-protection.json
+block-net-delegation-increase,Block Net Delegation Increase,block,True,3,"RISK-008,RISK-010,RISK-013",presets/comprehensive-protection.json
+allow-revoke-only,Pass Revoke-Only Transactions,pass,True,3,"RISK-008,RISK-010,RISK-013",presets/comprehensive-protection.json
+alert-any-burn,Alert on Token Burns,alert,True,2,"RISK-012,RISK-013",presets/comprehensive-protection.json
+alert-freeze-operation,Alert on Freeze/Thaw Operations,alert,True,2,"RISK-010,RISK-013",presets/comprehensive-protection.json
+alert-mint-operation,Alert on Token Minting,alert,True,1,RISK-013,presets/comprehensive-protection.json
+block-large-sol-transfer,Block Large SOL Transfers,block,True,0,,presets/comprehensive-protection.json
+alert-sol-transfer,Alert on SOL Transfers,alert,True,0,,presets/comprehensive-protection.json
+block-account-creation-spam,Block Account Creation Spam,block,True,0,,presets/comprehensive-protection.json
+alert-account-creation,Alert on Multiple Account Creation,alert,True,0,,presets/comprehensive-protection.json
+block-high-complexity-unknown,Block Complex Unknown Programs,block,True,0,,presets/comprehensive-protection.json
+alert-high-complexity,Alert on High Complexity,alert,True,0,,presets/comprehensive-protection.json
+alert-account-confusion,Alert on Potential Account Confusion,alert,True,0,,presets/comprehensive-protection.json
+block-dangerous-instruction-combo,Block Dangerous Instruction Combinations,block,True,1,RISK-013,presets/comprehensive-protection.json
+block-blocked-programs,Block Known Malicious Programs,block,True,0,,presets/comprehensive-protection.json
+block-critical-risk-score,Block Critical Risk Transactions,block,True,0,,presets/comprehensive-protection.json
+alert-authority-changes,Alert on Authority Changes,alert,True,5,"RISK-005,RISK-007,RISK-010,RISK-011,RISK-013",presets/comprehensive-protection.json
+block-drift-nonce-custom-program-outflow,Block Drift-Style: Durable Nonce + Custom Program + Outflow,block,True,1,RISK-013,presets/comprehensive-protection.json
+alert-drift-nonce-custom-program,Alert: Durable Nonce Targeting Custom Program,alert,True,0,,presets/comprehensive-protection.json
+jupiter-confirmed-suspicious,Block Confirmed Suspicious Tokens,block,True,0,,presets/rug-pull-protection.json
+jupiter-critical-rug-pull,Block Active Rug Pulls,block,True,0,,presets/rug-pull-protection.json
+jupiter-holder-exodus,Block on Massive Holder Exodus,block,True,0,,presets/rug-pull-protection.json
+jupiter-liquidity-drain,Block on Liquidity Drainage,block,True,0,,presets/rug-pull-protection.json
+jupiter-freeze-authority,Block Tokens with Freeze Authority,block,True,0,,presets/rug-pull-protection.json
+jupiter-extreme-concentration,Block Extreme Token Concentration,block,True,0,,presets/rug-pull-protection.json
+jupiter-multiple-red-flags,Block Multiple Rug Pull Indicators,block,True,0,,presets/rug-pull-protection.json
+jupiter-high-concentration-warning,Warn on High Concentration,alert,True,0,,presets/rug-pull-protection.json
+jupiter-dev-concentration-warning,Warn on High Dev Holdings,alert,True,0,,presets/rug-pull-protection.json
+jupiter-low-organic-score,Warn on Low Organic Trading,alert,True,0,,presets/rug-pull-protection.json
+jupiter-very-new-token,Caution on Very New Tokens,alert,True,0,,presets/rug-pull-protection.json
+jupiter-few-organic-buyers,Warn on Low Organic Buyer Count,alert,True,0,,presets/rug-pull-protection.json
+jupiter-low-holder-count,Warn on Very Low Holder Count,alert,True,0,,presets/rug-pull-protection.json
+jupiter-verified-bypass,Allow Verified High-Quality Tokens,allow,True,0,,presets/rug-pull-protection.json
+block-non-core-programs,Block Non-Core Programs,block,True,0,,presets/trading-bot-protection.json
+block-any-delegation,Block All Token Delegations,block,True,3,"RISK-008,RISK-010,RISK-013",presets/trading-bot-protection.json
+block-authority-changes,Block Authority Changes,block,True,3,"RISK-010,RISK-011,RISK-013",presets/trading-bot-protection.json
+block-account-creation,Block Account Creation,block,True,0,,presets/trading-bot-protection.json
+limit-sol-transfer,Limit SOL Transfers,block,True,0,,presets/trading-bot-protection.json
+block-freeze-operations,Block Freeze/Thaw Operations,block,True,3,"RISK-010,RISK-011,RISK-013",presets/trading-bot-protection.json
+block-mint-burn,Block Mint/Burn Operations,block,True,2,"RISK-012,RISK-013",presets/trading-bot-protection.json
+block-high-complexity,Block High Complexity Transactions,block,True,0,,presets/trading-bot-protection.json
+block-blocked-programs,Block Malicious Programs,block,True,0,,presets/trading-bot-protection.json
+unexpected-balance-drain,Unexpected Balance Loss,alert,True,0,,presets/simulation-defense.json
+compound-risk-delegation-and-loss,Delegation with Balance Loss,alert,True,0,,presets/simulation-defense.json
+suspicious-simulation-logs,Suspicious Program Logs,alert,True,0,,presets/simulation-defense.json
+simulation-failure-with-balance-change,Simulation Failure with Balance Loss,alert,True,0,,presets/simulation-defense.json
+nft-transfer-detected,NFT Transfer Alert,alert,True,0,,presets/simulation-defense.json
+full-token-drain,Complete Token Drain,alert,True,0,,presets/simulation-defense.json
+excessive-compute-usage,Excessive Compute Usage,alert,True,0,,presets/simulation-defense.json
+large-balance-loss-percentage,Large Percentage Balance Loss,alert,True,0,,presets/simulation-defense.json
+multiple-accounts-losing-balance,Multiple Account Drains,alert,True,0,,presets/simulation-defense.json
+cpi-with-errors,CPI Calls with Error Logs,alert,True,0,,presets/simulation-defense.json
+alert-suspicious-program-logs,Alert on Suspicious Program Behavior,alert,True,0,,presets/simulation-defense.json
+block-suspicious-logs-with-balance-change,Block Suspicious Logs with Balance Changes,block,True,0,,presets/simulation-defense.json
+unlimited-delegation,Unlimited Delegation Alert,alert,True,2,"RISK-004,RISK-007",presets/wallet-scan-enhanced.json
+blocked-programs,Known Malicious Program,block,True,2,"RISK-006,RISK-007",presets/wallet-scan-enhanced.json
+critical-risk-score,Critical Risk Pattern Alert,alert,True,5,"RISK-007,RISK-047,RISK-048,RISK-051,RISK-052",presets/wallet-scan-enhanced.json
+multiple-delegations,Multiple Delegations Alert,alert,True,2,"RISK-004,RISK-007",presets/wallet-scan-enhanced.json
+authority-changes-suspicious,Authority Changes - Suspicious Program,alert,True,4,"RISK-005,RISK-007,RISK-044,RISK-045",presets/wallet-scan-enhanced.json
+scammer-interaction,Known Scammer Interaction,block,True,3,"RISK-043,RISK-044,RISK-045",presets/wallet-scan-enhanced.json
+suspicious-interaction,Suspicious Address Interaction,alert,True,2,"RISK-044,RISK-045",presets/wallet-scan-enhanced.json

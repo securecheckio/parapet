@@ -1,0 +1,161 @@
+{
+  "version": "1.0",
+  "name": "Deep CPI Scan Ruleset",
+  "description": "Advanced ruleset for detecting suspicious behavior in cross-program invocations (CPIs)",
+  "author": "securecheck",
+  "rules": [
+    {
+      "version": "1.0",
+      "id": "deep-cpi-alert",
+      "name": "Deep CPI Chain Alert",
+      "description": "Alerts when transaction has unusually deep cross-program invocation chains (>5 levels)",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["security", "cpi", "deep-scan"],
+      "rule": {
+        "action": "alert",
+        "conditions": {
+          "all": [
+            {
+              "field": "inner_instruction:has_deep_cpis",
+              "operator": "equals",
+              "value": true
+            }
+          ]
+        },
+        "message": "Transaction contains unusually deep CPI chain (>5 levels)"
+      },
+      "metadata": {
+        "severity": "medium",
+        "weight": 30,
+        "comment": "Deep CPI chains can hide malicious behavior in nested program calls"
+      }
+    },
+    {
+      "version": "1.0",
+      "id": "unknown-inner-programs",
+      "name": "Unknown Programs in CPIs",
+      "description": "Alerts when transaction invokes unknown programs via CPIs (not system/token programs)",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["security", "cpi", "deep-scan", "unknown"],
+      "rule": {
+        "action": "alert",
+        "conditions": {
+          "all": [
+            {
+              "field": "inner_instruction:has_unknown_inner_programs",
+              "operator": "equals",
+              "value": true
+            }
+          ]
+        },
+        "message": "Transaction calls unknown programs via CPIs"
+      },
+      "metadata": {
+        "severity": "medium",
+        "weight": 35,
+        "comment": "Unknown programs in CPIs should be reviewed - could be malicious contracts"
+      }
+    },
+    {
+      "version": "1.0",
+      "id": "high-cpi-risk",
+      "name": "High CPI Risk Score",
+      "description": "Blocks transactions with very high CPI risk scores (deep chains + unknown programs)",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["security", "cpi", "deep-scan", "high-risk"],
+      "rule": {
+        "action": "block",
+        "conditions": {
+          "all": [
+            {
+              "field": "inner_instruction:cpi_risk_score",
+              "operator": "greater_than",
+              "value": 10
+            }
+          ]
+        },
+        "message": "Transaction has very high CPI risk score - likely malicious"
+      },
+      "metadata": {
+        "severity": "critical",
+        "weight": 80,
+        "comment": "Combination of deep CPIs and unknown programs indicates sophisticated attack"
+      }
+    },
+    {
+      "version": "1.0",
+      "id": "multiple-unknown-cpis",
+      "name": "Multiple Unknown Programs in CPIs",
+      "description": "Blocks when transaction invokes 3+ unknown programs via CPIs",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["security", "cpi", "deep-scan", "unknown"],
+      "rule": {
+        "action": "block",
+        "conditions": {
+          "all": [
+            {
+              "field": "inner_instruction:unknown_program_count",
+              "operator": "greater_than",
+              "value": 2
+            }
+          ]
+        },
+        "message": "Transaction invokes multiple unknown programs via CPIs"
+      },
+      "metadata": {
+        "severity": "high",
+        "weight": 60,
+        "comment": "Multiple unknown programs in CPIs is a red flag for complex attacks"
+      }
+    },
+    {
+      "version": "1.0",
+      "id": "block-extreme-cpi-depth",
+      "name": "Block Extreme CPI Depth",
+      "description": "Block transactions with extremely deep CPI chains (depth score >80)",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["critical", "cpi", "depth"],
+      "rule": {
+        "action": "block",
+        "conditions": {
+          "field": "inner_instruction:cpi_depth_score",
+          "operator": "greater_than",
+          "value": 80
+        },
+        "message": "🚨 BLOCKED: Extreme CPI depth detected - likely obfuscation attempt"
+      },
+      "metadata": {
+        "severity": "critical",
+        "weight": 70
+      }
+    },
+    {
+      "version": "1.0",
+      "id": "alert-moderate-cpi-depth",
+      "name": "Alert on Moderate CPI Depth",
+      "description": "Warn on transactions with moderately deep CPI chains (depth score 50-80)",
+      "author": "securecheck",
+      "enabled": true,
+      "tags": ["warning", "cpi", "depth"],
+      "rule": {
+        "action": "alert",
+        "conditions": {
+          "all": [
+            {"field": "inner_instruction:cpi_depth_score", "operator": "greater_than", "value": 50},
+            {"field": "inner_instruction:cpi_depth_score", "operator": "less_than_or_equal", "value": 80}
+          ]
+        },
+        "message": "⚠️ Moderate CPI depth detected - review transaction carefully"
+      },
+      "metadata": {
+        "severity": "medium",
+        "weight": 25
+      }
+    }
+  ]
+}

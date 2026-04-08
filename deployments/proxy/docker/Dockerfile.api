@@ -1,0 +1,47 @@
+# Sol-Shield API with MCP Server - Multi-stage Docker Build
+
+# ============================================
+# Builder Stage: Compile Rust binary
+# ============================================
+FROM rustlang/rust:nightly as builder
+
+WORKDIR /build
+
+# Copy workspace files
+COPY Cargo.toml Cargo.lock ./
+COPY core ./core
+COPY scanner ./scanner
+COPY api ./api
+COPY proxy/rules ./proxy/rules
+
+# Build the API binary (includes MCP server)
+RUN cargo build --release -p parapet-api --bin parapet-api
+
+# ============================================
+# Runtime Stage: Minimal Debian image
+# ============================================
+FROM debian:bookworm-slim
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy compiled binary from builder
+COPY --from=builder /build/target/release/parapet-api /usr/local/bin/parapet-api
+
+# Copy rules directory
+COPY --from=builder /build/proxy/rules /app/rules
+
+# Expose API port
+EXPOSE 3001
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:3001/health || exit 1
+
+# Run as non-root user
+RUN useradd -m -u 1000 solshield
+USER solshield
+
+CMD ["parapet-api"]

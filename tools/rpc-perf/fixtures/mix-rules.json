@@ -1,0 +1,37 @@
+[
+  {
+    "version": "1.0",
+    "id": "rpc-perf-block-compute-budget",
+    "name": "RPC Perf Block (Compute Budget program present)",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "program_ids",
+        "operator": "contains",
+        "value": "ComputeBudget111111111111111111111111111111"
+      },
+      "message": "rpc-perf: block scenario (compute budget ix)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "rpc-perf-alert-memo",
+    "name": "RPC Perf Alert (Memo program present)",
+    "author": "rpc-perf",
+    "enabled": true,
+    "tags": ["rpc-perf"],
+    "metadata": { "weight": 20 },
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "program_ids",
+        "operator": "contains",
+        "value": "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr"
+      },
+      "message": "rpc-perf: alert scenario (memo ix)"
+    }
+  }
+]

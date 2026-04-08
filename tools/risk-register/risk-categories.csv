@@ -1,0 +1,10 @@
+category,total_risks,critical,high,medium,low,description
+Authority Control,9,3,5,1,0,Risks related to authority changes and ownership transfers
+Burn & Close,1,1,0,0,0,Risks related to token burns and account closures
+Instruction Padding,1,0,0,1,0,Risks related to instruction data padding attacks
+Program Reputation,19,5,2,6,6,Risks related to unknown or malicious programs
+SOL Transfer,1,0,0,0,1,Risks related to SOL movements and spending
+Token Delegation,3,1,1,1,0,Risks related to token approvals and delegations
+Token Safety,6,1,5,0,0,Risks related to token mint authorities and rug pulls
+Transaction Pattern,24,8,2,4,10,Risks related to unusual transaction structures
+Wallet Reputation,3,1,0,2,0,Risks related to wallet identity and reputation

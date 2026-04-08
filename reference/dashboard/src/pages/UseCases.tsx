@@ -1,0 +1,228 @@
+import { FC } from 'react';
+import { Link } from 'react-router-dom';
+
+const UseCases: FC = () => {
+  return (
+    <div className="relative">
+      {/* Hero */}
+      <div className="bg-zinc-900 border-b border-white/10">
+        <div className="max-w-7xl mx-auto px-6 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20">
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 border border-white/20 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 mb-4 sm:mb-6">
+              <span className="text-xs text-white/50 uppercase tracking-wide font-medium">Use Cases</span>
+            </div>
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold mb-4 sm:mb-6 text-white px-2">Built for every user</h1>
+            <p className="text-sm sm:text-base lg:text-lg text-white/70 max-w-2xl sm:max-w-3xl mx-auto leading-relaxed px-4">
+              RPC-level transaction security for wallets, trading bots, enterprises, and developers.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Personas */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 space-y-6">
+        <PersonaCard
+          title="dApp Developers"
+          subtitle="Add security verification to your application"
+          description="Integrate RPC-level security checks into your application. Users receive detailed risk analysis in transaction simulation responses."
+          benefits={[
+            'Drop-in RPC replacement requiring minimal code changes',
+            'Structured risk data in simulation responses for UI display',
+            'Configurable security policies via JSON rules',
+            'Sub-100ms overhead on transaction analysis',
+          ]}
+          useCases={[
+            'DeFi protocols wanting to verify counterparty addresses',
+            'NFT marketplaces checking program verification status',
+            'Payment applications requiring recipient validation',
+            'Any application handling high-value transactions',
+          ]}
+          cta="Get API Key"
+          color="blue"
+          category="Developers"
+        />
+
+        <PersonaCard
+          title="Trading Bots & Automation"
+          subtitle="Programmatic transaction filtering with auditable rules"
+          description="Apply security policies to automated trading systems. Filter by program allowlist, spending limits, or address reputation before broadcasting transactions."
+          benefits={[
+            'JSON configuration you can version control and audit',
+            'Program allowlist enforcement (only verified DEXs)',
+            'Configurable spending and complexity limits',
+            'Structured security data in RPC responses for programmatic handling',
+          ]}
+          useCases={[
+            'MEV bots restricting execution to verified programs only',
+            'Arbitrage bots with per-transaction spending limits',
+            'Treasury management with address allowlist enforcement',
+            'Automated systems requiring audit trail of security decisions',
+          ]}
+          cta="View Bot Rules"
+          color="purple"
+          category="Automation"
+        />
+
+        <PersonaCard
+          title="Enterprises & Institutions"
+          subtitle="Enterprise-grade security and compliance"
+          description="Meet regulatory requirements with customizable security policies. Export transaction data in ISO 20022, XBRL-JSON, or JSON-LS formats for audit trails and regulatory reporting."
+          benefits={[
+            'Dedicated RPC proxy deployment',
+            'Custom security rule configuration',
+            'Forensic output formats: ISO 20022, XBRL-JSON, JSON-LS',
+            'SLA guarantees and priority support',
+          ]}
+          useCases={[
+            'Institutional custody solutions',
+            'Corporate treasury management',
+            'Compliance-driven financial services',
+            'White-label wallet infrastructure',
+          ]}
+          cta="Contact Sales"
+          color="orange"
+          category="Enterprise"
+        />
+
+        <PersonaCard
+          title="Wallet Providers"
+          subtitle="Additional security layer with user-configurable rules"
+          description="Offer custom RPC support so users can route transactions through SecureCheck. Provides transparent warnings with specific threat details rather than generic blocks."
+          benefits={[
+            'Specific threat warnings (e.g., "Helius-flagged scammer address" vs "transaction failed")',
+            'Configurable warn vs. block behavior based on user risk tolerance',
+            'Detailed risk information in simulation response for user review',
+            'JSON security rules users can inspect and understand',
+          ]}
+          useCases={[
+            'Users with significant holdings wanting extra verification',
+            'Institutional wallets requiring customizable security policies',
+            'Power users who want to audit security logic',
+            'Wallets serving enterprises with compliance requirements',
+          ]}
+          cta="Learn More"
+          color="green"
+          category="Wallets"
+        />
+
+        <PersonaCard
+          title="DAOs & Communities"
+          subtitle="Protect your treasury and members"
+          description="Secure your community treasury with multi-signature protection and spending limits. Educate members about safe transaction patterns."
+          benefits={[
+            'Treasury-specific security rules',
+            'Member wallet protection recommendations',
+            'Transparent transaction filtering',
+            'Community governance over rules',
+          ]}
+          useCases={[
+            'DAO treasuries with large holdings',
+            'Community gaming guilds',
+            'Collective investment groups',
+            'Protocol governance participants',
+          ]}
+          cta="Learn More"
+          color="pink"
+          category="Communities"
+        />
+      </div>
+
+      {/* CTA */}
+      <div className="bg-zinc-900 border-y-4 border-blue-500">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16 lg:py-20 text-center">
+          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-3 sm:mb-4 text-white">Help us test and verify</h2>
+          <p className="text-sm sm:text-base lg:text-lg text-white/70 mb-8 sm:mb-10 max-w-2xl mx-auto px-4">
+            We're looking for early users to help test and validate this security tool.
+          </p>
+          <Link
+            to="/signup"
+            className="inline-block px-8 sm:px-10 py-3 sm:py-4 bg-blue-600 text-white font-bold rounded hover:bg-blue-700 transition-colors text-base sm:text-lg"
+          >
+            Join Testing Program
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface PersonaCardProps {
+  title: string;
+  subtitle: string;
+  description: string;
+  benefits: string[];
+  useCases: string[];
+  cta: string;
+  color: 'blue' | 'purple' | 'orange' | 'green' | 'pink';
+  category: string;
+}
+
+const PersonaCard: FC<PersonaCardProps> = ({
+  title,
+  subtitle,
+  benefits,
+  useCases,
+  cta,
+  color,
+  category,
+}) => {
+  const colorClasses = {
+    blue: 'border-blue-500 text-blue-500',
+    purple: 'border-purple-500 text-purple-500',
+    orange: 'border-orange-500 text-orange-500',
+    green: 'border-green-500 text-green-500',
+    pink: 'border-pink-500 text-pink-500',
+  };
+  
+  const bgColors = {
+    blue: 'bg-blue-500/10',
+    purple: 'bg-purple-500/10',
+    orange: 'bg-orange-500/10',
+    green: 'bg-green-500/10',
+    pink: 'bg-pink-500/10',
+  };
+  
+  return (
+    <div className={`border-l-4 ${colorClasses[color].split(' ')[0]} bg-white/5 py-12 px-8`}>
+      <div className={`inline-block px-3 py-1 rounded text-xs font-semibold mb-4 ${bgColors[color]} ${colorClasses[color].split(' ')[1]}`}>
+        {category}
+      </div>
+      
+      <h2 className="text-3xl font-bold mb-2 text-white">{title}</h2>
+      <p className="text-lg text-white/60 mb-6">{subtitle}</p>
+      
+      <div className="mb-8">
+        <h3 className="text-sm font-bold mb-3 text-white/80 uppercase tracking-wide">Key Benefits</h3>
+        <ul className="space-y-2">
+          {benefits.map((benefit, idx) => (
+            <li key={idx} className="flex items-start gap-3 text-sm text-white/70">
+              <span className={`${colorClasses[color].split(' ')[1]} mt-0.5`}>→</span>
+              <span>{benefit}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div className="mb-8">
+        <h3 className="text-sm font-bold mb-3 text-white/80 uppercase tracking-wide">Common Use Cases</h3>
+        <ul className="space-y-2">
+          {useCases.map((useCase, idx) => (
+            <li key={idx} className="flex items-start gap-3 text-sm text-white/70">
+              <span className="text-white/40 mt-0.5">•</span>
+              <span>{useCase}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <Link
+        to="/signup"
+        className={`inline-block px-8 py-3 ${bgColors[color]} ${colorClasses[color].split(' ')[1]} font-semibold rounded-lg hover:bg-white/10 transition-all text-sm border ${colorClasses[color].split(' ')[0]}`}
+      >
+        {cta}
+      </Link>
+    </div>
+  );
+};
+
+export default UseCases;

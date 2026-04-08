@@ -1,0 +1,110 @@
+# ====================================
+# Sol-Shield Terraform Configuration
+# ====================================
+# Copy this file to terraform.tfvars and fill in your values
+
+# ----------------
+# General Settings
+# ----------------
+deployment_name = "production"  # Name for your deployment (production, staging, dev)
+
+# -----------------------
+# Deployment Mode
+# -----------------------
+# Choose deployment strategy:
+# - "docker": Easy deployment, portable, ~2-5% overhead (recommended for open-source users)
+# - "native": Maximum performance, ~2-5% faster, best for high-throughput production (>5000 req/s)
+deployment_mode = "docker"
+
+# -----------------------
+# RPC Configuration
+# -----------------------
+# Your upstream Solana RPC URL (Helius, QuickNode, etc.)
+upstream_rpc_url = "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY_HERE"
+
+# Port for Sol-Shield proxy (default: 8899)
+proxy_port = 8899
+
+# -----------------------
+# Security & Rate Limiting
+# -----------------------
+# Enable rate limiting per wallet address
+enable_rate_limiting = false
+
+# Default monthly request limit per wallet (if rate limiting enabled)
+default_requests_per_month = 10000
+
+# Comma-separated allowlisted wallets (empty = all allowed)
+# Example: "wallet1,wallet2,wallet3"
+allowlisted_wallets = ""
+
+# -----------------------
+# SSH Access
+# -----------------------
+# Path to your SSH public key
+ssh_public_key_path = "~/.ssh/id_rsa.pub"
+
+# IP addresses allowed to SSH (CIDR notation)
+# IMPORTANT: Change this to your IP for production security!
+# Example: ssh_allowed_ips = ["1.2.3.4/32", "5.6.7.0/24"]
+ssh_allowed_ips = ["0.0.0.0/0"]
+
+# IP addresses allowed to access HTTPS/RPC (CIDR notation)  
+# IMPORTANT: Change this to your allowed IPs for production!
+# Example: https_allowed_ips = ["1.2.3.4/32", "5.6.7.0/24"]
+https_allowed_ips = ["0.0.0.0/0", "::/0"]
+
+# -----------------------
+# HTTPS Configuration (Optional)
+# -----------------------
+# Enable automatic HTTPS with Let's Encrypt (requires domain name)
+enable_https = false
+
+# Your domain name (e.g., rpc.yourdomain.com)
+# IMPORTANT: Point DNS A record to your server IP BEFORE deploying
+# domain_name = "rpc.yourdomain.com"
+
+# Email for Let's Encrypt notifications (certificate expiry, etc.)
+# email = "you@email.com"
+
+# -----------------------
+# Cloud Provider Specific
+# -----------------------
+
+# === DigitalOcean ===
+# Uncomment for DigitalOcean deployment
+# do_token = "YOUR_DIGITALOCEAN_TOKEN"
+# region = "nyc3"
+# droplet_size = "s-2vcpu-2gb"
+# redis_enabled = false
+# use_reserved_ip = false
+
+# === AWS ===
+# Uncomment for AWS deployment
+# region = "us-east-1"
+# instance_type = "t3.small"
+# root_volume_size = 20
+# redis_enabled = false
+# use_elastic_ip = false
+
+# -----------------------
+# Optional: Redis
+# -----------------------
+# Enable managed Redis for caching and rate limiting
+# redis_enabled = true
+
+# DigitalOcean Redis size
+# redis_size = "db-s-1vcpu-1gb"
+
+# AWS Redis node type
+# redis_node_type = "cache.t3.micro"
+
+# -----------------------
+# Optional: Tags
+# -----------------------
+# Additional tags for resources
+tags = ["sol-shield", "production"]  # For DigitalOcean
+# tags = {                            # For AWS
+#   Environment = "production"
+#   Project     = "sol-shield"
+# }

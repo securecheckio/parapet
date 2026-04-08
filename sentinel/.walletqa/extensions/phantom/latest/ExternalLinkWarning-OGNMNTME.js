@@ -1,0 +1,8 @@
+import{b as k}from"./chunk-S6QG2THO.js";import{d as h}from"./chunk-DUNKZ5IF.js";import{g as y}from"./chunk-H3R3NFRZ.js";import{a as C}from"./chunk-FKKJRVFA.js";import"./chunk-BRQH5KZA.js";import"./chunk-4FP76AVJ.js";import{d as x}from"./chunk-3MAR52KN.js";import{ja as g}from"./chunk-4GHA7GV2.js";import{c as f}from"./chunk-2PW2PH4X.js";import"./chunk-HOXBCK7A.js";import{a as d}from"./chunk-EJAQ3Z2J.js";import"./chunk-OJPBMZQC.js";import"./chunk-M73UGOFM.js";import"./chunk-UPPQC44E.js";import"./chunk-CYENH7PC.js";import"./chunk-ULZ3YIG4.js";import"./chunk-JWTAN66J.js";import"./chunk-AW2XPS6Y.js";import{a as s}from"./chunk-BYU664DD.js";import{Ca as a,M as L,N as m,Z as p}from"./chunk-UIH6NVAU.js";import"./chunk-U7OZEJ4F.js";import"./chunk-ZRGHR2IN.js";import{g as i,i as c,n as l}from"./chunk-TSHWMJEM.js";c();l();var o=i(L(),1);var r=i(m(),1),W=f.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+`,T=o.default.memo(({url:e})=>{let{t:n}=p(),{hideExternalLinkWarningModal:t}=k(),u=(0,o.useCallback)(()=>{d.capture("collectibleExternalLinkOpened",{data:{url:e.toString()}}),t(),self.open(e.href,"_blank")},[t,e]);return(0,r.jsxs)(W,{children:[(0,r.jsx)(y,{}),(0,r.jsx)(h,{icon:(0,r.jsx)(C,{color:s(a.colors.legacy.spotWarning,.1),diameter:94,children:(0,r.jsx)(g,{width:54,height:54,circleFill:a.colors.legacy.spotWarning})}),primaryText:n("externalLinkWarningTitle"),secondaryText:n("externalLinkWarningDescription",{url:e.host})}),(0,r.jsx)(x,{primaryText:n("commandCancel"),secondaryText:n("commandContinue"),onPrimaryClicked:t,onSecondaryClicked:u})]})}),D=T;export{T as ExternalLinkWarning,D as default};
+//# sourceMappingURL=ExternalLinkWarning-OGNMNTME.js.map

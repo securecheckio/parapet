@@ -1,0 +1,86 @@
+# DigitalOcean API token
+# Get from: https://cloud.digitalocean.com/account/api/tokens
+do_token = "dop_v1_xxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+
+# Project configuration
+project_name = "securecheck-saas"
+environment  = "prod"  # prod, staging, or dev
+region       = "nyc3"  # nyc1, nyc3, sfo3, sgp1, lon1, fra1, tor1, blr1
+
+# Deployment mode:
+# - "all-in-one": Single droplet with everything ($24/month)
+# - "separate-db": App + separate database droplet ($48/month)
+# - "managed-db": App + DigitalOcean managed databases ($54+/month)
+deployment_mode = "all-in-one"
+
+# Droplet sizes (see: https://slugs.do-api.dev/)
+app_droplet_size = "s-2vcpu-4gb"  # $24/month - 2 vCPU, 4GB RAM
+db_droplet_size  = "s-2vcpu-4gb"  # $24/month - only if separate-db mode
+
+# Managed database options (only if deployment_mode = "managed-db")
+create_managed_db    = false
+create_managed_redis = false
+managed_db_size      = "db-s-1vcpu-1gb"   # $15/month
+managed_redis_size   = "db-s-1vcpu-1gb"   # $15/month
+managed_db_nodes     = 1                  # 1-3 nodes for HA
+
+# SSH configuration
+# Get your SSH key IDs: doctl compute ssh-key list
+ssh_keys = [
+  "12345678",  # Your SSH key ID
+]
+ssh_allowed_ips = ["0.0.0.0/0", "::/0"]  # Restrict to your IP for better security
+
+# Monitoring and backups
+enable_monitoring = true
+enable_backups    = true  # +20% cost but worth it
+
+# Database credentials
+db_name     = "securecheck"
+db_user     = "securecheck"
+db_password = "CHANGE_THIS_STRONG_PASSWORD_123!"  # CHANGE THIS!
+
+# Redis password (optional but recommended)
+redis_password = "CHANGE_THIS_REDIS_PASSWORD_456!"  # CHANGE THIS!
+
+# Upstream Solana RPC
+# Use a premium RPC provider for best performance:
+# - Helius: https://helius.dev
+# - QuickNode: https://quicknode.com
+# - Triton: https://triton.one
+upstream_rpc_url = "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY"
+
+# Domain configuration
+domain     = "example.com"           # Your domain (leave empty if no domain)
+manage_dns = false                   # Set to true to manage DNS in DigitalOcean
+
+# Subdomains
+rpc_subdomain = "rpc"  # rpc.example.com
+api_subdomain = "api"  # api.example.com
+
+# GitHub deployment
+github_repo   = "https://github.com/securecheckio/securecheck-saas.git"
+github_branch = "main"
+
+# Payment configuration
+payments_enabled       = true  # Set to false for free/private instances
+payment_token_mint     = "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz"
+payment_token_name     = "xLABS"
+payment_token_symbol   = "xLABS"
+payment_token_logo     = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz/logo.png"
+payment_token_decimals = "6"
+usdc_token_mint        = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+treasury_wallet        = "YOUR_TREASURY_WALLET_ADDRESS_HERE"  # CHANGE THIS!
+
+# Credits pricing (token amounts in lamports, 6 decimals)
+# Defaults: Small=10 tokens, Medium=50, Large=100, XLarge=500
+credits_price_small  = "10000000"
+credits_price_medium = "50000000"
+credits_price_large  = "100000000"
+credits_price_xlarge = "500000000"
+
+# Credits amounts (requests granted per package)
+credits_amount_small  = "100000"    # 100k requests
+credits_amount_medium = "500000"    # 500k requests
+credits_amount_large  = "1000000"   # 1M requests
+credits_amount_xlarge = "5000000"   # 5M requests

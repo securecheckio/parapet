@@ -1,0 +1,338 @@
+[
+  {
+    "version": "1.0",
+    "id": "unexpected-balance-drain",
+    "name": "Unexpected Balance Loss",
+    "description": "Detects transactions that would drain significant SOL without receiving tokens",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "sol_balance_change",
+            "operator": "less_than",
+            "value": -1.0
+          },
+          {
+            "field": "token_transfers_in",
+            "operator": "equals",
+            "value": 0
+          }
+        ]
+      },
+      "message": "Transaction would drain >1 SOL with no tokens received in return"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 50
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "compound-risk-delegation-and-loss",
+    "name": "Delegation with Balance Loss",
+    "description": "Detects dangerous combination of token delegation and SOL loss",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "simulation", "compound"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "has_delegation",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "sol_balance_change",
+            "operator": "less_than",
+            "value": -0.5
+          }
+        ]
+      },
+      "message": "Token delegation combined with significant SOL loss (>0.5 SOL)"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 60
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "suspicious-simulation-logs",
+    "name": "Suspicious Program Logs",
+    "description": "Detects suspicious keywords in program execution logs",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "high", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "suspicious_keywords",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Program logs contain suspicious keywords (drain, exploit, steal, etc.)"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "high",
+      "weight": 30
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "simulation-failure-with-balance-change",
+    "name": "Simulation Failure with Balance Loss",
+    "description": "Detects simulations that fail but would still result in balance loss",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "simulation_failed",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "sol_balance_change",
+            "operator": "less_than",
+            "value": 0.0
+          }
+        ]
+      },
+      "message": "Transaction simulation failed but would still result in balance loss"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 70
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "nft-transfer-detected",
+    "name": "NFT Transfer Alert",
+    "description": "Alerts when NFTs would be transferred",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "medium", "simulation", "nft"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "nft_transfers",
+        "operator": "not_equals",
+        "value": []
+      },
+      "message": "Transaction would transfer NFT(s)"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "medium",
+      "weight": 20
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-nft-drain",
+    "name": "Block Multiple NFT Drain",
+    "description": "Blocks transactions that would transfer more than 3 NFTs (likely drain attack)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["critical", "simulation", "nft", "drain"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "nft_transfer_count",
+        "operator": "greater_than",
+        "value": 3
+      },
+      "message": "🚨 BLOCKED: Multiple NFT drain detected (>3 NFTs) - likely malicious"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "full-token-drain",
+    "name": "Complete Token Drain",
+    "description": "Detects when tokens would be fully drained to zero",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "high", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "tokens_fully_drained",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "Transaction would completely drain token account(s) to zero"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "high",
+      "weight": 35
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "excessive-compute-usage",
+    "name": "Excessive Compute Usage",
+    "description": "Detects unusually high compute unit consumption",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "low", "simulation", "compute"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "excessive_compute",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Transaction uses excessive compute units (possible inefficiency or obfuscation)"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "low",
+      "weight": 10
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "large-balance-loss-percentage",
+    "name": "Large Percentage Balance Loss",
+    "description": "Alerts when transaction would drain >50% of SOL balance",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "sol_balance_change_percent",
+        "operator": "less_than",
+        "value": -50.0
+      },
+      "message": "Transaction would drain more than 50% of your SOL balance"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 55
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "multiple-accounts-losing-balance",
+    "name": "Multiple Account Drains",
+    "description": "Detects when multiple accounts would lose balance",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "high", "simulation"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "accounts_losing_balance",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "Transaction would drain balances from 3+ accounts"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "high",
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "cpi-with-errors",
+    "name": "CPI Calls with Error Logs",
+    "description": "Detects CPI calls combined with error messages in logs",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "medium", "simulation", "compound"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "has_cpi_calls",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "has_error_logs",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "CPI calls detected with error messages in logs (possible failed exploit attempt)"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "medium",
+      "weight": 25
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-suspicious-program-logs",
+    "name": "Alert on Suspicious Program Behavior",
+    "description": "Warn when simulation logs show suspicious program behavior patterns",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["high", "simulation", "logs", "behavior"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "simulation_logs:suspicious_patterns",
+        "operator": "not_equals",
+        "value": []
+      },
+      "message": "⚠️ WARNING: Suspicious program behavior detected in simulation logs"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "high",
+      "weight": 35
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-suspicious-logs-with-balance-change",
+    "name": "Block Suspicious Logs with Balance Changes",
+    "description": "Block when suspicious log patterns coincide with balance decreases",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["critical", "simulation", "logs", "balance"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "simulation_logs:suspicious_patterns", "operator": "not_equals", "value": []},
+          {"field": "simulation_balance:sol_decrease", "operator": "greater_than", "value": 1000000000}
+        ]
+      },
+      "message": "🚨 BLOCKED: Suspicious program behavior with SOL drain detected"
+    },
+    "metadata": {
+      "stage": "simulation",
+      "severity": "critical",
+      "weight": 75
+    }
+  }
+]

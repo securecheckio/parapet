@@ -1,0 +1,34 @@
+[
+  {
+    "version": "1.0",
+    "id": "missing-analyzer",
+    "name": "Rule with Missing Analyzer",
+    "description": "This rule will FAIL validation because 'twitter_sentiment' field doesn't exist",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "twitter_sentiment",
+        "operator": "equals",
+        "value": "negative"
+      },
+      "message": "This rule references a field that no analyzer provides"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "valid-rule",
+    "name": "Valid Rule",
+    "description": "This rule is valid and will pass validation",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "risk_score",
+        "operator": "greater_than",
+        "value": 90
+      },
+      "message": "High risk detected"
+    }
+  }
+]

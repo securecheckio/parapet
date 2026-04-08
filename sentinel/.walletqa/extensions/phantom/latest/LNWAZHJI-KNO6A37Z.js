@@ -1,0 +1,2 @@
+import{a,b as e,c as m,d as s,e as u,f as v,g as i,h as d,i as f}from"./chunk-4SQ5ETC4.js";import{a as n,i as c,n as l}from"./chunk-TSHWMJEM.js";c();l();var P=n(p=>{let[r,t]=s({prefix:"TanstackQueryDevtools"}),h=m(),C=a(()=>{let o=r.theme_preference||u;return o!=="system"?o:h()});return e(v.Provider,{value:p,get children(){return e(i,{localStore:r,setLocalStore:t,get children(){return e(d.Provider,{value:C,get children(){return e(f,{localStore:r,setLocalStore:t})}})}})}})},"DevtoolsComponent"),S=P;export{S as default};
+//# sourceMappingURL=LNWAZHJI-KNO6A37Z.js.map

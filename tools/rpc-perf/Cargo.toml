@@ -1,0 +1,33 @@
+[package]
+name = "rpc-perf"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Lower-bound latency: JSON-RPC sendRawTransaction through parapet-proxy + rule engine with a local mock upstream (upstream_delay_ms=0). No real Solana network. Default rules: fixtures/minimal-rules.json (structural only); use mix-rules.json for pass/alert/block splits. Not simulation/enrichment."
+default-run = "rpc-perf"
+
+[lib]
+name = "rpc_perf"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rpc-perf"
+path = "src/main.rs"
+
+[dependencies]
+parapet-proxy = { path = "../../proxy" }
+axum = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+reqwest = { workspace = true }
+anyhow = { workspace = true }
+clap = { version = "4.5", features = ["derive"] }
+bincode = { workspace = true }
+base64 = { workspace = true }
+rand = { version = "0.8", features = ["std"] }
+rand_chacha = "0.3"
+solana-sdk = "2.3"
+solana-system-interface = "1.0"

@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sol Shield - Escalations Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status.connected {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status.disconnected {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .wallet-section {
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #cbd5e0;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+        }
+        
+        .card h2 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        .escalation {
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 16px;
+            transition: all 0.2s;
+        }
+        
+        .escalation:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+        
+        .escalation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        
+        .risk-badge {
+            display: inline-block;
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+        
+        .risk-high {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+        
+        .risk-medium {
+            background: #fef3c7;
+            color: #f59e0b;
+        }
+        
+        .countdown {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .instructions {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .instruction-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .instruction-item:last-child {
+            border-bottom: none;
+        }
+        
+        .warnings {
+            margin: 16px 0;
+        }
+        
+        .warning-item {
+            background: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .btn-approve {
+            background: #10b981;
+        }
+        
+        .btn-approve:hover {
+            background: #059669;
+        }
+        
+        .btn-deny {
+            background: #ef4444;
+        }
+        
+        .btn-deny:hover {
+            background: #dc2626;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state svg {
+            width: 80px;
+            height: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Sol Shield Dashboard</h1>
+            <p>Real-time transaction escalation management</p>
+            <div class="wallet-section">
+                <span id="ws-status" class="status disconnected">⚫ Disconnected</span>
+                <button id="connect-wallet" class="btn">Connect Wallet</button>
+                <span id="wallet-address" style="margin-left: 12px; display: none;"></span>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="card">
+                <h2>⚠️ Pending Escalations</h2>
+                <div id="escalations-list">
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <h3>No pending escalations</h3>
+                        <p>Transactions requiring approval will appear here</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/@solana/wallet-adapter-wallets@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/index.iife.js"></script>
+    <script>
+        // Support both direct API access (port 3001) and nginx proxy (port 8080)
+        const API_URL = window.location.port === '8080' 
+            ? window.location.origin  // Via nginx proxy
+            : window.location.origin.replace(':3001', '') + ':3001';  // Direct to API
+        const WS_URL = API_URL.replace('http', 'ws') + '/ws/escalations';
+        
+        let wallet = null;
+        let ws = null;
+        let escalations = new Map();
+        
+        // Connect wallet
+        document.getElementById('connect-wallet').addEventListener('click', async () => {
+            try {
+                // Check if Phantom is installed
+                const solana = window.solana;
+                if (!solana || !solana.isPhantom) {
+                    alert('Please install Phantom wallet');
+                    return;
+                }
+                
+                // Connect
+                const response = await solana.connect();
+                wallet = response.publicKey.toString();
+                
+                document.getElementById('wallet-address').textContent = 
+                    `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+                document.getElementById('wallet-address').style.display = 'inline';
+                document.getElementById('connect-wallet').textContent = 'Connected';
+                document.getElementById('connect-wallet').disabled = true;
+                
+                // Connect WebSocket
+                connectWebSocket();
+                
+                // Load pending escalations
+                loadPendingEscalations();
+                
+            } catch (err) {
+                console.error('Failed to connect wallet:', err);
+                alert('Failed to connect wallet');
+            }
+        });
+        
+        // Connect WebSocket
+        function connectWebSocket() {
+            if (!wallet) return;
+            
+            ws = new WebSocket(WS_URL);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                document.getElementById('ws-status').textContent = '🟢 Connected';
+                document.getElementById('ws-status').className = 'status connected';
+                
+                // Subscribe to escalations
+                ws.send(JSON.stringify({ wallet }));
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleEscalationEvent(data);
+            };
+            
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+            
+            ws.onclose = () => {
+                document.getElementById('ws-status').textContent = '⚫ Disconnected';
+                document.getElementById('ws-status').className = 'status disconnected';
+                
+                // Reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+        }
+        
+        // Handle escalation events
+        function handleEscalationEvent(event) {
+            console.log('Escalation event:', event);
+            
+            if (event.type === 'escalation_created') {
+                escalations.set(event.escalation.escalation_id, event.escalation);
+                renderEscalations();
+            } else if (event.type === 'escalation_approved' || 
+                       event.type === 'escalation_denied' ||
+                       event.type === 'escalation_forwarded') {
+                escalations.delete(event.escalation_id);
+                renderEscalations();
+            }
+        }
+        
+        // Load pending escalations
+        async function loadPendingEscalations() {
+            try {
+                // TODO: Get nonce and sign message
+                const message = `solshield:list_pending:${Date.now()}`;
+                const signedMessage = await window.solana.signMessage(
+                    new TextEncoder().encode(message),
+                    'utf8'
+                );
+                
+                const response = await fetch(`${API_URL}/api/v1/escalations/pending`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wallet,
+                        message,
+                        signature: btoa(String.fromCharCode(...signedMessage.signature)),
+                        timestamp: Math.floor(Date.now() / 1000)
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    data.forEach(esc => escalations.set(esc.escalation_id, esc));
+                    renderEscalations();
+                }
+            } catch (err) {
+                console.error('Failed to load pending escalations:', err);
+            }
+        }
+        
+        // Render escalations
+        function renderEscalations() {
+            const container = document.getElementById('escalations-list');
+            
+            if (escalations.size === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                        </svg>
+                        <h3>No pending escalations</h3>
+                        <p>Transactions requiring approval will appear here</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = Array.from(escalations.values()).map(esc => {
+                const timeLeft = Math.max(0, esc.expires_at - Math.floor(Date.now() / 1000));
+                const fastPathAvailable = timeLeft > 10;
+                
+                return `
+                    <div class="escalation" data-id="${esc.escalation_id}">
+                        <div class="escalation-header">
+                            <div>
+                                <strong>${esc.escalation_id}</strong>
+                                <span class="risk-badge ${esc.risk_score >= 80 ? 'risk-high' : 'risk-medium'}">
+                                    Risk: ${esc.risk_score}/100
+                                </span>
+                            </div>
+                            <div class="countdown" data-expires="${esc.expires_at}">
+                                ${fastPathAvailable ? '⚡' : '🐢'} ${timeLeft}s remaining
+                            </div>
+                        </div>
+                        
+                        <div class="warnings">
+                            ${esc.warnings.map(w => `<div class="warning-item">⚠️ ${w}</div>`).join('')}
+                        </div>
+                        
+                        <div class="instructions">
+                            <strong>Transaction Instructions:</strong>
+                            ${esc.decoded_instructions.map((ix, i) => `
+                                <div class="instruction-item">
+                                    ${i + 1}. ${ix.human_readable || 'Unknown instruction'}
+                                </div>
+                            `).join('')}
+                        </div>
+                        
+                        <div class="actions">
+                            <button class="btn btn-approve" onclick="approveEscalation('${esc.escalation_id}', ${fastPathAvailable})">
+                                ${fastPathAvailable ? 'Approve & Forward ⚡' : 'Approve (Create Rule) 🐢'}
+                            </button>
+                            <button class="btn btn-deny" onclick="denyEscalation('${esc.escalation_id}')">
+                                Deny
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            // Start countdown timers
+            startCountdowns();
+        }
+        
+        // Start countdown timers
+        function startCountdowns() {
+            const timers = document.querySelectorAll('.countdown');
+            
+            setInterval(() => {
+                timers.forEach(timer => {
+                    const expires = parseInt(timer.dataset.expires);
+                    const timeLeft = Math.max(0, expires - Math.floor(Date.now() / 1000));
+                    const fastPathAvailable = timeLeft > 10;
+                    
+                    timer.textContent = `${fastPathAvailable ? '⚡' : '🐢'} ${timeLeft}s remaining`;
+                    
+                    if (timeLeft === 0) {
+                        timer.textContent = '⏱️ Expired';
+                    }
+                });
+            }, 1000);
+        }
+        
+        // Approve escalation
+        async function approveEscalation(escalationId, fastPath) {
+            try {
+                // Get escalation details
+                const esc = escalations.get(escalationId);
+                
+                // Create rule definition
+                const rule = {
+                    id: `${escalationId}_rule`,
+                    name: `Approved: ${esc.canonical_hash.slice(0, 8)}...`,
+                    priority: 1000,
+                    conditions: {
+                        canonical_transaction_hash: esc.canonical_hash
+                    },
+                    action: "allow",
+                    recurring: false,
+                    use_count_limit: 1,
+                    expires_at: Math.floor(Date.now() / 1000) + 300
+                };
+                
+                // Sign the approval
+                const message = `solshield:approve:${escalationId}:${Date.now()}`;
+                const signedMessage = await window.solana.signMessage(
+                    new TextEncoder().encode(message),
+                    'utf8'
+                );
+                
+                // TODO: Get nonce
+                const nonce = Math.random().toString(36).substring(7);
+                
+                const response = await fetch(`${API_URL}/api/v1/escalations/${escalationId}/approve`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        approver_wallet: wallet,
+                        message,
+                        signature: btoa(String.fromCharCode(...signedMessage.signature)),
+                        nonce,
+                        timestamp: Math.floor(Date.now() / 1000),
+                        rule
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    alert(result.message || 'Escalation approved');
+                    escalations.delete(escalationId);
+                    renderEscalations();
+                } else {
+                    const error = await response.json();
+                    alert(`Failed to approve: ${error.message || 'Unknown error'}`);
+                }
+            } catch (err) {
+                console.error('Failed to approve escalation:', err);
+                alert('Failed to approve escalation');
+            }
+        }
+        
+        // Deny escalation
+        async function denyEscalation(escalationId) {
+            const reason = prompt('Reason for denial (optional):');
+            
+            try {
+                const message = `solshield:deny:${escalationId}:${Date.now()}`;
+                const signedMessage = await window.solana.signMessage(
+                    new TextEncoder().encode(message),
+                    'utf8'
+                );
+                
+                const nonce = Math.random().toString(36).substring(7);
+                
+                const response = await fetch(`${API_URL}/api/v1/escalations/${escalationId}/deny`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        wallet,
+                        message,
+                        signature: btoa(String.fromCharCode(...signedMessage.signature)),
+                        nonce,
+                        reason
+                    })
+                });
+                
+                if (response.ok) {
+                    alert('Escalation denied');
+                    escalations.delete(escalationId);
+                    renderEscalations();
+                } else {
+                    alert('Failed to deny escalation');
+                }
+            } catch (err) {
+                console.error('Failed to deny escalation:', err);
+                alert('Failed to deny escalation');
+            }
+        }
+    </script>
+</body>
+</html>

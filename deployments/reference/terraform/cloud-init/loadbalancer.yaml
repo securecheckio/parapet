@@ -1,0 +1,145 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - nginx
+  - certbot
+  - python3-certbot-nginx
+  - ufw
+
+write_files:
+  - path: /etc/nginx/nginx.conf
+    content: |
+      user www-data;
+      worker_processes auto;
+      pid /run/nginx.pid;
+      
+      events {
+          worker_connections 2048;
+          multi_accept on;
+      }
+      
+      http {
+          sendfile on;
+          tcp_nopush on;
+          tcp_nodelay on;
+          keepalive_timeout 65;
+          types_hash_max_size 2048;
+          
+          include /etc/nginx/mime.types;
+          default_type application/octet-stream;
+          
+          access_log /var/log/nginx/access.log;
+          error_log /var/log/nginx/error.log;
+          
+          gzip on;
+          gzip_vary on;
+          gzip_proxied any;
+          gzip_comp_level 6;
+          gzip_types text/plain text/css text/xml text/javascript application/json application/javascript application/xml+rss application/rss+xml font/truetype font/opentype application/vnd.ms-fontobject image/svg+xml;
+          
+          # Rate limiting
+          limit_req_zone $binary_remote_addr zone=api_limit:10m rate=100r/s;
+          
+          include /etc/nginx/conf.d/*.conf;
+          include /etc/nginx/sites-enabled/*;
+      }
+
+  - path: /etc/nginx/sites-available/rpc
+    content: |
+      upstream rpc_backend {
+          server ${rpc_backend}:8899 max_fails=3 fail_timeout=30s;
+          keepalive 32;
+      }
+      
+      server {
+          listen 80;
+          server_name ${rpc_subdomain}.${domain};
+          
+          location / {
+              limit_req zone=api_limit burst=20 nodelay;
+              
+              proxy_pass http://rpc_backend;
+              proxy_http_version 1.1;
+              proxy_set_header Connection "";
+              proxy_set_header Host $host;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              
+              proxy_connect_timeout 10s;
+              proxy_send_timeout 60s;
+              proxy_read_timeout 60s;
+              
+              # CORS headers
+              add_header Access-Control-Allow-Origin * always;
+              add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
+              add_header Access-Control-Allow-Headers "Content-Type" always;
+              
+              if ($request_method = OPTIONS) {
+                  return 204;
+              }
+          }
+          
+          location /health {
+              access_log off;
+              proxy_pass http://rpc_backend/health;
+          }
+      }
+
+  - path: /etc/nginx/sites-available/web
+    content: |
+      upstream web_backend {
+          server ${web_backend}:3000 max_fails=3 fail_timeout=30s;
+          keepalive 32;
+      }
+      
+      server {
+          listen 80;
+          server_name ${domain};
+          
+          location / {
+              proxy_pass http://web_backend;
+              proxy_http_version 1.1;
+              proxy_set_header Upgrade $http_upgrade;
+              proxy_set_header Connection 'upgrade';
+              proxy_set_header Host $host;
+              proxy_cache_bypass $http_upgrade;
+              proxy_set_header X-Real-IP $remote_addr;
+              proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+              proxy_set_header X-Forwarded-Proto $scheme;
+              
+              proxy_connect_timeout 10s;
+              proxy_send_timeout 60s;
+              proxy_read_timeout 60s;
+          }
+          
+          location /api/health {
+              access_log off;
+              proxy_pass http://web_backend/api/health;
+          }
+      }
+
+runcmd:
+  - systemctl enable nginx
+  
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow 22/tcp
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw --force enable
+  
+  # Enable sites
+  - ln -sf /etc/nginx/sites-available/rpc /etc/nginx/sites-enabled/
+  - ln -sf /etc/nginx/sites-available/web /etc/nginx/sites-enabled/
+  - rm -f /etc/nginx/sites-enabled/default
+  - nginx -t && systemctl restart nginx
+  
+  # Setup SSL (after DNS propagation)
+  - sleep 60
+  - certbot --nginx -d ${domain} -d ${rpc_subdomain}.${domain} --non-interactive --agree-tos --email admin@${domain} || true
+
+final_message: "Load balancer droplet ready!"
