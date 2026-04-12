@@ -81,6 +81,40 @@ rate_limit = "10/60"
 # Env var equivalent: RUGCHECK_CACHE_TTL=600
 cache_ttl = 600
 
+[ai]
+# AI-powered program analysis (requires program-analysis feature at compile time)
+# Supports OpenAI, Anthropic/Claude, Groq, and other OpenAI-compatible providers
+# Used for deep program bytecode analysis (Tier 3 analysis)
+
+# API key for AI provider
+# Env var equivalent: AI_API_KEY, OPENAI_API_KEY, ANTHROPIC_API_KEY, or GROQ_API_KEY
+# api_key = "your_api_key_here"
+
+# API base URL (provider endpoint)
+# Env var equivalent: AI_BASE_URL
+# Examples:
+#   OpenAI:     https://api.openai.com/v1
+#   Anthropic:  https://api.anthropic.com/v1
+#   Groq:       https://api.groq.com/openai/v1
+#   Nano GPT:   https://api.nano-gpt.com/v1
+# base_url = "https://api.openai.com/v1"
+
+# Model to use for analysis
+# Env var equivalent: AI_MODEL
+# Examples:
+#   OpenAI:     gpt-4, gpt-4-turbo, gpt-3.5-turbo
+#   Anthropic:  claude-3-5-sonnet-20241022, claude-3-opus-20240229
+#   Groq:       llama-3.1-70b-versatile, mixtral-8x7b-32768
+# model = "gpt-4"
+
+# Maximum tokens for AI response
+# Env var equivalent: AI_MAX_TOKENS
+max_tokens = 4000
+
+# Temperature (0.0-1.0, lower = more deterministic)
+# Env var equivalent: AI_TEMPERATURE
+temperature = 0.1
+
 # ============================================================================
 # USAGE NOTES
 # ============================================================================
@@ -98,6 +132,11 @@ cache_ttl = 600
 # - OTTERSEC_API_KEY
 # - JUPITER_API_KEY
 # - RUGCHECK_API_KEY
+# - AI_API_KEY (or OPENAI_API_KEY, ANTHROPIC_API_KEY, etc.)
+# - AI_BASE_URL
+# - AI_MODEL
+# - AI_MAX_TOKENS
+# - AI_TEMPERATURE
 # - RULES_PATH
 # - PARAPET_RPC_URL
 # - HELIUS_RATE_LIMIT (format: "20/60")
@@ -107,6 +146,7 @@ cache_ttl = 600
 #
 # Format: Use SCREAMING_SNAKE_CASE for env vars
 # Example: [third_party.helius].api_key -> HELIUS_API_KEY
+# Example: [ai].api_key -> AI_API_KEY
 # Note: Rate limits use "requests/seconds" format: "20/60" not just "20"
 
 # Config File Priority:

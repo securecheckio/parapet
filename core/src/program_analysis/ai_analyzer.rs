@@ -38,7 +38,7 @@ pub struct AiVulnerability {
 }
 
 /// AI provider configuration (OpenAI-compatible)
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Deserialize, serde::Serialize)]
 pub struct AiProviderConfig {
     pub api_key: String,
     pub base_url: String,
@@ -49,7 +49,33 @@ pub struct AiProviderConfig {
 
 impl Default for AiProviderConfig {
     fn default() -> Self {
-        // Check for provider-specific env vars, fallback to OpenAI
+        Self::from_env()
+    }
+}
+
+impl AiProviderConfig {
+    /// Load configuration from environment variables
+    /// Supports provider-specific env vars with fallback to generic AI_* vars
+    pub fn from_env() -> Self {
+        // Try generic AI_* env vars first
+        if let Ok(api_key) = env::var("AI_API_KEY") {
+            return Self {
+                api_key,
+                base_url: env::var("AI_BASE_URL")
+                    .unwrap_or_else(|_| "https://api.openai.com/v1".to_string()),
+                model: env::var("AI_MODEL").unwrap_or_else(|_| "gpt-4".to_string()),
+                max_tokens: env::var("AI_MAX_TOKENS")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(4000),
+                temperature: env::var("AI_TEMPERATURE")
+                    .ok()
+                    .and_then(|s| s.parse().ok())
+                    .unwrap_or(0.1),
+            };
+        }
+
+        // Fallback to provider-specific env vars (legacy support)
         let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
 
         match provider.as_str() {
@@ -88,6 +114,26 @@ impl Default for AiProviderConfig {
                 temperature: 0.1,
             },
         }
+    }
+
+    /// Apply environment variable overrides to TOML-loaded config
+    pub fn with_env_overrides(mut self) -> Self {
+        if let Ok(api_key) = env::var("AI_API_KEY") {
+            self.api_key = api_key;
+        }
+        if let Ok(base_url) = env::var("AI_BASE_URL") {
+            self.base_url = base_url;
+        }
+        if let Ok(model) = env::var("AI_MODEL") {
+            self.model = model;
+        }
+        if let Some(max_tokens) = env::var("AI_MAX_TOKENS").ok().and_then(|s| s.parse().ok()) {
+            self.max_tokens = max_tokens;
+        }
+        if let Some(temperature) = env::var("AI_TEMPERATURE").ok().and_then(|s| s.parse().ok()) {
+            self.temperature = temperature;
+        }
+        self
     }
 }
 

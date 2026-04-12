@@ -127,13 +127,37 @@ SOLANA_RPC_URL=https://api.mainnet-beta.solana.com
 # Redis cache (optional but recommended)
 REDIS_URL=redis://localhost:6379
 
-# AI provider (optional, for Tier 3)
-AI_PROVIDER=openai
+# AI provider (optional, for Tier 3 analysis)
+# Option 1: Generic AI config (recommended)
+AI_API_KEY=sk-...
+AI_BASE_URL=https://api.openai.com/v1
+AI_MODEL=gpt-4
+AI_MAX_TOKENS=4000
+AI_TEMPERATURE=0.1
+
+# Option 2: Provider-specific env vars (legacy)
 OPENAI_API_KEY=sk-...
+ANTHROPIC_API_KEY=sk-ant-...
+GROQ_API_KEY=gsk-...
 
 # Cache TTL (seconds)
 PROGRAM_CACHE_TTL=86400  # 24 hours
 ```
+
+### TOML Configuration
+
+AI analyzer settings can also be configured via TOML file (e.g., `scanner/config.toml`):
+
+```toml
+[ai]
+api_key = "sk-..."
+base_url = "https://api.openai.com/v1"
+model = "gpt-4"
+max_tokens = 4000
+temperature = 0.1
+```
+
+Environment variables override TOML settings when present.
 
 ## Integration with Rules Engine
 
