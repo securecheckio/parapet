@@ -1,4 +1,4 @@
-![Parapet Logo](.github/assets/parapet-logo.jpg)
+![Parapet Logo](parapet.png)
 
 # Parapet
 
