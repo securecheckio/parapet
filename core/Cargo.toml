@@ -53,6 +53,7 @@ goblin = { version = "0.8", optional = true }
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt", "macros"] }
 serial_test = "3.0"
+criterion = "0.5"
 
 [features]
 default = []

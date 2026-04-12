@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
+use criterion::{black_box, criterion_group, criterion_main, Bencher, BenchmarkId, Criterion};
 use parapet_core::rules::flowbits::FlowbitStateManager;
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
@@ -7,7 +7,7 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("per_wallet_operations");
 
     // Benchmark set operation
-    group.bench_function("set", |b| {
+    group.bench_function("set", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         b.iter(|| {
@@ -20,7 +20,7 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
     });
 
     // Benchmark increment operation
-    group.bench_function("increment", |b| {
+    group.bench_function("increment", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         b.iter(|| {
@@ -33,7 +33,7 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
     });
 
     // Benchmark is_set check
-    group.bench_function("is_set", |b| {
+    group.bench_function("is_set", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         manager.set(&wallet, "test_flowbit", Some(Duration::from_secs(3600)));
@@ -43,7 +43,7 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
     });
 
     // Benchmark get_counter
-    group.bench_function("get_counter", |b| {
+    group.bench_function("get_counter", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         manager.increment(&wallet, "test_counter", Some(Duration::from_secs(3600)));
@@ -59,7 +59,7 @@ fn bench_global_operations(c: &mut Criterion) {
     let mut group = c.benchmark_group("global_operations");
 
     // Benchmark global set
-    group.bench_function("set_global", |b| {
+    group.bench_function("set_global", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         b.iter(|| {
             manager.set_global(black_box("test_flowbit"), Some(Duration::from_secs(3600)));
@@ -67,7 +67,7 @@ fn bench_global_operations(c: &mut Criterion) {
     });
 
     // Benchmark global increment
-    group.bench_function("increment_global", |b| {
+    group.bench_function("increment_global", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         b.iter(|| {
             manager.increment_global(black_box("test_counter"), Some(Duration::from_secs(3600)));
@@ -75,7 +75,7 @@ fn bench_global_operations(c: &mut Criterion) {
     });
 
     // Benchmark global is_set check
-    group.bench_function("is_set_global", |b| {
+    group.bench_function("is_set_global", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         manager.set_global("test_flowbit", Some(Duration::from_secs(3600)));
         b.iter(|| {
@@ -84,7 +84,7 @@ fn bench_global_operations(c: &mut Criterion) {
     });
 
     // Benchmark global get_counter
-    group.bench_function("get_counter_global", |b| {
+    group.bench_function("get_counter_global", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         manager.increment_global("test_counter", Some(Duration::from_secs(3600)));
         b.iter(|| {
@@ -153,7 +153,7 @@ fn bench_variable_interpolation(c: &mut Criterion) {
     let mut group = c.benchmark_group("variable_interpolation");
 
     // Benchmark simple interpolation (no variables)
-    group.bench_function("no_variables", |b| {
+    group.bench_function("no_variables", |b: &mut Bencher| {
         let template = "simple_flowbit_name";
         b.iter(|| {
             black_box(template.contains('{'));
@@ -161,7 +161,7 @@ fn bench_variable_interpolation(c: &mut Criterion) {
     });
 
     // Benchmark single variable interpolation
-    group.bench_function("single_variable", |b| {
+    group.bench_function("single_variable", |b: &mut Bencher| {
         let template = "transfers_to:{recipient}";
         let recipient = "7xKHnfHvPfVvFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
         b.iter(|| {
@@ -171,7 +171,7 @@ fn bench_variable_interpolation(c: &mut Criterion) {
     });
 
     // Benchmark multiple variable interpolation
-    group.bench_function("multiple_variables", |b| {
+    group.bench_function("multiple_variables", |b: &mut Bencher| {
         let template = "transfer_{mint}_to_{recipient}";
         let mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
         let recipient = "7xKHnfHvPfVvFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV";
@@ -190,7 +190,7 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
     let mut group = c.benchmark_group("realistic_scenarios");
 
     // AI Agent: 10 transactions in 10 minutes
-    group.bench_function("ai_agent_velocity", |b| {
+    group.bench_function("ai_agent_velocity", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(Some(1));
         let wallet = Pubkey::new_unique();
 
@@ -204,7 +204,7 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
     });
 
     // Enterprise: Lateral movement detection (3 wallets, same recipient)
-    group.bench_function("enterprise_lateral_movement", |b| {
+    group.bench_function("enterprise_lateral_movement", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(None);
         let recipient = "AttackerAddress111111111111111111111111111";
 
@@ -221,7 +221,7 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
     });
 
     // AI Agent: Gradual exfiltration (per-recipient tracking)
-    group.bench_function("ai_agent_exfiltration", |b| {
+    group.bench_function("ai_agent_exfiltration", |b: &mut Bencher| {
         let mut manager = FlowbitStateManager::new(Some(1));
         let wallet = Pubkey::new_unique();
         let recipient = "AttackerAddress111111111111111111111111111";

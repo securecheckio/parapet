@@ -73,13 +73,13 @@ impl McpRateLimiter {
         quota.scans_this_hour += 1;
 
         // Try to acquire concurrent scan permit (non-blocking check)
-        let concurrent_permit = self
-            .concurrent_scans
-            .clone()
-            .try_acquire_owned()
-            .map_err(|_| RateLimitError::TooManyConcurrentScans {
-                max_concurrent: self.concurrent_scans.available_permits() + 1,
-            })?;
+        let concurrent_permit =
+            self.concurrent_scans
+                .clone()
+                .try_acquire_owned()
+                .map_err(|_| RateLimitError::TooManyConcurrentScans {
+                    max_concurrent: self.concurrent_scans.available_permits() + 1,
+                })?;
 
         Ok(QuotaPermit {
             _concurrent_permit: concurrent_permit,
@@ -96,7 +96,9 @@ impl McpRateLimiter {
             let elapsed = quota.hour_started.elapsed().as_secs();
             QuotaStatus {
                 scans_used: quota.scans_this_hour,
-                scans_remaining: quota.max_scans_per_hour.saturating_sub(quota.scans_this_hour),
+                scans_remaining: quota
+                    .max_scans_per_hour
+                    .saturating_sub(quota.scans_this_hour),
                 max_scans_per_hour: quota.max_scans_per_hour,
                 reset_in_seconds: 3600_u64.saturating_sub(elapsed),
             }
@@ -126,13 +128,8 @@ pub struct QuotaStatus {
 
 #[derive(Debug)]
 pub enum RateLimitError {
-    QuotaExceeded {
-        limit: u32,
-        reset_in_seconds: u64,
-    },
-    TooManyConcurrentScans {
-        max_concurrent: usize,
-    },
+    QuotaExceeded { limit: u32, reset_in_seconds: u64 },
+    TooManyConcurrentScans { max_concurrent: usize },
 }
 
 impl IntoResponse for RateLimitError {

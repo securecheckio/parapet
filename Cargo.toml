@@ -4,6 +4,7 @@ members = [
     "core",
     "proxy",
     "scanner",
+    "api",
     "api-core",
     "mcp",
     "tools/rpc-perf",

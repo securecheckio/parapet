@@ -4,11 +4,7 @@
 use anyhow::{anyhow, Result};
 use base64::Engine;
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{
-    message::Message,
-    pubkey::Pubkey,
-    transaction::Transaction,
-};
+use solana_sdk::{message::Message, pubkey::Pubkey, transaction::Transaction};
 use spl_token::instruction as token_instruction;
 use std::str::FromStr;
 
@@ -26,19 +22,14 @@ pub async fn build_revoke_approval_tx(
     token_account: &str,
     rpc_client: &RpcClient,
 ) -> Result<String> {
-    let owner = Pubkey::from_str(wallet)
-        .map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
-    
+    let owner = Pubkey::from_str(wallet).map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
+
     let token_account_pubkey = Pubkey::from_str(token_account)
         .map_err(|e| anyhow!("Invalid token account address: {}", e))?;
 
     // Create revoke instruction
-    let revoke_ix = token_instruction::revoke(
-        &spl_token::id(),
-        &token_account_pubkey,
-        &owner,
-        &[],
-    )?;
+    let revoke_ix =
+        token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
 
     // Get recent blockhash
     let recent_blockhash = rpc_client
@@ -76,47 +67,43 @@ pub async fn build_batch_revoke_tx(
         return Err(anyhow!("No token accounts provided"));
     }
 
-    let owner = Pubkey::from_str(wallet)
-        .map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
+    let owner = Pubkey::from_str(wallet).map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
 
     let mut transactions = Vec::new();
-    
+
     // Batch up to 10 revoke instructions per transaction (conservative limit)
     // Solana transactions have a size limit, and we want to leave room for signatures
     const MAX_REVOKES_PER_TX: usize = 10;
-    
+
     for chunk in token_accounts.chunks(MAX_REVOKES_PER_TX) {
         let mut instructions = Vec::new();
-        
+
         for token_account_str in chunk {
-            let token_account_pubkey = Pubkey::from_str(token_account_str)
-                .map_err(|e| anyhow!("Invalid token account address {}: {}", token_account_str, e))?;
-            
-            let revoke_ix = token_instruction::revoke(
-                &spl_token::id(),
-                &token_account_pubkey,
-                &owner,
-                &[],
-            )?;
-            
+            let token_account_pubkey = Pubkey::from_str(token_account_str).map_err(|e| {
+                anyhow!("Invalid token account address {}: {}", token_account_str, e)
+            })?;
+
+            let revoke_ix =
+                token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
+
             instructions.push(revoke_ix);
         }
-        
+
         // Get recent blockhash
         let recent_blockhash = rpc_client
             .get_latest_blockhash()
             .map_err(|e| anyhow!("Failed to get recent blockhash: {}", e))?;
-        
+
         // Create transaction
         let message = Message::new(&instructions, Some(&owner));
         let mut tx = Transaction::new_unsigned(message);
         tx.message.recent_blockhash = recent_blockhash;
-        
+
         // Serialize to base64
         let serialized = bincode::serialize(&tx)?;
         transactions.push(base64::engine::general_purpose::STANDARD.encode(&serialized));
     }
-    
+
     Ok(transactions)
 }
 
@@ -182,7 +169,7 @@ mod tests {
             "TokenAccount1111111111111111111111111111",
             Some("USDC"),
         );
-        
+
         assert!(description.contains("REVOKE"));
         assert!(description.contains("USDC"));
         assert!(description.contains("TokenAccount1111111111111111111111111111"));
@@ -195,13 +182,13 @@ mod tests {
             "TokenAccount2".to_string(),
             "TokenAccount3".to_string(),
         ];
-        
+
         let description = describe_batch_revoke(
             "So11111111111111111111111111111111111111112",
             &token_accounts,
             1,
         );
-        
+
         assert!(description.contains("3 token accounts"));
         assert!(description.contains("REVOKE"));
     }

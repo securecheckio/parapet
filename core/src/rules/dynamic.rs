@@ -274,7 +274,7 @@ impl DynamicRuleStore {
             }
 
             // Update local cache
-            let mut cache = self.local_cache.write().unwrap();
+            let mut cache = self.local_cache.write().await;
             *cache = new_cache;
 
             log::debug!("🔄 Refreshed {} rules from Redis", cache.len());

@@ -3,7 +3,7 @@
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use log::{info, warn};
+use log::info;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

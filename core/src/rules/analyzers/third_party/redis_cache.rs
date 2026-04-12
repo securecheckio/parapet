@@ -6,7 +6,7 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 #[cfg(feature = "redis")]
-use redis;
+use redis::{self, AsyncCommands};
 
 /// Shared cache that uses Redis when available, falls back to in-memory
 pub struct SharedCache {
@@ -138,11 +138,9 @@ impl SharedCache {
         value: &[u8],
         ttl: Duration,
     ) -> Result<()> {
-        use redis::AsyncCommands;
-
         let mut conn = client.get_multiplexed_async_connection().await?;
-        let ttl_secs = ttl.as_secs() as usize;
-        conn.set_ex(key, value, ttl_secs).await?;
+        let ttl_secs = ttl.as_secs();
+        conn.set_ex::<_, _, ()>(key, value, ttl_secs).await?;
         Ok(())
     }
 
@@ -177,9 +175,8 @@ impl SharedCache {
     pub async fn clear(&self) -> Result<()> {
         #[cfg(feature = "redis")]
         if let Some(client) = &self.redis_client {
-            use redis::AsyncCommands;
             let mut conn = client.get_multiplexed_async_connection().await?;
-            redis::cmd("FLUSHDB").query_async(&mut conn).await?;
+            redis::cmd("FLUSHDB").query_async::<()>(&mut conn).await?;
         }
 
         let mut cache = self.fallback_cache.lock().await;

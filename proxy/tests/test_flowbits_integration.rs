@@ -1,9 +1,19 @@
-use parapet_core::rules::engine::RuleEngine;
+use parapet_core::rules::analyzers::*;
 use parapet_core::rules::types::RuleDefinition;
+use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use solana_sdk::{
     message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, system_instruction,
     transaction::Transaction,
 };
+use std::sync::Arc;
+
+fn create_test_registry() -> AnalyzerRegistry {
+    let mut registry = AnalyzerRegistry::new();
+    registry.register(Arc::new(BasicAnalyzer::new()));
+    registry.register(Arc::new(TokenInstructionAnalyzer::new()));
+    registry.register(Arc::new(SystemProgramAnalyzer::new()));
+    registry
+}
 
 /// Test AI agent velocity limiting
 #[tokio::test]
@@ -12,10 +22,9 @@ async fn test_ai_agent_velocity_limit() {
     let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
-    let mut engine = RuleEngine::new();
-    for rule in rules {
-        engine.add_rule(rule).unwrap();
-    }
+    let registry = create_test_registry();
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
     let recipient = Pubkey::new_unique();
@@ -56,10 +65,9 @@ async fn test_ai_agent_account_spam() {
     let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
-    let mut engine = RuleEngine::new();
-    for rule in rules {
-        engine.add_rule(rule).unwrap();
-    }
+    let registry = create_test_registry();
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
 
@@ -113,10 +121,9 @@ async fn test_enterprise_lateral_movement() {
     let rules_json = include_str!("../tests/fixtures/rules/presets/enterprise-cross-wallet.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
-    let mut engine = RuleEngine::new();
-    for rule in rules {
-        engine.add_rule(rule).unwrap();
-    }
+    let registry = create_test_registry();
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules(rules).unwrap();
 
     // Simulate 3 different wallets sending to same recipient
     let wallet1 = Keypair::new();
@@ -154,7 +161,7 @@ async fn test_enterprise_lateral_movement() {
     let ix3 = system_instruction::transfer(&wallet3.pubkey(), &suspicious_recipient, 1_000_000);
     let message3 = Message::new(&[ix3], Some(&wallet3.pubkey()));
     let mut tx3 = Transaction::new_unsigned(message3);
-    tx3.sign(&[&wallet3], solana_sdk::hash::Default());
+    tx3.sign(&[&wallet3], solana_sdk::hash::Hash::default());
 
     let decision3 = engine.evaluate(&tx3).await.unwrap();
     assert_eq!(
@@ -173,10 +180,9 @@ async fn test_ai_agent_gradual_exfiltration() {
     let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-advanced.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
-    let mut engine = RuleEngine::new();
-    for rule in rules {
-        engine.add_rule(rule).unwrap();
-    }
+    let registry = create_test_registry();
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
     let attacker_wallet = Pubkey::new_unique();
@@ -220,10 +226,9 @@ async fn test_repeated_block_detection() {
     let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
-    let mut engine = RuleEngine::new();
-    for rule in rules {
-        engine.add_rule(rule).unwrap();
-    }
+    let registry = create_test_registry();
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
     let recipient = Pubkey::new_unique();

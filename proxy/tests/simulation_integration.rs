@@ -1,9 +1,6 @@
-use parapet_core::rules::{
-    analyzers::simulation::{
-        SimulationAnalyzerRegistry, SimulationBalanceAnalyzer, SimulationLogAnalyzer,
-        SimulationTokenAnalyzer,
-    },
-    RuleEngine,
+use parapet_core::rules::analyzers::simulation::{
+    SimulationAnalyzerRegistry, SimulationBalanceAnalyzer, SimulationLogAnalyzer,
+    SimulationTokenAnalyzer,
 };
 use serde_json::json;
 

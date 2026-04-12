@@ -3962,6 +3962,38 @@ dependencies = [
 ]
 
 [[package]]
+name = "parapet-api"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "axum",
+ "base64 0.22.1",
+ "bincode",
+ "borsh 0.10.4",
+ "bs58",
+ "ed25519-dalek 2.2.0",
+ "env_logger 0.11.10",
+ "futures",
+ "hex",
+ "log",
+ "parapet-core",
+ "parapet-scanner",
+ "redis 0.27.6",
+ "reqwest 0.12.28",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "solana-client",
+ "solana-sdk",
+ "spl-token",
+ "thiserror 1.0.69",
+ "tokio",
+ "tower-http 0.5.2",
+ "uuid",
+]
+
+[[package]]
 name = "parapet-api-core"
 version = "0.1.0"
 dependencies = [
@@ -4007,6 +4039,7 @@ dependencies = [
  "borsh 0.10.4",
  "bs58",
  "chrono",
+ "criterion",
  "futures",
  "goblin",
  "log",
