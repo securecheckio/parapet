@@ -61,3 +61,4 @@ coverage/
 !docs/**/*.md
 !proxy/README.md
 !proxy/rules/README.md
+!mcp/resources/*.md

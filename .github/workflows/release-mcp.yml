@@ -35,7 +35,7 @@ jobs:
           targets: ${{ matrix.target }}
 
       - name: Build
-        working-directory: mcp-server
+        working-directory: mcp
         run: cargo build --release --target ${{ matrix.target }}
 
       - name: Get binary name
@@ -51,7 +51,7 @@ jobs:
       - name: Package
         shell: bash
         run: |
-          cd mcp-server/target/${{ matrix.target }}/release
+          cd mcp/target/${{ matrix.target }}/release
           tar -czf parapet-mcp-${{ matrix.platform }}.tar.gz ${{ steps.binary.outputs.name }}
           sha256sum parapet-mcp-${{ matrix.platform }}.tar.gz > parapet-mcp-${{ matrix.platform }}.tar.gz.sha256
 
@@ -60,8 +60,8 @@ jobs:
         with:
           name: parapet-mcp-${{ matrix.platform }}
           path: |
-            mcp-server/target/${{ matrix.target }}/release/parapet-mcp-${{ matrix.platform }}.tar.gz
-            mcp-server/target/${{ matrix.target }}/release/parapet-mcp-${{ matrix.platform }}.tar.gz.sha256
+            mcp/target/${{ matrix.target }}/release/parapet-mcp-${{ matrix.platform }}.tar.gz
+            mcp/target/${{ matrix.target }}/release/parapet-mcp-${{ matrix.platform }}.tar.gz.sha256
 
   release:
     name: Create Release
