@@ -1,0 +1,80 @@
+[
+  {
+    "version": "1.0",
+    "id": "allow-sol-to-treasury",
+    "name": "Allow SOL to Treasury",
+    "description": "Allow SOL transfers to your treasury wallet",
+    "enabled": false,
+    "tags": ["allowlist", "sol-transfer"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
+          {"field": "system:sol_recipients", "operator": "contains", "value": "YOUR_TREASURY_WALLET_HERE"}
+        ]
+      },
+      "message": "✅ ALLOWED: SOL transfer to treasury wallet"
+    },
+    "metadata": {
+      "note": "Replace YOUR_TREASURY_WALLET_HERE with your actual wallet address"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-sol-to-blacklist",
+    "name": "Block SOL to Known Scam Addresses",
+    "description": "Prevent transfers to known scam addresses",
+    "enabled": true,
+    "tags": ["blocklist", "sol-transfer"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:sol_recipients",
+        "operator": "in",
+        "value": [
+          "ScamAddress1111111111111111111111111111",
+          "ScamAddress2222222222222222222222222222"
+        ]
+      },
+      "message": "🚨 BLOCKED: SOL transfer to known scam address"
+    },
+    "metadata": {
+      "note": "Add known scam addresses to the value array"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-sol-to-unknown-large",
+    "name": "Block Large SOL to Any Address",
+    "description": "Block large SOL transfers as fallback",
+    "enabled": true,
+    "tags": ["sol-transfer", "protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
+      },
+      "message": "🚨 BLOCKED: Large SOL transfer (> 5 SOL) - verify recipient address"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-sol-transfer-any",
+    "name": "Alert on All SOL Transfers",
+    "description": "Warn on any SOL transfer for review",
+    "enabled": true,
+    "tags": ["alert", "sol-transfer"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:has_sol_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: SOL transfer detected - verify recipient"
+    }
+  }
+]

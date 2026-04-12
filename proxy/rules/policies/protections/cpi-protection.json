@@ -1,0 +1,133 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-deep-cpi-chains",
+    "name": "Block Deep CPI Chains",
+    "description": "Block transactions with excessive CPI nesting (>4 levels) that can hide malicious behavior",
+    "enabled": true,
+    "tags": ["critical", "cpi", "protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "inner_instruction:has_deep_cpis", "operator": "equals", "value": true},
+          {"field": "inner_instruction:cpi_depth_score", "operator": "greater_than", "value": 70}
+        ]
+      },
+      "message": "🚨 BLOCKED: Deep CPI chain detected - potential hidden malicious behavior"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 60,
+      "false_positive_rate": "low",
+      "validation_status": "production"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-deep-cpi-chains",
+    "name": "Alert on Deep CPI Chains",
+    "description": "Warn on transactions with moderately deep CPI nesting (3-4 levels)",
+    "enabled": true,
+    "tags": ["warning", "cpi"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:has_deep_cpis",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Deep CPI chain detected - review transaction carefully"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 30
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-unknown-cpi-programs",
+    "name": "Block Unknown Programs in CPIs",
+    "description": "Block transactions calling unverified programs via CPI",
+    "enabled": false,
+    "tags": ["critical", "cpi", "unknown-programs"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "🚨 BLOCKED: Unknown program detected in CPI call"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 70,
+      "note": "Disabled by default - may have high false positive rate with legitimate DeFi protocols",
+      "recommendation": "Enable for high-security environments or use alert action"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-unknown-cpi-programs",
+    "name": "Alert on Unknown Programs in CPIs",
+    "description": "Warn when transaction calls unverified programs via CPI",
+    "enabled": true,
+    "tags": ["warning", "cpi", "unknown-programs"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "⚠️ WARNING: Unknown program called via CPI - verify program safety"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 25
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-cpi-risk",
+    "name": "Block High CPI Risk Score",
+    "description": "Block transactions with high CPI risk scores indicating complex suspicious patterns",
+    "enabled": true,
+    "tags": ["critical", "cpi", "risk-score"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "inner_instruction:cpi_risk_score",
+        "operator": "greater_than",
+        "value": 80
+      },
+      "message": "🚨 BLOCKED: High CPI risk score detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 65
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-multiple-unknown-cpis",
+    "name": "Alert on Multiple Unknown CPIs",
+    "description": "Warn when transaction calls 2+ unknown programs via CPI (very suspicious)",
+    "enabled": true,
+    "tags": ["critical", "cpi"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "⚠️ WARNING: Multiple unknown programs in CPI chain - highly suspicious"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 40
+    }
+  }
+]

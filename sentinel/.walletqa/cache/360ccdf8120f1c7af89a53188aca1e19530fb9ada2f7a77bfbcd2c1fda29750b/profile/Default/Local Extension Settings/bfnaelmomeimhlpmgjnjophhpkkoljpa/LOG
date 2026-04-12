@@ -1,0 +1,5 @@
+2026/04/06-17:55:58.672 72970 Creating DB /tmp/walletqa-setup-Fjxvyx/Default/Local Extension Settings/bfnaelmomeimhlpmgjnjophhpkkoljpa since it was missing.
+2026/04/06-17:55:58.706 72970 Reusing MANIFEST /tmp/walletqa-setup-Fjxvyx/Default/Local Extension Settings/bfnaelmomeimhlpmgjnjophhpkkoljpa/MANIFEST-000001
+2026/04/06-17:56:44.541 72971 Level-0 table #5: started
+2026/04/06-17:56:44.571 72971 Level-0 table #5: 1394708 bytes OK
+2026/04/06-17:56:44.585 72971 Delete type=0 #3

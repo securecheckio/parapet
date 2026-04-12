@@ -1,0 +1,182 @@
+[
+  {
+    "version": "1.0",
+    "id": "token2022-permanent-delegate-block",
+    "name": "Block Permanent Delegate Tokens",
+    "description": "Blocks Token-2022 tokens with Permanent Delegate extension (enables burn without signature)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["critical", "token-2022", "permanent-delegate", "burn-scam"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_mint:has_permanent_delegate",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Token has Permanent Delegate - can burn your tokens without signature"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100,
+      "threat": "2026 Permanent Delegate Burn Scam",
+      "impact": "40%+ of new Solana tokens in 2026, $50M+ losses in Q1 2026",
+      "attack_vector": "Attacker can burn victim tokens seconds after purchase without requiring victim signature",
+      "networks": ["mainnet-beta"],
+      "references": [
+        "https://dev.to/ohmygod/solanas-permanent-delegate-burn-scam-how-token-2022-extensions-power-2026s-largest-automated-rug-4579"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-transfer-hook-block",
+    "name": "Block Transfer Hook Tokens",
+    "description": "Blocks Token-2022 tokens with Transfer Hook extension (malicious callback on every transfer)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["critical", "token-2022", "transfer-hook", "honeypot"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_mint:has_transfer_hook",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Token has Transfer Hook - can block or steal tokens during transfers"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100,
+      "threat": "Transfer Hook Honeypot",
+      "attack_vector": "Malicious program called on every transfer - can revert (honeypot) or drain tokens",
+      "note": "Legitimate use cases exist (e.g. loyalty points, compliance), but high risk",
+      "networks": ["mainnet-beta"]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-extreme-transfer-fee",
+    "name": "Alert on Extreme Transfer Fees",
+    "description": "Alerts on Token-2022 tokens with transfer fees >50% (effective drain)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["critical", "token-2022", "transfer-fee", "drain"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:max_transfer_fee_bps",
+        "operator": "greater_than",
+        "value": 5000
+      },
+      "message": "🚨 CRITICAL: Token has extreme transfer fee (>50%) - transfers will be drained"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 95,
+      "threat": "Hidden Transfer Fee Drain",
+      "attack_vector": "Every transfer loses >50% to fee collector - effective drain mechanism",
+      "networks": ["mainnet-beta"]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-high-transfer-fee",
+    "name": "Alert on High Transfer Fees",
+    "description": "Alerts on Token-2022 tokens with transfer fees >10% (suspicious)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["high", "token-2022", "transfer-fee"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:max_transfer_fee_bps",
+        "operator": "greater_than",
+        "value": 1000
+      },
+      "message": "⚠️ HIGH RISK: Token has high transfer fee (>10%) - suspicious fee structure"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 50,
+      "threshold": "10% (1000 basis points)",
+      "note": "Legitimate projects rarely exceed 3-5% transfer fees",
+      "networks": ["mainnet-beta"]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-default-frozen-state",
+    "name": "Alert on Default Frozen Account State",
+    "description": "Alerts on tokens where new accounts are frozen by default (honeypot)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["high", "token-2022", "frozen", "honeypot"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:has_default_frozen_state",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ HIGH RISK: Token accounts are frozen by default - you won't be able to transfer"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 40,
+      "threat": "Default Frozen Honeypot",
+      "attack_vector": "New token accounts created as frozen - can buy but not sell",
+      "networks": ["mainnet-beta"]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-metadata-pointer-warning",
+    "name": "Alert on Metadata Pointer",
+    "description": "Alerts when token uses Metadata Pointer (can point to fake metadata)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["medium", "token-2022", "metadata"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:has_metadata_pointer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ CAUTION: Token uses Metadata Pointer - verify token details are accurate"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 10,
+      "threat": "Fake Metadata",
+      "attack_vector": "Metadata pointer can be changed to display fake token name/symbol/logo",
+      "note": "Common in legitimate Token-2022 implementations, but can be abused",
+      "networks": ["mainnet-beta"]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "token2022-info-detection",
+    "name": "Info: Token-2022 Detected",
+    "description": "Informational alert when Token-2022 tokens are detected",
+    "author": "securecheck",
+    "enabled": false,
+    "tags": ["info", "token-2022"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:any_token_2022",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "ℹ️ INFO: Transaction involves Token-2022 tokens (extended features enabled)"
+    },
+    "metadata": {
+      "severity": "info",
+      "weight": 0,
+      "note": "Token-2022 enables advanced features but also new attack vectors. Enable this rule for visibility.",
+      "networks": ["mainnet-beta"]
+    }
+  }
+]

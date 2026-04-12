@@ -1,0 +1,98 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-freezable-tokens",
+    "name": "Block Tokens with Freeze Authority",
+    "description": "Block transactions involving tokens that have freeze authority enabled",
+    "enabled": false,
+    "tags": ["critical", "freeze", "rug-protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_mint:any_mint_freezable",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Token has freeze authority - owner can freeze your account at any time"
+    },
+    "metadata": {
+      "note": "STRICT MODE - Blocks ALL tokens with freeze authority (may include legitimate projects)",
+      "recommendation": "Use 'alert' action instead if you want warnings rather than blocks"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-freezable-tokens",
+    "name": "Alert on Freezable Tokens",
+    "description": "Warn when transaction involves tokens with freeze authority",
+    "enabled": true,
+    "tags": ["warning", "freeze", "rug-protection"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:any_mint_freezable",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Token has freeze authority - verify project trustworthiness before proceeding"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-all-mints-freezable",
+    "name": "Block if ALL Tokens Are Freezable",
+    "description": "Block when every token in transaction has freeze authority (very suspicious)",
+    "enabled": true,
+    "tags": ["critical", "freeze"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {"field": "token_mint:mints_analyzed", "operator": "greater_than", "value": 0},
+          {"field": "token_mint:all_mints_freezable", "operator": "equals", "value": true}
+        ]
+      },
+      "message": "🚨 BLOCKED: ALL tokens involved have freeze authority"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-freeze-authority-on-blocklist",
+    "name": "Block if Freeze Authority is Known Scammer",
+    "description": "Block tokens where freeze authority address is on your scammer blocklist",
+    "enabled": true,
+    "tags": ["critical", "freeze", "scam"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_mint:freeze_authority_addresses",
+        "operator": "in",
+        "value": [
+          "ScammerWallet1111111111111111111111111111",
+          "ScammerWallet2222222222222222222222222222"
+        ]
+      },
+      "message": "🚨 BLOCKED: Token freeze authority is a known scammer"
+    },
+    "metadata": {
+      "note": "Add known scammer addresses to the value array"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-multiple-risky-mints",
+    "name": "Alert on Multiple Risky Tokens",
+    "description": "Warn when transaction involves 2+ tokens with freeze authority",
+    "enabled": true,
+    "tags": ["warning", "freeze"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_mint:risky_mint_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "⚠️ WARNING: Multiple tokens with freeze authority detected - extra caution advised"
+    }
+  }
+]

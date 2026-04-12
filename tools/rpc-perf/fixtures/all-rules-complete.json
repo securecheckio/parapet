@@ -1,0 +1,2482 @@
+[
+  {
+    "version": "1.0",
+    "id": "test-block-blocked-programs",
+    "name": "Block Malicious Programs",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "Blocked program detected"
+    },
+    "tags": []
+  },
+  {
+    "version": "1.0",
+    "id": "test-block-high-risk",
+    "name": "Block High Risk Transactions",
+    "enabled": true,
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 80
+      },
+      "message": "High risk score detected"
+    },
+    "tags": []
+  },
+  {
+    "version": "1.0",
+    "id": "allow-jupiter-delegate",
+    "name": "Allow Delegation to Jupiter",
+    "description": "Allow token approvals specifically to Jupiter aggregator",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "delegation",
+      "jupiter"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_approve",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:delegate_addresses",
+            "operator": "contains",
+            "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+          }
+        ]
+      },
+      "message": "\u2705 ALLOWED: Delegation to Jupiter v6"
+    },
+    "metadata": {
+      "program": "Jupiter v6",
+      "program_id": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-raydium-delegate",
+    "name": "Allow Delegation to Raydium",
+    "description": "Allow token approvals specifically to Raydium AMM",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "delegation",
+      "raydium"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_approve",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:delegate_addresses",
+            "operator": "contains",
+            "value": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+          }
+        ]
+      },
+      "message": "\u2705 ALLOWED: Delegation to Raydium AMM"
+    },
+    "metadata": {
+      "program": "Raydium AMM",
+      "program_id": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-orca-delegate",
+    "name": "Allow Delegation to Orca",
+    "description": "Allow token approvals specifically to Orca Whirlpool",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "delegation",
+      "orca"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_approve",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:delegate_addresses",
+            "operator": "contains",
+            "value": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+          }
+        ]
+      },
+      "message": "\u2705 ALLOWED: Delegation to Orca Whirlpool"
+    },
+    "metadata": {
+      "program": "Orca Whirlpool",
+      "program_id": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-delegation-to-unknown",
+    "name": "Block Delegation to Non-Allowlisted",
+    "description": "Block any delegation that isn't to an explicitly allowed address",
+    "enabled": false,
+    "tags": [
+      "allowlist",
+      "delegation",
+      "strict"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_approve",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "not": {
+              "field": "token_instructions:delegate_addresses",
+              "operator": "in",
+              "value": [
+                "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+                "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+              ]
+            }
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Delegation to non-allowlisted address"
+    },
+    "metadata": {
+      "note": "Enable for strict allowlist mode. Add your trusted delegate addresses to the value array."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-delegation-to-new-address",
+    "name": "Alert on Any Delegation",
+    "description": "Warn whenever delegation happens (even to known addresses)",
+    "enabled": true,
+    "tags": [
+      "alert",
+      "delegation"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_approve",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Token delegation detected - review delegate address carefully"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-unlimited-to-any",
+    "name": "Block Unlimited Delegations",
+    "description": "Block unlimited approvals regardless of delegate",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "delegation"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Unlimited delegation (u64::MAX) detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-core-programs",
+    "name": "Allow Core Solana Programs",
+    "description": "Core programs are always safe (System, Token, Compute Budget)",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "core"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "complexity:non_core_program_count",
+        "operator": "equals",
+        "value": 0
+      },
+      "message": "\u2705 Transaction uses only core Solana programs"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-jupiter-v6",
+    "name": "Allow Jupiter v6",
+    "description": "Jupiter v6 aggregator is verified safe",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "dex"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "complexity:all_programs",
+        "operator": "contains",
+        "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+      },
+      "message": "\u2705 Jupiter v6 detected (verified DEX)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-raydium",
+    "name": "Allow Raydium AMM",
+    "description": "Raydium AMM is verified safe",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "dex"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "complexity:all_programs",
+        "operator": "contains",
+        "value": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+      },
+      "message": "\u2705 Raydium AMM detected (verified DEX)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-orca",
+    "name": "Allow Orca Whirlpool",
+    "description": "Orca Whirlpool is verified safe",
+    "enabled": true,
+    "tags": [
+      "allowlist",
+      "dex"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "complexity:all_programs",
+        "operator": "contains",
+        "value": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+      },
+      "message": "\u2705 Orca Whirlpool detected (verified DEX)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-non-allowlisted",
+    "name": "Block Non-Allowlisted Programs",
+    "description": "Block any programs not on the allowlist",
+    "enabled": false,
+    "tags": [
+      "allowlist",
+      "strict"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "complexity:non_core_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Transaction uses non-allowlisted programs"
+    },
+    "metadata": {
+      "note": "Enable this for strict allowlist mode. Combine with specific DEX/protocol allow rules."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-non-core-programs",
+    "name": "Alert on Non-Core Programs",
+    "description": "Warn when transaction uses programs beyond core Solana",
+    "enabled": true,
+    "tags": [
+      "alert",
+      "programs"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:non_core_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\u26a0\ufe0f Transaction uses non-core programs - verify you trust them"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-sol-to-treasury",
+    "name": "Allow SOL to Treasury",
+    "description": "Allow SOL transfers to your treasury wallet",
+    "enabled": false,
+    "tags": [
+      "allowlist",
+      "sol-transfer"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:has_sol_transfer",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "system:sol_recipients",
+            "operator": "contains",
+            "value": "YOUR_TREASURY_WALLET_HERE"
+          }
+        ]
+      },
+      "message": "\u2705 ALLOWED: SOL transfer to treasury wallet"
+    },
+    "metadata": {
+      "note": "Replace YOUR_TREASURY_WALLET_HERE with your actual wallet address"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-sol-to-blacklist",
+    "name": "Block SOL to Known Scam Addresses",
+    "description": "Prevent transfers to known scam addresses",
+    "enabled": true,
+    "tags": [
+      "blocklist",
+      "sol-transfer"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:sol_recipients",
+        "operator": "in",
+        "value": [
+          "ScamAddress1111111111111111111111111111",
+          "ScamAddress2222222222222222222222222222"
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: SOL transfer to known scam address"
+    },
+    "metadata": {
+      "note": "Add known scam addresses to the value array"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-sol-to-unknown-large",
+    "name": "Block Large SOL to Any Address",
+    "description": "Block large SOL transfers as fallback",
+    "enabled": true,
+    "tags": [
+      "sol-transfer",
+      "protection"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
+      },
+      "message": "\ud83d\udea8 BLOCKED: Large SOL transfer (> 5 SOL) - verify recipient address"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-sol-transfer-any",
+    "name": "Alert on All SOL Transfers",
+    "description": "Warn on any SOL transfer for review",
+    "enabled": true,
+    "tags": [
+      "alert",
+      "sol-transfer"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:has_sol_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: SOL transfer detected - verify recipient"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-usdc-only",
+    "name": "Allow USDC Transfers Only",
+    "description": "Only allow transfers of USDC (mainnet mint)",
+    "enabled": false,
+    "tags": [
+      "allowlist",
+      "mint",
+      "strict"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_transfer",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "not": {
+              "field": "token_instructions:mints_involved",
+              "operator": "contains",
+              "value": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            }
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Only USDC transfers allowed"
+    },
+    "metadata": {
+      "mint": "USDC",
+      "mint_address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-stablecoins-only",
+    "name": "Allow Stablecoins Only",
+    "description": "Restrict transfers to known stablecoins (USDC, USDT, UXD)",
+    "enabled": false,
+    "tags": [
+      "allowlist",
+      "mint",
+      "stablecoin"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_transfer",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "not": {
+              "field": "token_instructions:mints_involved",
+              "operator": "in",
+              "value": [
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+                "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+              ]
+            }
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Only stablecoin transfers allowed (USDC, USDT, UXD)"
+    },
+    "metadata": {
+      "mints": {
+        "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+        "UXD": "7kbnvuGBxxj8AG9qp8Scn56muWGaRaFqxg1FsRp3PaFT"
+      }
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-suspicious-mint",
+    "name": "Block Known Scam Token Mints",
+    "description": "Block transfers of known scam tokens",
+    "enabled": true,
+    "tags": [
+      "blocklist",
+      "mint",
+      "scam"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:mints_involved",
+        "operator": "in",
+        "value": [
+          "ScamMint1111111111111111111111111111111",
+          "ScamMint2222222222222222222222222222222"
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Known scam token detected"
+    },
+    "metadata": {
+      "note": "Add known scam mint addresses here"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "prefer-transfer-checked",
+    "name": "Prefer TransferChecked Instructions",
+    "description": "Alert if using old Transfer instead of TransferChecked",
+    "enabled": false,
+    "tags": [
+      "alert",
+      "best-practice"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_transfer",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:uses_transfer_checked",
+            "operator": "equals",
+            "value": false
+          }
+        ]
+      },
+      "message": "\u26a0\ufe0f WARNING: Using old Transfer instruction - TransferChecked is safer"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allowlist-only",
+    "name": "Allow Only Programs on Allowlist",
+    "description": "Example: Only allow Jupiter, Raydium, Orca (customize this list)",
+    "author": "your-name",
+    "enabled": false,
+    "tags": [
+      "allowlist"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "not": {
+          "all": [
+            {
+              "field": "program_ids",
+              "operator": "in",
+              "value": [
+                "JUP4Fb2cqiRUcaTHdrPC8h2gNsA2ETXiPDD33WcGuJB",
+                "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+              ]
+            }
+          ]
+        }
+      },
+      "message": "\ud83d\udeab Only allowed DEXs permitted (Jupiter, Raydium, Orca)"
+    },
+    "metadata": {
+      "note": "Disabled by default - enable and customize program list for your needs"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-deep-cpi-chains",
+    "name": "Block Deep CPI Chains",
+    "description": "Block transactions with excessive CPI nesting (>4 levels) that can hide malicious behavior",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "cpi",
+      "protection"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:has_deep_cpis",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "inner_instruction:cpi_depth_score",
+            "operator": "greater_than",
+            "value": 70
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Deep CPI chain detected - potential hidden malicious behavior"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 60,
+      "false_positive_rate": "low",
+      "validation_status": "production"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-deep-cpi-chains",
+    "name": "Alert on Deep CPI Chains",
+    "description": "Warn on transactions with moderately deep CPI nesting (3-4 levels)",
+    "enabled": true,
+    "tags": [
+      "warning",
+      "cpi"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:has_deep_cpis",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Deep CPI chain detected - review transaction carefully"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 30
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-unknown-cpi-programs",
+    "name": "Block Unknown Programs in CPIs",
+    "description": "Block transactions calling unverified programs via CPI",
+    "enabled": false,
+    "tags": [
+      "critical",
+      "cpi",
+      "unknown-programs"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Unknown program detected in CPI call"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 70,
+      "note": "Disabled by default - may have high false positive rate with legitimate DeFi protocols",
+      "recommendation": "Enable for high-security environments or use alert action"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-unknown-cpi-programs",
+    "name": "Alert on Unknown Programs in CPIs",
+    "description": "Warn when transaction calls unverified programs via CPI",
+    "enabled": true,
+    "tags": [
+      "warning",
+      "cpi",
+      "unknown-programs"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\u26a0\ufe0f WARNING: Unknown program called via CPI - verify program safety"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 25
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-cpi-risk",
+    "name": "Block High CPI Risk Score",
+    "description": "Block transactions with high CPI risk scores indicating complex suspicious patterns",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "cpi",
+      "risk-score"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "inner_instruction:cpi_risk_score",
+        "operator": "greater_than",
+        "value": 80
+      },
+      "message": "\ud83d\udea8 BLOCKED: High CPI risk score detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 65
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-multiple-unknown-cpis",
+    "name": "Alert on Multiple Unknown CPIs",
+    "description": "Warn when transaction calls 2+ unknown programs via CPI (very suspicious)",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "cpi"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "inner_instruction:unknown_program_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "\u26a0\ufe0f WARNING: Multiple unknown programs in CPI chain - highly suspicious"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-authority-change-fingerprint",
+    "name": "Block Authority Change Fingerprints",
+    "description": "Block transactions with known authority-change instruction fingerprints",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "authority",
+      "fingerprint"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "instruction_data:has_authority_change",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Authority change instruction fingerprint detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 70,
+      "false_positive_rate": "low",
+      "note": "Requires fingerprint configuration file"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "warn-unverified-programs",
+    "name": "Warn on Unverified Programs",
+    "description": "Alerts when transaction involves programs without OtterSec verification",
+    "enabled": true,
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "ottersec:unverified_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\u26a0\ufe0f WARNING: Transaction involves {unverified_count} program(s) without cryptographic verification"
+    },
+    "tags": []
+  },
+  {
+    "version": "1.0",
+    "id": "block-close-non-owned-account",
+    "name": "Block Closing Non-Owned Accounts",
+    "description": "Prevent transactions that close token accounts you don't own",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "ownership",
+      "protection"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:closes_non_owned_account",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Attempting to close a token account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-transfer-from-non-owned",
+    "name": "Block Transfers from Non-Owned Accounts",
+    "description": "Prevent transferring tokens from accounts you don't control (without proper delegation)",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "ownership",
+      "protection"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:transfers_from_non_owned",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Attempting to transfer tokens from an account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-authority-change-non-owned",
+    "name": "Block Authority Changes on Non-Owned Accounts",
+    "description": "Prevent modifying authority on accounts you don't control",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "ownership",
+      "protection"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:modifies_non_owned_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Attempting to modify authority on an account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-approve-non-owned",
+    "name": "Alert on Approving Non-Owned Tokens",
+    "description": "Warn when delegating tokens you don't own (may be legitimate with existing delegation)",
+    "enabled": true,
+    "tags": [
+      "warning",
+      "ownership"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:approves_non_owned_tokens",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Delegating tokens from an account you don't directly own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-multiple-non-owned-ops",
+    "name": "Block Multiple Non-Owned Operations",
+    "description": "Block if transaction has 2+ operations on non-owned accounts (very suspicious)",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "ownership"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:non_owned_operations_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "\ud83d\udea8 BLOCKED: Multiple operations on accounts you don't own (highly suspicious)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-unlimited-delegation",
+    "name": "Block Unlimited Token Delegations",
+    "description": "Prevents unlimited token approvals (u64::MAX) - most common drain attack",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "delegation",
+      "drain-attack"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Unlimited token delegation (u64::MAX) - common drain attack pattern"
+    },
+    "metadata": {
+      "attack_type": "unlimited_approval",
+      "severity": "critical",
+      "false_positive_rate": 0.001
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-freeze-with-approval",
+    "name": "Block Freeze + Approval Combo",
+    "description": "Prevents freeze authority abuse combined with token approval",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "combo-attack",
+      "freeze"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_freeze",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Freeze + Approval combination - attacker can freeze your approved tokens"
+    },
+    "metadata": {
+      "attack_type": "freeze_combo",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-burn-with-approval",
+    "name": "Block Burn + Approval Combo",
+    "description": "Prevents burn operations combined with approvals",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "combo-attack",
+      "burn"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_burn",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Burn + Approval combination - your tokens could be destroyed"
+    },
+    "metadata": {
+      "attack_type": "burn_combo",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-net-delegation-increase",
+    "name": "Block Net Delegation Increase",
+    "description": "Blocks transactions that add more approvals than they revoke",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "delegation"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:net_delegation_change",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Net increase in token delegations detected"
+    },
+    "metadata": {
+      "attack_type": "delegation_increase",
+      "severity": "critical"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-revoke-only",
+    "name": "Pass Revoke-Only Transactions",
+    "description": "Explicitly allows revoke operations (security improvement)",
+    "enabled": true,
+    "tags": [
+      "safe",
+      "revoke"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_revoke",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "equals",
+            "value": 0
+          },
+          {
+            "field": "token_instructions:net_delegation_change",
+            "operator": "less_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "\u2705 SAFE: Revoking token delegation (security improvement)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-any-burn",
+    "name": "Alert on Token Burns",
+    "description": "Warns when transaction will permanently destroy tokens",
+    "enabled": true,
+    "tags": [
+      "high",
+      "burn"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_burn",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Token burn detected - your tokens will be permanently destroyed!"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-freeze-operation",
+    "name": "Alert on Freeze/Thaw Operations",
+    "description": "Warns when freeze or thaw operations are detected",
+    "enabled": true,
+    "tags": [
+      "high",
+      "freeze"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "any": [
+          {
+            "field": "token_instructions:has_freeze",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:has_thaw",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "\u26a0\ufe0f WARNING: Account freeze/thaw operation - can prevent transfers"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-mint-operation",
+    "name": "Alert on Token Minting",
+    "description": "Warns when new tokens are being minted (supply inflation)",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "supply"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_mint",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Token minting detected - supply will increase"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-large-sol-transfer",
+    "name": "Block Large SOL Transfers",
+    "description": "Blocks native SOL transfers over 5 SOL",
+    "enabled": true,
+    "tags": [
+      "high",
+      "sol-transfer",
+      "drain"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
+      },
+      "message": "\ud83d\udea8 BLOCKED: Large SOL transfer (> 5 SOL) - verify recipient address"
+    },
+    "metadata": {
+      "threshold_sol": 5.0
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-sol-transfer",
+    "name": "Alert on SOL Transfers",
+    "description": "Warns on SOL transfers over 0.1 SOL",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "sol-transfer"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 100000000
+      },
+      "message": "\u26a0\ufe0f WARNING: Transferring SOL (> 0.1 SOL)"
+    },
+    "metadata": {
+      "threshold_sol": 0.1
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-account-creation-spam",
+    "name": "Block Account Creation Spam",
+    "description": "Prevents creation of excessive accounts (rent drain attack)",
+    "enabled": true,
+    "tags": [
+      "high",
+      "spam",
+      "rent-drain"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:account_creation_count",
+        "operator": "greater_than",
+        "value": 20
+      },
+      "message": "\ud83d\udea8 BLOCKED: Excessive account creation (> 20) - spam/rent drain attack"
+    },
+    "metadata": {
+      "attack_type": "rent_drain"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-account-creation",
+    "name": "Alert on Multiple Account Creation",
+    "description": "Warns when creating 3+ accounts (rent costs)",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "accounts"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:account_creation_count",
+        "operator": "greater_than_or_equal",
+        "value": 3
+      },
+      "message": "\u26a0\ufe0f WARNING: Creating 3+ accounts - will cost ~0.006+ SOL in rent"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-complexity-unknown",
+    "name": "Block Complex Unknown Programs",
+    "description": "Blocks complex transactions with multiple unknown programs",
+    "enabled": true,
+    "tags": [
+      "high",
+      "complexity",
+      "obfuscation"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 2
+          },
+          {
+            "field": "complexity:complexity_score",
+            "operator": "greater_than",
+            "value": 70
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Complex transaction with 3+ unknown programs - potential obfuscation"
+    },
+    "metadata": {
+      "attack_type": "obfuscation"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-high-complexity",
+    "name": "Alert on High Complexity",
+    "description": "Warns when complexity score exceeds threshold",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "complexity"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:is_complex_transaction",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Complex transaction detected - review carefully before signing"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-account-confusion",
+    "name": "Alert on Potential Account Confusion",
+    "description": "Warns on many writable non-signer accounts (missing signer check vulnerability)",
+    "enabled": true,
+    "tags": [
+      "high",
+      "account-confusion",
+      "signer-check"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:potential_authority_mismatch",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Many writable accounts without signatures - potential missing signer check vulnerability"
+    },
+    "metadata": {
+      "vulnerability": "missing_signer_check",
+      "reference": "Wormhole exploit 2022"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-dangerous-instruction-combo",
+    "name": "Block Dangerous Instruction Combinations",
+    "description": "Blocks suspicious instruction combinations detected by analyzer",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "combo-attack"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:dangerous_operation_combo",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Dangerous instruction combination detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-blocked-programs",
+    "name": "Block Known Malicious Programs",
+    "description": "Blocks transactions involving programs on blocklist",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "blocklist"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:blocked_program_detected",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Transaction involves known malicious program"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-critical-risk-score",
+    "name": "Block Critical Risk Transactions",
+    "description": "Blocks transactions with risk score >= 90",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "risk-score"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "core_security:risk_score",
+        "operator": "greater_than_or_equal",
+        "value": 90
+      },
+      "message": "\ud83d\udea8 BLOCKED: Critical risk score (>= 90) - multiple suspicious indicators"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-authority-changes",
+    "name": "Alert on Authority Changes",
+    "description": "Warns when transaction modifies token/account authority",
+    "enabled": true,
+    "tags": [
+      "medium",
+      "authority"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_set_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f WARNING: Authority change detected - ownership will be modified"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-drift-nonce-custom-program-outflow",
+    "name": "Block Drift-Style: Durable Nonce + Custom Program + Outflow",
+    "description": "Blocks durable nonce transactions targeting a non-core custom program that also contain fund outflows in the same transaction. Low false positive rate - this combination is rare in legitimate use.",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "drift",
+      "durable-nonce",
+      "custom-program",
+      "outflow"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          {
+            "any": [
+              {
+                "field": "system:has_sol_transfer",
+                "operator": "equals",
+                "value": true
+              },
+              {
+                "field": "token_instructions:has_transfer",
+                "operator": "equals",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "message": "BLOCKED: Durable nonce + custom program + fund outflow - Drift-style combined exploit pattern detected"
+    },
+    "metadata": {
+      "attack_type": "drift_exploit_with_drain",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "false_positive_rate": 0.005
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-drift-nonce-custom-program",
+    "name": "Alert: Durable Nonce Targeting Custom Program",
+    "description": "Alerts on any durable nonce transaction targeting a non-core custom program. Catches the Drift attack pre-signing step (admin takeover tx had no outflow). Will fire on legitimate multisig/governance workflows - operators should review and allowlist known-safe programs. Weight 60 contributes toward the blocking threshold.",
+    "enabled": true,
+    "tags": [
+      "high",
+      "drift",
+      "durable-nonce",
+      "custom-program"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "ALERT: Durable nonce transaction targeting non-core custom program - review for Drift-style pre-signed exploit (allowlist known-safe programs to suppress)"
+    },
+    "metadata": {
+      "attack_type": "drift_presign",
+      "severity": "high",
+      "weight": 60
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "deep-cpi-alert",
+    "name": "Deep CPI Chain Alert",
+    "description": "Alerts when transaction has unusually deep cross-program invocation chains (>5 levels)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "security",
+      "cpi",
+      "deep-scan"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:has_deep_cpis",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "Transaction contains unusually deep CPI chain (>5 levels)"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 30,
+      "comment": "Deep CPI chains can hide malicious behavior in nested program calls"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "unknown-inner-programs",
+    "name": "Unknown Programs in CPIs",
+    "description": "Alerts when transaction invokes unknown programs via CPIs (not system/token programs)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "security",
+      "cpi",
+      "deep-scan",
+      "unknown"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:has_unknown_inner_programs",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "Transaction calls unknown programs via CPIs"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 35,
+      "comment": "Unknown programs in CPIs should be reviewed - could be malicious contracts"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "high-cpi-risk",
+    "name": "High CPI Risk Score",
+    "description": "Blocks transactions with very high CPI risk scores (deep chains + unknown programs)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "security",
+      "cpi",
+      "deep-scan",
+      "high-risk"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:cpi_risk_score",
+            "operator": "greater_than",
+            "value": 10
+          }
+        ]
+      },
+      "message": "Transaction has very high CPI risk score - likely malicious"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 80,
+      "comment": "Combination of deep CPIs and unknown programs indicates sophisticated attack"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "multiple-unknown-cpis",
+    "name": "Multiple Unknown Programs in CPIs",
+    "description": "Blocks when transaction invokes 3+ unknown programs via CPIs",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "security",
+      "cpi",
+      "deep-scan",
+      "unknown"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:unknown_program_count",
+            "operator": "greater_than",
+            "value": 2
+          }
+        ]
+      },
+      "message": "Transaction invokes multiple unknown programs via CPIs"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 60,
+      "comment": "Multiple unknown programs in CPIs is a red flag for complex attacks"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-extreme-cpi-depth",
+    "name": "Block Extreme CPI Depth",
+    "description": "Block transactions with extremely deep CPI chains (depth score >80)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "cpi",
+      "depth"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "inner_instruction:cpi_depth_score",
+        "operator": "greater_than",
+        "value": 80
+      },
+      "message": "\ud83d\udea8 BLOCKED: Extreme CPI depth detected - likely obfuscation attempt"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 70
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-moderate-cpi-depth",
+    "name": "Alert on Moderate CPI Depth",
+    "description": "Warn on transactions with moderately deep CPI chains (depth score 50-80)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "warning",
+      "cpi",
+      "depth"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "inner_instruction:cpi_depth_score",
+            "operator": "greater_than",
+            "value": 50
+          },
+          {
+            "field": "inner_instruction:cpi_depth_score",
+            "operator": "less_than_or_equal",
+            "value": 80
+          }
+        ]
+      },
+      "message": "\u26a0\ufe0f Moderate CPI depth detected - review transaction carefully"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 25
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-medium-sol-transfer",
+    "name": "Medium SOL Transfer Alert",
+    "description": "Alerts on SOL transfers over 0.003 SOL for demo purposes",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "sol-transfer",
+      "medium"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 3000000
+      },
+      "message": "\u26a0\ufe0f ALERT: SOL transfer detected (>0.003 SOL) - verify recipient is trusted"
+    },
+    "metadata": {
+      "severity": "medium",
+      "threshold_sol": 0.003,
+      "weight": 15,
+      "networks": [
+        "devnet",
+        "testnet",
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-any-sol-transfer",
+    "name": "Any SOL Transfer Alert",
+    "description": "Alerts on all SOL transfers for maximum visibility",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "sol-transfer",
+      "info"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:has_sol_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u2139\ufe0f NOTICE: SOL transfer detected - monitor for suspicious activity"
+    },
+    "metadata": {
+      "severity": "low",
+      "weight": 5,
+      "networks": [
+        "devnet",
+        "testnet",
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-multiple-transfers",
+    "name": "Multiple Transfer Alert",
+    "description": "Warns when transaction contains multiple SOL transfers",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "pattern",
+      "medium"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:sol_transfer_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "\u26a0\ufe0f ALERT: Multiple SOL transfers in one transaction - verify all recipients"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 20,
+      "networks": [
+        "devnet",
+        "testnet",
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-rapid-transactions",
+    "name": "Rapid Transaction Pattern",
+    "description": "Detects unusually high transaction frequency",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "bot-detection",
+      "medium"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "basic:instruction_count",
+        "operator": "greater_than",
+        "value": 3
+      },
+      "message": "\u26a0\ufe0f ALERT: Transaction with multiple instructions - possible automated bot activity"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 10,
+      "networks": [
+        "devnet",
+        "testnet",
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-token-freeze-detected",
+    "name": "Token Freeze Authority Alert",
+    "description": "Alerts when transaction involves tokens with freeze authority (rug pull risk)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "freeze-risk",
+      "high"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_freeze",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f ALERT: Token with freeze authority detected - assets could be frozen by issuer"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 35,
+      "risk_type": "Freeze authority (rug pull vector)",
+      "networks": "all"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-token-mint-authority",
+    "name": "Token Mint Authority Alert",
+    "description": "Alerts when transaction involves tokens that can mint unlimited supply",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "mint-risk",
+      "medium"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_mint",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f ALERT: Token minting detected - supply inflation risk"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 20,
+      "risk_type": "Unlimited minting (supply dilution)",
+      "networks": "all"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-high-risk-score",
+    "name": "Elevated Risk Score Alert",
+    "description": "Alerts when transaction risk score exceeds 15",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "demo",
+      "risk-score",
+      "medium"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "core_security:risk_score",
+        "operator": "greater_than",
+        "value": 15
+      },
+      "message": "\u26a0\ufe0f ALERT: Elevated risk score detected - multiple suspicious patterns identified"
+    },
+    "metadata": {
+      "severity": "medium",
+      "weight": 25,
+      "networks": [
+        "devnet",
+        "testnet",
+        "mainnet-beta"
+      ]
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-presigned-authority-change",
+    "name": "Block: Pre-signed Authority Change",
+    "description": "Blocks any durable nonce transaction that contains an instruction whose first 8 bytes match a known authority/admin-transfer fingerprint. Fingerprints are computed from instruction names using the Anchor discriminator formula (SHA256('global:<name>')[0..8]) \u2014 no hardcoded byte values. The fingerprint list lives in rules/fingerprints/authority-change.json and can be extended without code changes. Covers any Anchor-based protocol. A pre-signed authority change has no legitimate operational justification \u2014 it is either an attack or a severe security failure requiring immediate review.",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "durable-nonce",
+      "authority-change",
+      "fingerprint"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "instruction_data:has_authority_change",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "BLOCKED: Pre-signed authority/admin change detected \u2014 durable nonce + known authority-transfer instruction fingerprint"
+    },
+    "metadata": {
+      "attack_type": "presigned_authority_change",
+      "severity": "critical",
+      "false_positive_rate": 0.001,
+      "trust": "top-level instruction bytes are from the signed transaction (zero RPC trust). CPI inner instruction bytes come from meta.innerInstructions (RPC-supplied). Use your own RPC node to eliminate this trust dependency.",
+      "note": "Fingerprints derived at runtime from instruction names in rules/fingerprints/authority-change.json \u2014 no hardcoded bytes"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-log-admin-change-with-nonce",
+    "name": "Block: Admin Change Instruction in Logs + Durable Nonce",
+    "description": "Blocks when confirmed transaction logs contain an admin/authority-change instruction name AND a durable nonce was used. Requires logs to be available (confirmed tx analysis or simulation). Rule is fully data-driven - add more instruction names to the value list as new attack patterns emerge.",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "drift",
+      "durable-nonce",
+      "log-analysis",
+      "admin-change"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "any": [
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferOwnership"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetOwner"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "ChangeAuthority"
+              }
+            ]
+          }
+        ]
+      },
+      "message": "BLOCKED: Durable nonce transaction contains admin/authority-change instruction in logs - Drift-style exploit pattern"
+    },
+    "metadata": {
+      "attack_type": "drift_log_admin_change",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "false_positive_rate": 0.002,
+      "note": "Only fires when logs are available (confirmed tx or simulation). On sendTransaction without logs, falls back to structural rules."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "allow-revoke",
+    "name": "Pass Revoke Operations",
+    "description": "Explicitly allows revoke-only transactions (security improvement)",
+    "enabled": true,
+    "tags": [
+      "safe",
+      "revoke"
+    ],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {
+            "field": "token_instructions:has_revoke",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "equals",
+            "value": 0
+          }
+        ]
+      },
+      "message": "\u2705 SAFE: Revoking token delegation (security improvement)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-account-spam",
+    "name": "Block Account Creation Spam",
+    "description": "Prevents creation of excessive accounts (rent drain)",
+    "enabled": true,
+    "tags": [
+      "high",
+      "spam"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:account_creation_count",
+        "operator": "greater_than",
+        "value": 20
+      },
+      "message": "\ud83d\udea8 BLOCKED: Excessive account creation (> 20 accounts) - spam attack"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-complex-non-core",
+    "name": "Block Complex Non-Core Programs",
+    "description": "Blocks complex transactions with multiple non-core programs",
+    "enabled": true,
+    "tags": [
+      "high",
+      "complexity"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 2
+          },
+          {
+            "field": "complexity:complexity_score",
+            "operator": "greater_than",
+            "value": 70
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Complex transaction with multiple non-core programs"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-writable-non-signer",
+    "name": "Alert on Writable Non-Signers",
+    "description": "Potential account confusion attack (missing signer checks)",
+    "enabled": true,
+    "tags": [
+      "high",
+      "account-confusion"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "complexity:writable_non_signer_count",
+        "operator": "greater_than",
+        "value": 5
+      },
+      "message": "\u26a0\ufe0f WARNING: Many writable accounts without signatures - potential account confusion attack"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-dangerous-combo",
+    "name": "Block Dangerous Operation Combinations",
+    "description": "Blocks suspicious instruction combinations",
+    "enabled": true,
+    "tags": [
+      "critical",
+      "combo-attack"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:dangerous_operation_combo",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Dangerous instruction combination detected"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "padding-critical-excessive",
+    "name": "Critical: Excessive Instruction Padding",
+    "enabled": true,
+    "tags": [],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "greater_than",
+            "value": 512
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction contains excessive padding ({{padding:max_padding_bytes}} bytes). This pattern is commonly used in padding attacks to bypass security checks."
+    },
+    "metadata": {
+      "category": "instruction_padding_attack",
+      "severity": "critical",
+      "attack_vector": "instruction_data_manipulation"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "padding-high-repeated-pattern",
+    "name": "High: Repeated Padding Pattern Detected",
+    "enabled": true,
+    "tags": [],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:has_repeated_padding",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction contains repeated padding pattern (e.g., 0x00 or 0xFF bytes). This suggests a malicious attempt to hide or obfuscate instruction data."
+    },
+    "metadata": {
+      "category": "instruction_padding_attack",
+      "severity": "high",
+      "attack_vector": "data_obfuscation"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "padding-high-ratio",
+    "name": "High: Suspicious Padding Ratio",
+    "enabled": true,
+    "tags": [],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_ratio",
+            "operator": "greater_than",
+            "value": 10.0
+          }
+        ]
+      },
+      "message": "Transaction blocked: Instruction padding ratio ({{padding:max_padding_ratio}}x) exceeds safe threshold. The instruction data is significantly larger than expected for its type."
+    },
+    "metadata": {
+      "category": "instruction_padding_attack",
+      "severity": "high",
+      "attack_vector": "size_anomaly"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "padding-medium-multiple-suspicious",
+    "name": "Medium: Multiple Instructions with Suspicious Padding",
+    "enabled": true,
+    "tags": [],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:suspicious_instruction_count",
+            "operator": "greater_than",
+            "value": 1
+          }
+        ]
+      },
+      "message": "Warning: Transaction contains {{padding:suspicious_instruction_count}} instructions with suspicious padding. Review the transaction details carefully before proceeding."
+    },
+    "metadata": {
+      "category": "instruction_padding_attack",
+      "severity": "medium",
+      "attack_vector": "multiple_anomalies"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "padding-low-single-moderate",
+    "name": "Low: Single Instruction with Moderate Padding",
+    "enabled": true,
+    "tags": [],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "padding:has_suspicious_padding",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "greater_than",
+            "value": 256
+          },
+          {
+            "field": "padding:max_padding_bytes",
+            "operator": "less_than_or_equal",
+            "value": 512
+          }
+        ]
+      },
+      "message": "Advisory: Instruction contains moderate padding ({{padding:max_padding_bytes}} bytes). This may be legitimate (e.g., Token-2022 extensions) but warrants review."
+    },
+    "metadata": {
+      "category": "instruction_padding_attack",
+      "severity": "low",
+      "attack_vector": "size_anomaly"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "mainnet-usdc-large-transfer",
+    "name": "Mainnet USDC Large Transfer",
+    "description": "Alerts on USDC transfers over $1000 on mainnet",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "mainnet",
+      "usdc",
+      "high-value"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u26a0\ufe0f MAINNET ALERT: Large USDC transfer detected - verify recipient"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 50,
+      "networks": "mainnet-beta",
+      "token_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "devnet-usdc-test",
+    "name": "Devnet USDC Test Alert",
+    "description": "Alerts on any USDC transfer on devnet for testing",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": [
+      "devnet",
+      "usdc",
+      "test"
+    ],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:has_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\u2139\ufe0f DEVNET: USDC transfer detected (testing)"
+    },
+    "metadata": {
+      "severity": "low",
+      "weight": 5,
+      "networks": "devnet",
+      "token_mint": "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-non-core-programs",
+    "name": "Block Non-Core Programs",
+    "description": "For trading bots - only allow core Solana programs by default",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "allowlist"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "complexity:non_core_program_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Transaction uses non-core programs (configure allowlist in separate rules)"
+    },
+    "metadata": {
+      "note": "Combine with program-allowlist.json to allow specific DEXes/protocols"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-any-delegation",
+    "name": "Block All Token Delegations",
+    "description": "Bots should never delegate tokens",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "delegation"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "\ud83d\udea8 BLOCKED: Token delegation detected (bots should never approve)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-authority-changes",
+    "name": "Block Authority Changes",
+    "description": "Bots should never change account authority",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "authority"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:has_set_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Authority change detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-account-creation",
+    "name": "Block Account Creation",
+    "description": "Bots should not create accounts",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "accounts"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:creates_accounts",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Account creation detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "limit-sol-transfer",
+    "name": "Limit SOL Transfers",
+    "description": "Bots should only transfer small amounts for fees",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "sol-transfer"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 100000000
+      },
+      "message": "\ud83d\udea8 BLOCKED: SOL transfer exceeds bot limit (0.1 SOL)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-freeze-operations",
+    "name": "Block Freeze/Thaw Operations",
+    "description": "Bots should never interact with freeze authority",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "freeze"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "any": [
+          {
+            "field": "token_instructions:has_freeze",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "token_instructions:has_thaw",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "\ud83d\udea8 BLOCKED: Freeze/thaw operation detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-mint-burn",
+    "name": "Block Mint/Burn Operations",
+    "description": "Bots should only trade, not create/destroy tokens",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "supply"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:modifies_supply",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "\ud83d\udea8 BLOCKED: Token supply modification detected (not allowed for bots)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-high-complexity",
+    "name": "Block High Complexity Transactions",
+    "description": "Bots should only execute simple swap transactions",
+    "enabled": true,
+    "tags": [
+      "bot",
+      "complexity"
+    ],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "complexity:complexity_score",
+        "operator": "greater_than",
+        "value": 50
+      },
+      "message": "\ud83d\udea8 BLOCKED: Transaction too complex for bot safety threshold"
+    }
+  }
+]

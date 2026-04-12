@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "sol-shield-solana": {
+      "command": "node",
+      "args": ["/path/to/openclaw-mcp-server.ts"],
+      "env": {
+        "SOL_SHIELD_RPC_URL": "http://localhost:8899"
+      }
+    }
+  }
+}

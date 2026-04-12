@@ -1,0 +1,87 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-close-non-owned-account",
+    "name": "Block Closing Non-Owned Accounts",
+    "description": "Prevent transactions that close token accounts you don't own",
+    "enabled": true,
+    "tags": ["critical", "ownership", "protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:closes_non_owned_account",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Attempting to close a token account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-transfer-from-non-owned",
+    "name": "Block Transfers from Non-Owned Accounts",
+    "description": "Prevent transferring tokens from accounts you don't control (without proper delegation)",
+    "enabled": true,
+    "tags": ["critical", "ownership", "protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:transfers_from_non_owned",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Attempting to transfer tokens from an account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-authority-change-non-owned",
+    "name": "Block Authority Changes on Non-Owned Accounts",
+    "description": "Prevent modifying authority on accounts you don't control",
+    "enabled": true,
+    "tags": ["critical", "ownership", "protection"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:modifies_non_owned_authority",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "🚨 BLOCKED: Attempting to modify authority on an account you don't own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-approve-non-owned",
+    "name": "Alert on Approving Non-Owned Tokens",
+    "description": "Warn when delegating tokens you don't own (may be legitimate with existing delegation)",
+    "enabled": true,
+    "tags": ["warning", "ownership"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:approves_non_owned_tokens",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "⚠️ WARNING: Delegating tokens from an account you don't directly own"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-multiple-non-owned-ops",
+    "name": "Block Multiple Non-Owned Operations",
+    "description": "Block if transaction has 2+ operations on non-owned accounts (very suspicious)",
+    "enabled": true,
+    "tags": ["critical", "ownership"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:non_owned_operations_count",
+        "operator": "greater_than",
+        "value": 1
+      },
+      "message": "🚨 BLOCKED: Multiple operations on accounts you don't own (highly suspicious)"
+    }
+  }
+]
