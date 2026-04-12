@@ -20,7 +20,6 @@ Parapet is an open-source security platform for Solana that provides:
 
 - **Transaction analysis and threat detection** - Real-time rule-based security
 - **Wallet security scanning** - Comprehensive threat assessment for Solana wallets
-- **Phishing site analysis** - Detection and analysis of malicious sites
 - **Secure RPC proxy** - Configurable security rules at the RPC level
 
 ## Components
