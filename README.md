@@ -4,11 +4,11 @@
 
 ### Fast, portable Solana transaction security
 
-  **Open-source security platform for the Solana ecosystem**
+**Open-source security platform for the Solana ecosystem**
 
-  [License: MIT](LICENSE)
-  [Rust](https://www.rust-lang.org/)
-  [Built for Solana](https://solana.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![Solana](https://img.shields.io/badge/Built%20for-Solana-14F195?logo=solana)](https://solana.com/)
 
   [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
 
