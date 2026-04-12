@@ -1,6 +1,4 @@
-<div align="center">
-  <img src=".github/assets/parapet-logo.jpg" alt="Parapet Logo" width="200"/>
-</div>
+![Parapet Logo](.github/assets/parapet-logo.jpg)
 
 # Parapet
 
