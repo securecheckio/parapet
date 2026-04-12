@@ -55,7 +55,7 @@ services:
       - OTTERSEC_RATE_LIMIT=${OTTERSEC_RATE_LIMIT:-30/60}
       
       # Rules
-      - RULES_PATH=${RULES_PATH:-/app/rules/presets/default.json}
+      - RULES_PATH=${RULES_PATH:-/app/rules/presets/default-protection.json}
       
       # Logging
       - RUST_LOG=${RUST_LOG:-info,sol_shield_proxy=debug}
@@ -111,7 +111,7 @@ services:
       - OTTERSEC_RATE_LIMIT=${OTTERSEC_RATE_LIMIT:-30/60}
       
       # Rules path
-      - RULES_PATH=/app/rules/presets/default.json
+      - RULES_PATH=/app/rules/presets/default-protection.json
       
       # Logging
       - RUST_LOG=${RUST_LOG:-info,sol_shield_api=debug}

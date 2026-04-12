@@ -10,15 +10,18 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### SOL Transfers
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_sol_transfer` | Boolean | True if transaction contains SOL transfers | ❌ No |
-| `sol_transfer_count` | Number | Number of SOL transfer instructions | ❌ No |
-| `total_sol_transferred` | Number | Total lamports transferred (sum of all transfers) | ❌ No |
-| `max_sol_transfer` | Number | Largest single transfer amount in lamports | ❌ No |
-| `sol_recipients` | Array[String] | List of recipient addresses for SOL transfers | ✅ Yes - `{recipient}` |
+
+| Field                   | Type          | Description                                       | Variable Interpolation |
+| ----------------------- | ------------- | ------------------------------------------------- | ---------------------- |
+| `has_sol_transfer`      | Boolean       | True if transaction contains SOL transfers        | ❌ No                   |
+| `sol_transfer_count`    | Number        | Number of SOL transfer instructions               | ❌ No                   |
+| `total_sol_transferred` | Number        | Total lamports transferred (sum of all transfers) | ❌ No                   |
+| `max_sol_transfer`      | Number        | Largest single transfer amount in lamports        | ❌ No                   |
+| `sol_recipients`        | Array[String] | List of recipient addresses for SOL transfers     | ✅ Yes - `{recipient}`  |
+
 
 **Example Values**:
+
 ```json
 {
   "has_sol_transfer": true,
@@ -31,13 +34,16 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### Account Operations
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `creates_accounts` | Boolean | True if transaction creates new accounts | ❌ No |
-| `account_creation_count` | Number | Number of CreateAccount instructions | ❌ No |
-| `total_rent_required` | Number | Total lamports required for rent exemption | ❌ No |
+
+| Field                    | Type    | Description                                | Variable Interpolation |
+| ------------------------ | ------- | ------------------------------------------ | ---------------------- |
+| `creates_accounts`       | Boolean | True if transaction creates new accounts   | ❌ No                   |
+| `account_creation_count` | Number  | Number of CreateAccount instructions       | ❌ No                   |
+| `total_rent_required`    | Number  | Total lamports required for rent exemption | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "creates_accounts": true,
@@ -48,12 +54,15 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### Program Assignment
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `assigns_program_ownership` | Boolean | True if transaction assigns program ownership | ❌ No |
-| `assign_count` | Number | Number of Assign instructions | ❌ No |
+
+| Field                       | Type    | Description                                   | Variable Interpolation |
+| --------------------------- | ------- | --------------------------------------------- | ---------------------- |
+| `assigns_program_ownership` | Boolean | True if transaction assigns program ownership | ❌ No                   |
+| `assign_count`              | Number  | Number of Assign instructions                 | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "assigns_program_ownership": true,
@@ -63,11 +72,14 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### Memory Allocation
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `allocate_count` | Number | Number of Allocate/AllocateWithSeed instructions | ❌ No |
+
+| Field            | Type   | Description                                      | Variable Interpolation |
+| ---------------- | ------ | ------------------------------------------------ | ---------------------- |
+| `allocate_count` | Number | Number of Allocate/AllocateWithSeed instructions | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "allocate_count": 2
@@ -76,13 +88,16 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### Durable Nonces
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `uses_durable_nonce` | Boolean | True if transaction uses a durable nonce | ❌ No |
-| `advances_nonce` | Boolean | True if transaction advances a nonce account | ❌ No |
-| `nonce_account` | String (Optional) | Address of the nonce account being advanced | ✅ Yes - `{nonce_account}` |
+
+| Field                | Type              | Description                                  | Variable Interpolation    |
+| -------------------- | ----------------- | -------------------------------------------- | ------------------------- |
+| `uses_durable_nonce` | Boolean           | True if transaction uses a durable nonce     | ❌ No                      |
+| `advances_nonce`     | Boolean           | True if transaction advances a nonce account | ❌ No                      |
+| `nonce_account`      | String (Optional) | Address of the nonce account being advanced  | ✅ Yes - `{nonce_account}` |
+
 
 **Example Values**:
+
 ```json
 {
   "uses_durable_nonce": true,
@@ -95,12 +110,15 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ### Security Indicators
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `high_rent_spam` | Boolean | True if creating >10 accounts (spam indicator) | ❌ No |
-| `large_sol_transfer` | Boolean | True if any transfer >1 SOL (1B lamports) | ❌ No |
+
+| Field                | Type    | Description                                    | Variable Interpolation |
+| -------------------- | ------- | ---------------------------------------------- | ---------------------- |
+| `high_rent_spam`     | Boolean | True if creating >10 accounts (spam indicator) | ❌ No                   |
+| `large_sol_transfer` | Boolean | True if any transfer >1 SOL (1B lamports)      | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "high_rent_spam": false,
@@ -117,6 +135,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 **Use Case**: Track transfers to specific addresses
 
 **Example**:
+
 ```json
 {
   "flowbits": {
@@ -127,6 +146,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 ```
 
 **Behavior**:
+
 - Transaction with 2 recipients: Uses first recipient only
 - Transaction with 0 recipients: Skips flowbit operation
 - Creates unique flowbit per recipient address
@@ -138,6 +158,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 **Use Case**: Track nonce advancement for staleness detection
 
 **Example**:
+
 ```json
 {
   "flowbits": {
@@ -149,6 +170,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 ```
 
 **Behavior**:
+
 - Only available when `advances_nonce` is true
 - If field not present: Skips flowbit operation
 - Creates unique flowbit per nonce account
@@ -307,7 +329,9 @@ Prevent Drift-style attacks with stale nonces:
 
 ## See Also
 
-- [Variable Interpolation Guide](../flowbits-variable-interpolation.md)
-- [Configuration Guide](../flowbits-configuration-guide.md)
+- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [Rule development hub](../RULES_DEVELOPMENT.md)
+- [Rule JSON format](../RULES_FORMAT.md)
 - [Token Instructions Analyzer](token-instructions.md)
 - [Basic Analyzer](basic.md)
+

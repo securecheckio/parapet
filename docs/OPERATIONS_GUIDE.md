@@ -27,6 +27,8 @@ graph TD
     N --> F
 ```
 
+
+
 ## Configuration Flow
 
 ```mermaid
@@ -44,6 +46,8 @@ graph LR
     J --> K[Listen on port]
     K --> L[✅ Ready for requests]
 ```
+
+
 
 ## Monitoring
 
@@ -81,6 +85,7 @@ redis-cli slowlog get 10
 **Location:** `/var/log/parapet/app.log` (systemd) or stdout
 
 **Log Levels:**
+
 ```bash
 # Production
 RUST_LOG=info
@@ -93,6 +98,7 @@ RUST_LOG=warn
 ```
 
 **Important Patterns:**
+
 - `🚫 BLOCKED` - Security block
 - `⚠️ ALERT` - Warning
 - `Rate limit exceeded` - Quota reached
@@ -101,16 +107,19 @@ RUST_LOG=warn
 ## Scaling
 
 ### Vertical (Single Instance)
+
 - 1 core → ~1000 req/s
 - 2 cores → ~2500 req/s
 - 4 cores → ~5000 req/s
 
 ### Horizontal (Multiple Instances)
+
 - Use Redis (required for shared state)
 - Load balancer in front
 - Shared rules.json via mount
 
 **Example:**
+
 ```
            ┌──→ Instance 1 ─┐
 LB (nginx) ├──→ Instance 2 ─┼──→ Redis
@@ -120,6 +129,7 @@ LB (nginx) ├──→ Instance 2 ─┼──→ Redis
 ## Backup
 
 ### Redis Data
+
 ```bash
 # Backup
 redis-cli save
@@ -132,6 +142,7 @@ sudo systemctl start redis
 ```
 
 ### Configuration
+
 ```bash
 # Backup
 tar czf parapet-config-$(date +%F).tar.gz \
@@ -146,6 +157,7 @@ tar xzf parapet-config-2024-01-01.tar.gz -C /
 ## Updates
 
 ### Zero-Downtime Update
+
 ```bash
 # 1. Test new version in staging
 cd /opt/parapet
@@ -165,6 +177,7 @@ sudo systemctl restart parapet
 ```
 
 ### Rules Update (Hot Reload)
+
 ```bash
 # Edit rules
 vim /opt/parapet/rules.json
@@ -176,24 +189,28 @@ vim /opt/parapet/rules.json
 ## Disaster Recovery
 
 ### Instance Failure
+
 1. Load balancer auto-routes to healthy instances
 2. Spawn new instance
 3. Points to same Redis
 4. Automatic recovery
 
 ### Redis Failure
+
 1. Proxy continues with in-memory cache
 2. No rate limiting (temporary)
 3. Restore Redis from backup
 4. Restart proxy to reconnect
 
 ### Data Loss
+
 1. Rate limit counters reset (acceptable - monthly window)
 2. Blocklist reloads from rules.json on restart
 
 ## Performance Tuning
 
 ### Redis
+
 ```conf
 # /etc/redis/redis.conf
 maxmemory 256mb
@@ -201,6 +218,7 @@ maxmemory-policy allkeys-lru
 ```
 
 ### Proxy
+
 ```bash
 # Increase worker threads
 TOKIO_WORKER_THREADS=4
@@ -210,6 +228,7 @@ ENABLE_USAGE_TRACKING=false  # if not needed
 ```
 
 ### WASM
+
 ```bash
 # Disable if not using
 unset WASM_ANALYZERS_PATH
@@ -218,6 +237,7 @@ unset WASM_ANALYZERS_PATH
 ## Alerts
 
 Set up alerts for:
+
 - Error rate >1%
 - Block rate >50%
 - Response time >100ms
@@ -232,3 +252,4 @@ Set up alerts for:
 4. Perform maintenance
 5. Test
 6. Resume traffic
+

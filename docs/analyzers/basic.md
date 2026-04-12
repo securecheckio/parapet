@@ -347,8 +347,9 @@ Maintain allowlists for:
 
 ## See Also
 
-- [Variable Interpolation Guide](../flowbits-variable-interpolation.md)
-- [Configuration Guide](../flowbits-configuration-guide.md)
+- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [Rule development hub](../RULES_DEVELOPMENT.md)
+- [Rule JSON format](../RULES_FORMAT.md)
 - [System Program Analyzer](system-program.md)
 - [Token Instructions Analyzer](token-instructions.md)
 

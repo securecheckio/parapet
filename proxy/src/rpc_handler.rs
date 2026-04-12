@@ -534,12 +534,12 @@ async fn handle_simulate_transaction(
                 );
 
                 // Build Parapet metadata
-                let sol_shield_data = build_sol_shield_metadata(&decision, threshold);
+                let parapet_data = build_parapet_metadata(&decision, threshold);
 
-                // Inject solShield into response
+                // Inject parapet into response
                 if let Some(result_obj) = result.as_object_mut() {
-                    result_obj.insert("solShield".to_string(), sol_shield_data);
-                    log::debug!("✅ Injected solShield metadata into simulation response");
+                    result_obj.insert("parapet".to_string(), parapet_data);
+                    log::debug!("✅ Injected parapet metadata into simulation response");
                 }
             }
             Err(e) => {
@@ -553,7 +553,7 @@ async fn handle_simulate_transaction(
 }
 
 /// Build structured Parapet metadata for simulation responses
-fn build_sol_shield_metadata(decision: &RuleDecision, threshold: u8) -> Value {
+fn build_parapet_metadata(decision: &RuleDecision, threshold: u8) -> Value {
     use serde_json::json;
 
     // Determine decision label

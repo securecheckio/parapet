@@ -8,6 +8,13 @@ target/
 .env.local
 .env.*.local
 
+# Proxy: only *.example is versioned; copy to local TOML
+proxy/config.toml
+proxy/analyzers.toml
+
+# Scanner: only *.example is versioned; copy to local TOML
+scanner/config.toml
+
 # IDEs
 .vscode/
 .idea/
@@ -52,3 +59,5 @@ coverage/
 !README.md
 !QUICKSTART.md
 !docs/**/*.md
+!proxy/README.md
+!proxy/rules/README.md

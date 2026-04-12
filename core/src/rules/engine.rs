@@ -72,11 +72,11 @@ impl RuleEngine {
         };
         
         // Auto-enable from environment variable
-        if std::env::var("SOLSHIELD_FLOWBITS_ENABLED")
+        if std::env::var("PARAPET_FLOWBITS_ENABLED")
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false)
         {
-            let max_wallets = std::env::var("SOLSHIELD_FLOWBITS_MAX_WALLETS")
+            let max_wallets = std::env::var("PARAPET_FLOWBITS_MAX_WALLETS")
                 .ok()
                 .and_then(|v| v.parse().ok());
             engine = engine.with_flowbits(max_wallets);
@@ -308,7 +308,7 @@ impl RuleEngine {
             log::warn!(
                 "⚠️  {} rules use flowbits but flowbits are DISABLED. \
                 These rules will have reduced effectiveness. \
-                Enable with SOLSHIELD_FLOWBITS_ENABLED=true",
+                Enable with PARAPET_FLOWBITS_ENABLED=true",
                 flowbit_rules_count
             );
         }

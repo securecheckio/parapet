@@ -82,24 +82,24 @@ RUST_LOG=info                     # Log level
 Customize which security rules are active:
 
 ```bash
-# Use preset
-cargo run -p parapet-proxy -- --rules-preset strict
+# Use preset (specify path to preset file)
+cargo run -p parapet-proxy -- --rules proxy/rules/presets/default-protection.json
 
 # Or custom rules file
 cargo run -p parapet-proxy -- --rules proxy/rules/custom-rules.json
 ```
 
-**Presets:**
-- `default` - Balanced security and usability
-- `strict` - Maximum security, blocks more transactions
-- `permissive` - Minimal blocking, warnings only
+**Available Presets:**
+- `default-protection.json` - Balanced security and usability
+- `bot-essentials.json` - Essential protection for automated bots
+- `wallet-scan-enhanced.json` - Enhanced scanning for wallet analysis
 
 ### Custom Rules
 
 Copy and edit a preset:
 
 ```bash
-cp proxy/rules/presets/default.json proxy/rules/my-rules.json
+cp proxy/rules/presets/default-protection.json proxy/rules/my-rules.json
 # Edit my-rules.json to adjust weights and thresholds
 cargo run -p parapet-proxy -- --rules proxy/rules/my-rules.json
 ```
@@ -118,10 +118,10 @@ Transactions are blocked when `risk_score >= threshold` (default: 70).
 ### Protecting a Bot Wallet
 
 ```bash
-# Run proxy with strict rules
+# Run proxy with bot-essentials rules
 export UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
 export DEFAULT_BLOCK_THRESHOLD=60  # Block more aggressively
-cargo run -p parapet-proxy -- --rules-preset strict
+cargo run -p parapet-proxy -- --rules proxy/rules/presets/bot-essentials.json
 
 # Configure bot to use http://localhost:8899
 ```
@@ -171,7 +171,7 @@ cargo run -p parapet-proxy 2>&1 | tee parapet.log
 
 ### Too many false positives
 - Increase threshold: `DEFAULT_BLOCK_THRESHOLD=80`
-- Use permissive preset: `--rules-preset permissive`
+- Use a less restrictive preset or create custom rules
 
 ### Missing Redis errors
 - Redis is optional for caching

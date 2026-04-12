@@ -1,6 +1,13 @@
 use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
+use std::path::PathBuf;
 use std::sync::Arc;
+
+fn fixture_preset(name: &str) -> PathBuf {
+    PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("tests/fixtures/rules/presets")
+        .join(name)
+}
 
 fn create_full_registry() -> AnalyzerRegistry {
     let mut registry = AnalyzerRegistry::new();
@@ -23,7 +30,11 @@ fn test_comprehensive_protection_rules_valid() {
     let mut engine = RuleEngine::new(registry);
 
     // Load comprehensive protection rules
-    let result = engine.load_rules_from_file("./rules/presets/comprehensive-protection.json");
+    let result = engine.load_rules_from_file(
+        fixture_preset("comprehensive-protection.json")
+            .to_str()
+            .expect("utf8 path"),
+    );
 
     assert!(
         result.is_ok(),
@@ -44,7 +55,11 @@ fn test_trading_bot_protection_rules_valid() {
     let mut engine = RuleEngine::new(registry);
 
     // Load trading bot protection rules
-    let result = engine.load_rules_from_file("./rules/presets/trading-bot-protection.json");
+    let result = engine.load_rules_from_file(
+        fixture_preset("trading-bot-protection.json")
+            .to_str()
+            .expect("utf8 path"),
+    );
 
     assert!(
         result.is_ok(),
@@ -65,7 +80,11 @@ fn test_enhanced_security_rules_valid() {
     let mut engine = RuleEngine::new(registry);
 
     // Load enhanced security rules
-    let result = engine.load_rules_from_file("./rules/presets/enhanced-security.json");
+    let result = engine.load_rules_from_file(
+        fixture_preset("enhanced-security.json")
+            .to_str()
+            .expect("utf8 path"),
+    );
 
     assert!(
         result.is_ok(),

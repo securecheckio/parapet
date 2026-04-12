@@ -1,56 +1,68 @@
 [
   {
     "version": "1.0",
-    "id": "unlimited-delegation",
+    "id": "block-unlimited-delegation",
     "name": "Block Unlimited Delegations",
     "description": "Blocks unlimited token approvals (u64::MAX)",
     "author": "securecheck",
     "enabled": true,
-    "tags": ["security", "critical"],
+    "tags": ["security", "critical", "delegation"],
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "delegation_is_unlimited",
-        "operator": "equals",
-        "value": true
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
       },
-      "message": "Transaction blocked: unlimited delegation detected"
+      "message": "🚨 BLOCKED: Unlimited token delegation detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100
     }
   },
   {
     "version": "1.0",
-    "id": "blocked-programs",
+    "id": "block-malicious-programs",
     "name": "Block Malicious Programs",
     "description": "Blocks transactions involving blocklisted programs",
     "author": "securecheck",
     "enabled": true,
-    "tags": ["security", "critical"],
+    "tags": ["security", "critical", "blocklist"],
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "blocked_program_detected",
+        "field": "security:blocked_program_detected",
         "operator": "equals",
         "value": true
       },
-      "message": "Transaction blocked: malicious program detected"
+      "message": "🚨 BLOCKED: Known malicious program detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100
     }
   },
   {
     "version": "1.0",
-    "id": "critical-risk",
-    "name": "Block Critical Risk",
-    "description": "Blocks transactions with critical risk score >= 90",
+    "id": "block-large-sol-transfer",
+    "name": "Block Large SOL Transfer",
+    "description": "Blocks transactions transferring >10 SOL",
     "author": "securecheck",
     "enabled": true,
-    "tags": ["security", "critical"],
+    "tags": ["security", "critical", "sol-transfer"],
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "risk_score",
-        "operator": ">=",
-        "value": 90
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 10000000000
       },
-      "message": "Transaction blocked: critical risk score"
+      "message": "🚨 BLOCKED: Large SOL transfer detected (>10 SOL)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 80
     }
   }
 ]

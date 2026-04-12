@@ -10,14 +10,17 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Token Transfers
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_transfer` | Boolean | True if transaction contains token transfers | ❌ No |
-| `transfer_count` | Number | Number of token transfer instructions | ❌ No |
-| `total_transfer_amount` | Number | Total tokens transferred (sum, raw amount) | ❌ No |
-| `max_transfer_amount` | Number | Largest single transfer amount (raw) | ❌ No |
+
+| Field                   | Type    | Description                                  | Variable Interpolation |
+| ----------------------- | ------- | -------------------------------------------- | ---------------------- |
+| `has_transfer`          | Boolean | True if transaction contains token transfers | ❌ No                   |
+| `transfer_count`        | Number  | Number of token transfer instructions        | ❌ No                   |
+| `total_transfer_amount` | Number  | Total tokens transferred (sum, raw amount)   | ❌ No                   |
+| `max_transfer_amount`   | Number  | Largest single transfer amount (raw)         | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "has_transfer": true,
@@ -29,13 +32,16 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Token Mints
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_mint` | Boolean | True if transaction mints new tokens | ❌ No |
-| `mint_count` | Number | Number of mint instructions | ❌ No |
-| `mints` | Array[String] | List of token mint addresses involved | ✅ Yes - `{mint}` |
+
+| Field        | Type          | Description                           | Variable Interpolation |
+| ------------ | ------------- | ------------------------------------- | ---------------------- |
+| `has_mint`   | Boolean       | True if transaction mints new tokens  | ❌ No                   |
+| `mint_count` | Number        | Number of mint instructions           | ❌ No                   |
+| `mints`      | Array[String] | List of token mint addresses involved | ✅ Yes - `{mint}`       |
+
 
 **Example Values**:
+
 ```json
 {
   "has_mint": true,
@@ -46,12 +52,15 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Token Burns
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_burn` | Boolean | True if transaction burns tokens | ❌ No |
-| `burn_count` | Number | Number of burn instructions | ❌ No |
+
+| Field        | Type    | Description                      | Variable Interpolation |
+| ------------ | ------- | -------------------------------- | ---------------------- |
+| `has_burn`   | Boolean | True if transaction burns tokens | ❌ No                   |
+| `burn_count` | Number  | Number of burn instructions      | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "has_burn": true,
@@ -61,13 +70,16 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Token Approvals
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_approve` | Boolean | True if transaction approves delegates | ❌ No |
-| `approve_count` | Number | Number of approve instructions | ❌ No |
-| `delegates` | Array[String] | List of delegate addresses approved | ✅ Yes - `{delegate}` |
+
+| Field           | Type          | Description                            | Variable Interpolation |
+| --------------- | ------------- | -------------------------------------- | ---------------------- |
+| `has_approve`   | Boolean       | True if transaction approves delegates | ❌ No                   |
+| `approve_count` | Number        | Number of approve instructions         | ❌ No                   |
+| `delegates`     | Array[String] | List of delegate addresses approved    | ✅ Yes - `{delegate}`   |
+
 
 **Example Values**:
+
 ```json
 {
   "has_approve": true,
@@ -78,16 +90,19 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Token Account Operations
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_close_account` | Boolean | True if transaction closes token accounts | ❌ No |
-| `close_account_count` | Number | Number of close account instructions | ❌ No |
-| `has_freeze` | Boolean | True if transaction freezes token accounts | ❌ No |
-| `freeze_count` | Number | Number of freeze instructions | ❌ No |
-| `has_thaw` | Boolean | True if transaction thaws token accounts | ❌ No |
-| `thaw_count` | Number | Number of thaw instructions | ❌ No |
+
+| Field                 | Type    | Description                                | Variable Interpolation |
+| --------------------- | ------- | ------------------------------------------ | ---------------------- |
+| `has_close_account`   | Boolean | True if transaction closes token accounts  | ❌ No                   |
+| `close_account_count` | Number  | Number of close account instructions       | ❌ No                   |
+| `has_freeze`          | Boolean | True if transaction freezes token accounts | ❌ No                   |
+| `freeze_count`        | Number  | Number of freeze instructions              | ❌ No                   |
+| `has_thaw`            | Boolean | True if transaction thaws token accounts   | ❌ No                   |
+| `thaw_count`          | Number  | Number of thaw instructions                | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "has_close_account": true,
@@ -101,12 +116,15 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ### Authority Operations
 
-| Field | Type | Description | Variable Interpolation |
-|-------|------|-------------|------------------------|
-| `has_set_authority` | Boolean | True if transaction changes token authorities | ❌ No |
-| `set_authority_count` | Number | Number of set authority instructions | ❌ No |
+
+| Field                 | Type    | Description                                   | Variable Interpolation |
+| --------------------- | ------- | --------------------------------------------- | ---------------------- |
+| `has_set_authority`   | Boolean | True if transaction changes token authorities | ❌ No                   |
+| `set_authority_count` | Number  | Number of set authority instructions          | ❌ No                   |
+
 
 **Example Values**:
+
 ```json
 {
   "has_set_authority": true,
@@ -123,6 +141,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 **Use Case**: Track token-specific activity (drain velocity, mint patterns)
 
 **Example**:
+
 ```json
 {
   "flowbits": {
@@ -134,6 +153,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 ```
 
 **Behavior**:
+
 - Transaction with multiple mints: Uses first mint only
 - Transaction with no mints: Skips flowbit operation
 - Creates unique flowbit per token mint address
@@ -145,6 +165,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 **Use Case**: Track delegation patterns (drainer detection)
 
 **Example**:
+
 ```json
 {
   "flowbits": {
@@ -156,6 +177,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 ```
 
 **Behavior**:
+
 - Transaction with multiple approvals: Uses first delegate only
 - Transaction with no approvals: Skips flowbit operation
 - Creates unique flowbit per delegate address
@@ -290,6 +312,7 @@ Alert on authority changes:
 ## Token Program Versions
 
 This analyzer supports:
+
 - **Token Program**: `TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA`
 - **Token-2022 Program**: `TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb`
 
@@ -313,6 +336,7 @@ Both programs are analyzed with the same field structure.
 ### Allowlist Recommendations
 
 Maintain allowlists for:
+
 - Known DEX programs (delegates)
 - Legitimate token mints
 - Trusted authority addresses
@@ -325,7 +349,9 @@ Maintain allowlists for:
 
 ## See Also
 
-- [Variable Interpolation Guide](../flowbits-variable-interpolation.md)
-- [Configuration Guide](../flowbits-configuration-guide.md)
+- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [Rule development hub](../RULES_DEVELOPMENT.md)
+- [Rule JSON format](../RULES_FORMAT.md)
 - [System Program Analyzer](system-program.md)
 - [Basic Analyzer](basic.md)
+

@@ -478,44 +478,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "auth-api"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "axum",
- "axum-extra",
- "base64 0.22.1",
- "bcrypt",
- "bs58",
- "chrono",
- "dotenvy",
- "ed25519-dalek 2.2.0",
- "env_logger 0.10.2",
- "futures",
- "jsonwebtoken",
- "log",
- "parapet-core",
- "parapet-scanner",
- "rand 0.8.5",
- "redis 0.24.0",
- "serde",
- "serde_json",
- "sha2 0.10.9",
- "solana-client",
- "solana-sdk",
- "solana-transaction-status",
- "sqlx",
- "thiserror 1.0.69",
- "time",
- "tokio",
- "tower",
- "tower-http 0.5.2",
- "urlencoding",
- "uuid",
- "web-push",
-]
-
-[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2169,6 +2131,15 @@ checksum = "843fba2746e448b37e26a819579957415c8cef339bf08564fe8b7ddbd959573c"
 dependencies = [
  "crc32fast",
  "miniz_oxide",
+]
+
+[[package]]
+name = "flowbits-perf"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "parapet-core",
+ "solana-sdk",
 ]
 
 [[package]]
@@ -3991,7 +3962,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "parapet-api"
+name = "parapet-api-core"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -4001,12 +3972,15 @@ dependencies = [
  "bincode",
  "borsh 0.10.4",
  "bs58",
+ "clap",
+ "dotenvy",
  "ed25519-dalek 2.2.0",
  "env_logger 0.11.10",
  "futures",
  "hex",
  "log",
  "parapet-core",
+ "parapet-mcp-server",
  "parapet-scanner",
  "redis 0.27.6",
  "reqwest 0.12.28",
@@ -4018,6 +3992,7 @@ dependencies = [
  "spl-token",
  "thiserror 1.0.69",
  "tokio",
+ "toml 0.8.23",
  "tower-http 0.5.2",
  "uuid",
 ]
@@ -4032,7 +4007,6 @@ dependencies = [
  "borsh 0.10.4",
  "bs58",
  "chrono",
- "criterion",
  "futures",
  "goblin",
  "log",
@@ -4067,6 +4041,47 @@ dependencies = [
  "solana-client",
  "solana-sdk",
  "tokio",
+]
+
+[[package]]
+name = "parapet-platform"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "axum",
+ "axum-extra",
+ "base64 0.22.1",
+ "bcrypt",
+ "bs58",
+ "chrono",
+ "clap",
+ "dotenvy",
+ "ed25519-dalek 2.2.0",
+ "env_logger 0.10.2",
+ "futures",
+ "jsonwebtoken",
+ "log",
+ "parapet-api-core",
+ "parapet-core",
+ "parapet-scanner",
+ "rand 0.8.5",
+ "redis 0.27.6",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "solana-client",
+ "solana-sdk",
+ "solana-transaction-status",
+ "sqlx",
+ "thiserror 1.0.69",
+ "time",
+ "tokio",
+ "toml 0.8.23",
+ "tower",
+ "tower-http 0.5.2",
+ "urlencoding",
+ "uuid",
+ "web-push",
 ]
 
 [[package]]

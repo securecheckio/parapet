@@ -27,8 +27,8 @@ TX 2: Token transfer → Check if "delegation_approved" → ALERT
 ## Configuration
 
 ```bash
-SOLSHIELD_FLOWBITS_DEFAULT_TTL=300  # 5 minutes default
-SOLSHIELD_FLOWBITS_MAX_WALLETS=10000  # Memory limit
+PARAPET_FLOWBITS_DEFAULT_TTL=300  # 5 minutes default
+PARAPET_FLOWBITS_MAX_WALLETS=10000  # Memory limit
 ```
 
 ## Use Cases

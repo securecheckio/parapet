@@ -28,7 +28,7 @@ network = "mainnet-beta"
 
 [security]
 default_blocking_threshold = 70
-rules_path = "./rules/presets/comprehensive-protection.json"
+rules_path = "./rules/presets/default-protection.json"
 # rule_action_override = "alert"  # Uncomment to override all rule actions
 
 # Optional: Block specific programs by ID

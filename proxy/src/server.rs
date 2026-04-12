@@ -415,6 +415,45 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
+/// Load optional `analyzers.toml` (or `ANALYZERS_CONFIG_PATH`). The committed template is
+/// `analyzers.toml.example` — copy to `analyzers.toml` to customize.
+/// If no file is found: **register all analyzers** (empty `AnalyzersConfig` → every `name()` enabled).
+fn load_analyzers_config() -> rules::AnalyzersConfig {
+    use parapet_core::rules::AnalyzersConfig;
+    use std::path::Path;
+
+    if let Ok(p) = std::env::var("ANALYZERS_CONFIG_PATH") {
+        if Path::new(&p).exists() {
+            match AnalyzersConfig::from_file(&p) {
+                Ok(c) => {
+                    log::info!("📋 Loaded analyzer config from {} (ANALYZERS_CONFIG_PATH)", p);
+                    return c;
+                }
+                Err(e) => log::warn!("⚠️ Failed to load ANALYZERS_CONFIG_PATH {}: {}", p, e),
+            }
+        } else {
+            log::warn!("⚠️ ANALYZERS_CONFIG_PATH={} does not exist", p);
+        }
+    }
+
+    for p in ["analyzers.toml", "proxy/analyzers.toml"] {
+        if Path::new(p).exists() {
+            match AnalyzersConfig::from_file(p) {
+                Ok(c) => {
+                    log::info!("📋 Loaded analyzer config from {}", p);
+                    return c;
+                }
+                Err(e) => log::warn!("⚠️ Failed to load {}: {}", p, e),
+            }
+        }
+    }
+
+    log::info!(
+        "📋 No analyzers.toml — registering all analyzers (copy analyzers.toml.example to customize)"
+    );
+    AnalyzersConfig::default()
+}
+
 fn mask_api_key(url: &str) -> String {
     if let Some(idx) = url.find("api-key=") {
         format!("{}api-key=***", &url[..idx])
@@ -436,36 +475,54 @@ fn initialize_rule_engine(
     use parapet_core::rules::analyzers::*;
     use parapet_core::rules::types::ActionOverride;
 
+    let ac = load_analyzers_config();
+
     // Create analyzer registry
     let mut registry = rules::AnalyzerRegistry::new();
 
     // Register built-in analyzers
-    registry.register(Arc::new(BasicAnalyzer::new()));
+    if ac.should_register("basic") {
+        registry.register(Arc::new(BasicAnalyzer::new()));
+    }
 
     // Register core security analyzer
-    registry.register(Arc::new(CoreSecurityAnalyzer::new(
-        std::collections::HashSet::new(),
-    )));
+    if ac.should_register("core_security") {
+        registry.register(Arc::new(CoreSecurityAnalyzer::new(
+            std::collections::HashSet::new(),
+        )));
+    }
 
     // Register extended instruction analyzers (no external deps)
-    registry.register(Arc::new(TokenInstructionAnalyzer::new()));
-    registry.register(Arc::new(SystemProgramAnalyzer::new()));
-    registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
-    registry.register(Arc::new(TransactionLogAnalyzer::new()));
-    
+    if ac.should_register("token_instructions") {
+        registry.register(Arc::new(TokenInstructionAnalyzer::new()));
+    }
+    if ac.should_register("system") {
+        registry.register(Arc::new(SystemProgramAnalyzer::new()));
+    }
+    if ac.should_register("complexity") {
+        registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
+    }
+    if ac.should_register("logs") {
+        registry.register(Arc::new(TransactionLogAnalyzer::new()));
+    }
+
     // Register instruction padding analyzer (protection against padding attacks)
-    registry.register(Arc::new(
-        parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer::new()
-    ));
-    
+    if ac.should_register("padding") {
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer::new(),
+        ));
+    }
+
     // Register inner instruction analyzer (CPI analysis)
-    registry.register(Arc::new(
-        parapet_core::rules::analyzers::InnerInstructionAnalyzer::new()
-    ));
+    if ac.should_register("inner_instruction") {
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::InnerInstructionAnalyzer::new(),
+        ));
+    }
 
     // Register instruction data fingerprint analyzer — loads from config file if present,
     // falls back to built-in authority-change defaults
-    {
+    if ac.should_register("instruction_data") {
         // Derive fingerprint config path from rules_path (e.g. ./rules/presets/foo.json → ./rules/fingerprints/authority-change.json)
         let fingerprint_path = rules_path
             .and_then(|p| std::path::Path::new(p).parent())
@@ -480,94 +537,113 @@ fn initialize_rule_engine(
                         a
                     }
                     Err(e) => {
-                        log::warn!("⚠️  Failed to load fingerprint config '{}': {} — using defaults", path.display(), e);
-                        InstructionDataAnalyzer::with_default_authority_names()
+                        log::warn!("⚠️  Failed to load fingerprint config '{}': {} — using parapet-core embed", path.display(), e);
+                        InstructionDataAnalyzer::with_authority_fingerprints_embedded()
                     }
                 }
             }
             _ => {
-                log::info!("ℹ️  No fingerprint config found — using default authority-change fingerprints");
-                InstructionDataAnalyzer::with_default_authority_names()
+                log::info!("ℹ️  No fingerprint override beside rules — using parapet-core authority-change.json");
+                InstructionDataAnalyzer::with_authority_fingerprints_embedded()
             }
         };
         registry.register(Arc::new(analyzer));
     }
 
-    // Register Helius analyzers (check HELIUS_API_KEY env var)
-    registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
-    registry.register(Arc::new(HeliusTransferAnalyzer::new()));
-    registry.register(Arc::new(HeliusFundingAnalyzer::new()));
+    // Register Helius analyzers (check HELIUS_API_KEY env var via should_register / requirements_met)
+    if ac.should_register("helius_identity") {
+        registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
+    }
+    if ac.should_register("helius_transfer") {
+        registry.register(Arc::new(HeliusTransferAnalyzer::new()));
+    }
+    if ac.should_register("helius_funding") {
+        registry.register(Arc::new(HeliusFundingAnalyzer::new()));
+    }
 
     // Register OtterSec Verified Analyzer (cryptographic source verification)
-    registry.register(Arc::new(OtterSecVerifiedAnalyzer::new()));
+    if ac.should_register("ottersec") {
+        registry.register(Arc::new(OtterSecVerifiedAnalyzer::new()));
+    }
+
+    // Rugcheck (optional enrichment API)
+    if ac.should_register("rugcheck") {
+        registry.register(Arc::new(RugcheckAnalyzer::new()));
+    }
 
     // Register Jupiter Token Analyzer (token safety via Jupiter API)
     #[cfg(feature = "jupiter")]
     {
-        use parapet_core::rules::analyzers::JupiterTokenAnalyzer;
-        registry.register(Arc::new(JupiterTokenAnalyzer::new()));
+        if ac.should_register("jupiter") {
+            use parapet_core::rules::analyzers::JupiterTokenAnalyzer;
+            registry.register(Arc::new(JupiterTokenAnalyzer::new()));
+        }
     }
 
     // Token Mint Analyzer requires RPC URL but not currently used in default config
     #[cfg(feature = "token-mint")]
     {
-        let rpc_url = std::env::var("UPSTREAM_RPC_URL")
-            .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
-        registry.register(Arc::new(TokenMintAnalyzer::new(rpc_url)));
+        if ac.should_register("token_mint") {
+            let rpc_url = std::env::var("UPSTREAM_RPC_URL")
+                .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
+            registry.register(Arc::new(TokenMintAnalyzer::new(rpc_url)));
+        }
     }
 
     // Load WASM analyzers from directory (if feature enabled and path configured)
     #[cfg(feature = "wasm-analyzers")]
     {
-        let wasm_config = parapet_core::rules::wasm_config::load_wasm_config_from_env();
+        if ac.should_register("wasm") {
+            let wasm_config = parapet_core::rules::wasm_config::load_wasm_config_from_env();
 
-        if let Some(wasm_path) = std::env::var("WASM_ANALYZERS_PATH").ok() {
-            if wasm_path != "none" && wasm_path != "disabled" {
-                log::info!("📦 Loading WASM analyzers from: {}", wasm_path);
-                match parapet_core::rules::load_wasm_analyzers_from_dir(
-                    &wasm_path,
-                    wasm_config.clone(),
-                ) {
-                    Ok(wasm_analyzers) => {
-                        for analyzer in wasm_analyzers {
-                            registry.register(analyzer);
-                        }
-                    }
-                    Err(e) => {
-                        log::warn!("⚠️ Failed to load WASM analyzers: {}", e);
-                    }
-                }
-            } else {
-                log::info!(
-                    "📦 WASM analyzers disabled via WASM_ANALYZERS_PATH={}",
-                    wasm_path
-                );
-            }
-        } else {
-            // Try default ./analyzers directory
-            let default_path = "./analyzers";
-            if std::path::Path::new(default_path).exists() {
-                log::info!(
-                    "📦 Loading WASM analyzers from default path: {}",
-                    default_path
-                );
-                match parapet_core::rules::load_wasm_analyzers_from_dir(
-                    default_path,
-                    wasm_config.clone(),
-                ) {
-                    Ok(wasm_analyzers) => {
-                        if !wasm_analyzers.is_empty() {
-                            log::info!(
-                                "📦 Loaded {} WASM analyzer(s) from default path",
-                                wasm_analyzers.len()
-                            );
+            if let Some(wasm_path) = std::env::var("WASM_ANALYZERS_PATH").ok() {
+                if wasm_path != "none" && wasm_path != "disabled" {
+                    log::info!("📦 Loading WASM analyzers from: {}", wasm_path);
+                    match parapet_core::rules::load_wasm_analyzers_from_dir(
+                        &wasm_path,
+                        wasm_config.clone(),
+                    ) {
+                        Ok(wasm_analyzers) => {
                             for analyzer in wasm_analyzers {
                                 registry.register(analyzer);
                             }
                         }
+                        Err(e) => {
+                            log::warn!("⚠️ Failed to load WASM analyzers: {}", e);
+                        }
                     }
-                    Err(e) => {
-                        log::debug!("No WASM analyzers in default path: {}", e);
+                } else {
+                    log::info!(
+                        "📦 WASM analyzers disabled via WASM_ANALYZERS_PATH={}",
+                        wasm_path
+                    );
+                }
+            } else {
+                // Try default ./analyzers directory
+                let default_path = "./analyzers";
+                if std::path::Path::new(default_path).exists() {
+                    log::info!(
+                        "📦 Loading WASM analyzers from default path: {}",
+                        default_path
+                    );
+                    match parapet_core::rules::load_wasm_analyzers_from_dir(
+                        default_path,
+                        wasm_config.clone(),
+                    ) {
+                        Ok(wasm_analyzers) => {
+                            if !wasm_analyzers.is_empty() {
+                                log::info!(
+                                    "📦 Loaded {} WASM analyzer(s) from default path",
+                                    wasm_analyzers.len()
+                                );
+                                for analyzer in wasm_analyzers {
+                                    registry.register(analyzer);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            log::debug!("No WASM analyzers in default path: {}", e);
+                        }
                     }
                 }
             }

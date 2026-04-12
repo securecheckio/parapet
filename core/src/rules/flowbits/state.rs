@@ -35,7 +35,7 @@ pub struct FlowbitStateManager {
 impl FlowbitStateManager {
     pub fn new(max_wallets: Option<usize>) -> Self {
         // Read env var ONCE at construction (not on every call)
-        let default_ttl = std::env::var("SOLSHIELD_FLOWBITS_DEFAULT_TTL")
+        let default_ttl = std::env::var("PARAPET_FLOWBITS_DEFAULT_TTL")
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .map(Duration::from_secs)

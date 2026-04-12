@@ -1,0 +1,65 @@
+# Parapet Platform Configuration
+# Platform-specific settings (extends api-core/config.toml)
+# Copy this file to platform-config.toml and customize
+
+[database]
+# PostgreSQL connection URL
+url = "postgresql://localhost:5432/parapet"
+
+[frontend]
+# Frontend URL for CORS
+url = "http://localhost:5173"
+cors_credentials = true
+
+[push_notifications]
+# Web Push VAPID keys (generate with web-push crate)
+# SECURITY: Use environment variables in production!
+# VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars override these
+enabled = false
+public_key = ""
+private_key = ""
+
+[payments]
+# Payment system configuration
+enabled = false
+
+# Payment token (default: xLABS token)
+token_mint = "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz"
+token_name = "xLABS"
+token_symbol = "xLABS"
+token_decimals = 6
+token_logo = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz/logo.png"
+
+# USDC mint for reference
+usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+
+# Treasury wallet for receiving payments
+treasury_wallet = ""
+
+[payments.pricing]
+# Credit pricing in token lamports (with decimals)
+# Example: 1_000_000 = 1 token (6 decimals)
+small_price = 1_000_000       # 1 token
+small_credits = 10_000        # 10k requests
+medium_price = 5_000_000      # 5 tokens
+medium_credits = 100_000      # 100k requests
+large_price = 20_000_000      # 20 tokens
+large_credits = 500_000       # 500k requests
+xlarge_price = 50_000_000     # 50 tokens
+xlarge_credits = 2_000_000    # 2M requests
+
+[learning]
+# Learning/course system
+enabled = true
+
+[display]
+# Dashboard display settings
+rules_path = "../../proxy/rules/presets/bot-essentials.json"
+
+# Environment Variable Overrides:
+# - DATABASE_URL → overrides [database].url
+# - FRONTEND_URL → overrides [frontend].url
+# - VAPID_PUBLIC_KEY → overrides [push_notifications].public_key
+# - VAPID_PRIVATE_KEY → overrides [push_notifications].private_key
+# - PAYMENTS_ENABLED → overrides [payments].enabled
+# - PAYMENT_TOKEN_* → overrides respective payment token fields

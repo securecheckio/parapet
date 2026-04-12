@@ -1,6 +1,8 @@
-# Parapet MCP Server
+# Parapet STDIO MCP Server
 
-A Model Context Protocol (MCP) server that exposes Parapet's wallet scanning and program analysis capabilities to AI assistants like Claude, Cursor, and other MCP clients.
+A **local** Model Context Protocol (MCP) server that exposes Parapet's wallet scanning and program analysis capabilities to AI assistants like Claude Desktop and Cursor IDE.
+
+> **This is the STDIO MCP server** - runs as a local process communicating over stdin/stdout. No authentication needed. For remote/cloud deployments with HTTP and API keys, see `[../api/](../api/)`.
 
 ## Features
 
@@ -9,7 +11,6 @@ A Model Context Protocol (MCP) server that exposes Parapet's wallet scanning and
   - Historical transaction analysis with deep CPI scanning
   - Risk scoring and threat classification
   - Integration with Helius, OtterSec, and Jupiter for enhanced analysis
-
 - **Program Analysis**: Security and verification checks for Solana programs
   - On-chain data verification
   - OtterSec verification status
@@ -80,6 +81,7 @@ Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
 Scan a Solana wallet for security threats and suspicious activity.
 
 **Parameters:**
+
 - `wallet_address` (required): Solana wallet address to scan
 - `rpc_url` (optional): Custom RPC URL
 - `max_transactions` (optional): Maximum transactions to analyze (default: 100)
@@ -87,6 +89,7 @@ Scan a Solana wallet for security threats and suspicious activity.
 - `format` (optional): Output format - `summary`, `detailed`, or `json` (default: `summary`)
 
 **Example:**
+
 ```
 scan_wallet({
   "wallet_address": "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU",
@@ -98,6 +101,7 @@ scan_wallet({
 
 **Output:**
 Returns a formatted security report including:
+
 - Security score (0-100)
 - Risk level assessment
 - Detected threats with severity levels
@@ -109,11 +113,13 @@ Returns a formatted security report including:
 Analyze a Solana program for security and verification status.
 
 **Parameters:**
+
 - `program_id` (required): Solana program ID to analyze
 - `rpc_url` (optional): Custom RPC URL
 - `network` (optional): Network name - `mainnet-beta`, `devnet`, or `testnet` (default: `mainnet-beta`)
 
 **Example:**
+
 ```
 analyze_program({
   "program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
@@ -123,6 +129,7 @@ analyze_program({
 
 **Output:**
 Returns analysis including:
+
 - On-chain account data
 - OtterSec verification status
 - Helius identity information (if API key provided)
@@ -183,6 +190,7 @@ The MCP server is built directly on top of the `parapet-scanner` library, provid
 ### Server not starting
 
 Check logs (written to stderr):
+
 ```bash
 RUST_LOG=debug parapet-mcp
 ```
@@ -190,6 +198,7 @@ RUST_LOG=debug parapet-mcp
 ### Rate limiting
 
 If you encounter rate limiting with public RPC endpoints:
+
 1. Use a private RPC provider (Helius, QuickNode, etc.)
 2. Reduce `max_transactions` parameter
 3. Increase delays by setting `rpc_delay_ms` in the code
@@ -197,6 +206,7 @@ If you encounter rate limiting with public RPC endpoints:
 ### Missing API features
 
 Ensure all required features are enabled in `Cargo.toml`:
+
 ```toml
 parapet-core = { 
     path = "../core", 
@@ -230,9 +240,26 @@ RUST_LOG=debug parapet-mcp
 
 Apache-2.0
 
+## MCP Server Comparison
+
+Parapet provides **two MCP implementations**:
+
+
+| Feature            | **STDIO MCP** (this repo)  | **HTTP MCP** (`../api/`) |
+| ------------------ | -------------------------- | ------------------------ |
+| **Use Case**       | Local AI assistants        | Remote/cloud access      |
+| **Protocol**       | JSON-RPC over stdin/stdout | HTTP SSE + POST          |
+| **Authentication** | None (trusted process)     | API keys + rate limiting |
+| **Best For**       | Claude Desktop, Cursor IDE | Web apps, remote agents  |
+| **Setup**          | Copy binary path to config | Deploy as web service    |
+
+
+**Most users want this STDIO version** for local AI assistant integration.
+
 ## Related Projects
 
 - [Parapet Core](../core) - Rule engine and analyzers
 - [Parapet Scanner](../scanner) - Wallet and program scanning library
 - [Parapet Proxy](../proxy) - RPC proxy with transaction filtering
-- [Parapet API](../api) - REST API and dashboard
+- [Parapet API](../api) - HTTP REST API with MCP-over-HTTP
+

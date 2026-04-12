@@ -199,10 +199,9 @@ parapet = { version = "0.1", features = ["all-analyzers"] }
 
 ## Documentation
 
-- [Wallet Integration Guide](../WALLET_INTEGRATION.md) - Support custom RPC in wallets
-- [Rules Engine Guide](../parapet-rpc-proxy/RULES.md) - Security rule configuration
-- [Analyzer Guide](../parapet-rpc-proxy/ANALYZER_GUIDE.md) - Available analyzers
-- [Complete Analyzer Suite](../parapet-rpc-proxy/COMPLETE_ANALYZER_SUITE.md) - All analyzers
+- [Wallet Integration Guide](../WALLET_INTEGRATION.md) — custom RPC in wallets
+- [Proxy](../proxy/README.md) — rules path, config, run
+- Analyzer code: `core/src/rules/analyzers/`
 
 ## Examples
 

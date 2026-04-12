@@ -1,7 +1,7 @@
 [
   {
     "version": "1.0",
-    "id": "unlimited-delegation",
+    "id": "alert-unlimited-delegation",
     "name": "Unlimited Delegation Alert",
     "description": "Detects unlimited token approvals (u64::MAX) which can indicate drain attacks",
     "author": "securecheck",
@@ -10,11 +10,11 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "delegation_is_unlimited",
-        "operator": "equals",
-        "value": true
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
       },
-      "message": "⚠️  Unlimited token delegation detected (u64::MAX)"
+      "message": "⚠️ Unlimited token delegation detected (u64::MAX)"
     },
     "metadata": {
       "severity": "critical",
@@ -24,7 +24,7 @@
   },
   {
     "version": "1.0",
-    "id": "blocked-programs",
+    "id": "block-malicious-programs",
     "name": "Known Malicious Program",
     "description": "Blocks transactions involving known malicious programs (signature-based)",
     "author": "securecheck",
@@ -33,11 +33,11 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "blocked_program_detected",
+        "field": "security:blocked_program_detected",
         "operator": "equals",
         "value": true
       },
-      "message": "🚨 Known malicious program detected on Helius blocklist"
+      "message": "🚨 Known malicious program detected"
     },
     "metadata": {
       "severity": "critical",
@@ -47,29 +47,29 @@
   },
   {
     "version": "1.0",
-    "id": "critical-risk-score",
-    "name": "Critical Risk Pattern Alert",
-    "description": "Detects transactions with critical risk score from analyzer",
+    "id": "alert-large-sol-transfer",
+    "name": "Large SOL Transfer Alert",
+    "description": "Alerts when transaction transfers >5 SOL",
     "author": "securecheck",
     "enabled": true,
     "tags": ["security", "risk"],
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "risk_score",
-        "operator": "greater_than_or_equal",
-        "value": 90
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 5000000000
       },
-      "message": "⚠️  Critical risk score from analyzer (>= 90)"
+      "message": "⚠️ Large SOL transfer detected (>5 SOL)"
     },
     "metadata": {
-      "severity": "critical",
+      "severity": "high",
       "weight": 50
     }
   },
   {
     "version": "1.0",
-    "id": "multiple-delegations",
+    "id": "alert-multiple-approvals",
     "name": "Multiple Delegations Alert",
     "description": "Warns when transaction has 3+ token approvals",
     "author": "securecheck",
@@ -78,11 +78,11 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "delegation_count",
+        "field": "token_instructions:approve_count",
         "operator": "greater_than_or_equal",
         "value": 3
       },
-      "message": "⚠️  Multiple token approvals detected (3+)"
+      "message": "⚠️ Multiple token approvals detected (3+)"
     },
     "metadata": {
       "severity": "high",
@@ -91,34 +91,33 @@
   },
   {
     "version": "1.0",
-    "id": "authority-changes-suspicious",
-    "name": "Authority Changes - Suspicious Program",
-    "description": "Alerts only when truly unknown/suspicious programs (no OtterSec verification AND no Helius identity) attempt authority changes",
+    "id": "alert-unverified-program-with-approvals",
+    "name": "Unverified Program with Approvals",
+    "description": "Alerts when unverified programs request token approvals (requires OtterSec)",
     "author": "securecheck",
     "enabled": true,
-    "tags": ["security", "authority", "verification"],
+    "tags": ["security", "verification", "ottersec"],
     "rule": {
       "action": "alert",
       "conditions": {
         "all": [
-          {"field": "authority_changes", "operator": "equals", "value": true},
-          {"field": "ottersec:all_programs_verified", "operator": "equals", "value": false},
-          {"field": "helius_identity:other_classifications", "operator": "equals", "value": []}
+          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0},
+          {"field": "ottersec:all_programs_verified", "operator": "equals", "value": false}
         ]
       },
-      "message": "⚠️  Authority change by program with NO verification or identity"
+      "message": "⚠️ Token approval requested by unverified program"
     },
     "metadata": {
       "severity": "high",
       "weight": 40,
-      "comment": "Only alerts when program has neither OtterSec verification NOR Helius identity - truly unknown programs"
+      "comment": "Requires OtterSec analyzer to be enabled"
     }
   },
   {
     "version": "1.0",
-    "id": "scammer-interaction",
+    "id": "block-scammer-interaction",
     "name": "Known Scammer Interaction",
-    "description": "Alerts when transaction involves addresses tagged as scammers",
+    "description": "Blocks transactions involving addresses tagged as scammers (requires Helius)",
     "author": "securecheck",
     "enabled": true,
     "tags": ["security", "scam", "helius"],
@@ -133,14 +132,15 @@
     },
     "metadata": {
       "severity": "critical",
-      "weight": 100
+      "weight": 100,
+      "comment": "Requires Helius analyzer to be enabled"
     }
   },
   {
     "version": "1.0",
-    "id": "suspicious-interaction",
+    "id": "alert-suspicious-interaction",
     "name": "Suspicious Address Interaction",
-    "description": "Warns about interactions with suspicious addresses",
+    "description": "Warns about interactions with suspicious addresses (requires Helius)",
     "author": "securecheck",
     "enabled": true,
     "tags": ["security", "suspicious", "helius"],
@@ -151,11 +151,12 @@
         "operator": "contains",
         "value": "suspicious"
       },
-      "message": "⚠️  Transaction involves suspicious address"
+      "message": "⚠️ Transaction involves suspicious address"
     },
     "metadata": {
       "severity": "high",
-      "weight": 40
+      "weight": 40,
+      "comment": "Requires Helius analyzer to be enabled"
     }
   }
 ]

@@ -5,7 +5,9 @@ VM initialization scripts for automated server provisioning.
 ## Files
 
 ### `cloud-init-docker.yaml` (Recommended)
+
 Docker-based deployment with automatic setup:
+
 - Installs Docker
 - Pulls and runs parapet container
 - Configures firewall and HTTPS
@@ -13,13 +15,16 @@ Docker-based deployment with automatic setup:
 - **Best for:** Easy updates, portability
 
 ### `cloud-init-native.yaml` (Max Performance)
+
 Native binary deployment:
+
 - Downloads pre-built binaries
 - Installs as systemd service
 - Direct hardware access
 - **Best for:** High-throughput production (>5000 req/s)
 
 ### `cloud-init-legacy.yaml`
+
 Legacy configuration for backwards compatibility.
 
 ## Usage with Terraform
@@ -55,6 +60,7 @@ aws ec2 run-instances \
 ## Configuration
 
 Cloud-init scripts pull configuration from:
+
 - Terraform variables (when using terraform)
 - Environment variables set during VM creation
 - Default values in the scripts
@@ -62,6 +68,7 @@ Cloud-init scripts pull configuration from:
 ## Troubleshooting
 
 Check cloud-init logs on the VM:
+
 ```bash
 # View cloud-init output
 sudo cat /var/log/cloud-init-output.log
@@ -69,3 +76,4 @@ sudo cat /var/log/cloud-init-output.log
 # Check for errors
 sudo journalctl -u cloud-init
 ```
+

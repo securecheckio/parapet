@@ -13,7 +13,7 @@ use solana_sdk::{
 #[tokio::test]
 async fn test_ai_agent_velocity_limit() {
     // Load AI agent protection rules
-    let rules_json = include_str!("../rules/presets/ai-agent-protection.json");
+    let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
     
     let mut engine = RuleEngine::new();
@@ -50,7 +50,7 @@ async fn test_ai_agent_velocity_limit() {
 /// Test AI agent account creation spam detection
 #[tokio::test]
 async fn test_ai_agent_account_spam() {
-    let rules_json = include_str!("../rules/presets/ai-agent-protection.json");
+    let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
     
     let mut engine = RuleEngine::new();
@@ -100,7 +100,7 @@ async fn test_ai_agent_account_spam() {
 /// Test enterprise lateral movement detection (cross-wallet)
 #[tokio::test]
 async fn test_enterprise_lateral_movement() {
-    let rules_json = include_str!("../rules/presets/enterprise-cross-wallet.json");
+    let rules_json = include_str!("../tests/fixtures/rules/presets/enterprise-cross-wallet.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
     
     let mut engine = RuleEngine::new();
@@ -149,7 +149,7 @@ async fn test_enterprise_lateral_movement() {
 /// Test AI agent gradual exfiltration detection
 #[tokio::test]
 async fn test_ai_agent_gradual_exfiltration() {
-    let rules_json = include_str!("../rules/presets/ai-agent-advanced.json");
+    let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-advanced.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
     
     let mut engine = RuleEngine::new();
@@ -186,7 +186,7 @@ async fn test_ai_agent_gradual_exfiltration() {
 /// Test repeated block detection
 #[tokio::test]
 async fn test_repeated_block_detection() {
-    let rules_json = include_str!("../rules/presets/ai-agent-protection.json");
+    let rules_json = include_str!("../tests/fixtures/rules/presets/ai-agent-protection.json");
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
     
     let mut engine = RuleEngine::new();

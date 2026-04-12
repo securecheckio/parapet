@@ -29,8 +29,10 @@ use parapet_scanner::{WalletScanner, ScanConfig};
 use solana_sdk::commitment_config::CommitmentConfig;
 use std::io::{self, BufRead, Write};
 
-mod tools;
 mod rugcheck_tools;
+
+// Import shared tools from the library
+use parapet_mcp_server::tools;
 
 #[derive(Debug, Deserialize)]
 struct JsonRpcRequest {
@@ -252,28 +254,6 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                         },
                         "required": ["mint_address"]
                     }
-                },
-                {
-                    "name": "analyze_phishing_site",
-                    "description": "Analyze a suspected phishing site by simulating wallet interactions in a sandboxed browser. Captures and analyzes any transaction the site attempts to create. Returns risk assessment and malicious program detection.",
-                    "inputSchema": {
-                        "type": "object",
-                        "properties": {
-                            "url": {
-                                "type": "string",
-                                "description": "URL of the suspected phishing site to analyze"
-                            },
-                            "timeout": {
-                                "type": "number",
-                                "description": "Navigation timeout in milliseconds (default: 30000)"
-                            },
-                            "max_steps": {
-                                "type": "number",
-                                "description": "Maximum navigation steps (default: 10)"
-                            }
-                        },
-                        "required": ["url"]
-                    }
                 }
             ]
         })),
@@ -309,9 +289,6 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                 }
                 Some("check_liquidity_lock") => {
                     handle_check_liquidity_lock(arguments.cloned().unwrap_or(json!({}))).await
-                }
-                Some("analyze_phishing_site") => {
-                    tools::handle_analyze_phishing_site(arguments.cloned().unwrap_or(json!({}))).await
                 }
                 _ => Err(anyhow::anyhow!("Unknown tool: {:?}", tool_name)),
             }

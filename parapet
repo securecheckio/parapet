@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# Parapet unified CLI
+# Wrapper for all Parapet commands and services
+
+set -e
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Get the directory where this script lives
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Helper functions
+print_usage() {
+    cat << EOF
+${BLUE}Parapet${NC} - Fast, portable Solana transaction security
+
+${GREEN}USAGE:${NC}
+    parapet <COMMAND> [OPTIONS]
+
+${GREEN}SERVICES:${NC}
+    ${YELLOW}proxy${NC}           Start RPC proxy server (port 8899)
+    ${YELLOW}api${NC}             Start lightweight API for AI agents (port 3000)
+    ${YELLOW}platform${NC}        Start full platform API (requires PostgreSQL/Redis)
+    ${YELLOW}mcp${NC}             Start MCP stdio server for AI agents
+
+${GREEN}CLI TOOLS:${NC}
+    ${YELLOW}wallet${NC} <ADDR>   Scan a wallet for security threats
+    ${YELLOW}tx${NC} <SIGNATURE>  Check a transaction signature against rules
+    ${YELLOW}program${NC} <ID>    Analyze a Solana program for security
+    ${YELLOW}keygen${NC}          Generate an API key for proxy authentication
+
+${GREEN}DEVELOPMENT:${NC}
+    ${YELLOW}build${NC}           Build all components in release mode
+    ${YELLOW}test${NC}            Run all tests
+    ${YELLOW}bench${NC}           Run performance benchmarks
+    ${YELLOW}check${NC}           Check code without building
+
+${GREEN}EXAMPLES:${NC}
+    parapet proxy
+    parapet api
+    parapet wallet 9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin
+    parapet tx 5KxP8p3bN...abc123 --rpc-url https://api.mainnet-beta.solana.com
+    parapet program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+
+${GREEN}OPTIONS:${NC}
+    -h, --help      Show this help message
+    -v, --version   Show version information
+
+For detailed help on a specific command:
+    parapet <COMMAND> --help
+
+EOF
+}
+
+print_version() {
+    echo "Parapet 0.1.0"
+    echo "Fast, portable Solana transaction security"
+}
+
+# Check if we're in the right directory
+if [ ! -f "$SCRIPT_DIR/Cargo.toml" ]; then
+    echo -e "${RED}Error:${NC} Could not find Cargo.toml. Are you in the parapet directory?"
+    exit 1
+fi
+
+# Main command router
+COMMAND="${1:-}"
+
+case "$COMMAND" in
+    ""|"-h"|"--help"|"help")
+        print_usage
+        exit 0
+        ;;
+    
+    "-v"|"--version"|"version")
+        print_version
+        exit 0
+        ;;
+    
+    "proxy")
+        echo -e "${GREEN}Starting Parapet RPC proxy...${NC}"
+        shift
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-proxy -- "$@"
+        ;;
+    
+    "api")
+        echo -e "${GREEN}Starting Parapet Core API (lightweight for AI agents)...${NC}"
+        shift
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-api-core -- "$@"
+        ;;
+    
+    "platform")
+        echo -e "${GREEN}Starting Parapet Platform API (full multi-tenant)...${NC}"
+        shift
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-platform -- "$@"
+        ;;
+    
+    "mcp")
+        echo -e "${GREEN}Starting Parapet MCP server...${NC}"
+        shift
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-mcp-server -- "$@"
+        ;;
+    
+    "wallet")
+        shift
+        if [ -z "$1" ]; then
+            echo -e "${RED}Error:${NC} Wallet address required"
+            echo "Usage: parapet wallet <WALLET_ADDRESS> [OPTIONS]"
+            echo "Example: parapet wallet 9xQeWvG816bUx9EPjHmaT23yvVM2ZWbrrpZb9PusVFin"
+            exit 1
+        fi
+        echo -e "${GREEN}Scanning wallet:${NC} $1"
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-scanner --bin wallet-scanner -- "$@"
+        ;;
+    
+    "tx")
+        shift
+        if [ -z "$1" ]; then
+            echo -e "${RED}Error:${NC} Transaction signature required"
+            echo "Usage: parapet tx <SIGNATURE> [OPTIONS]"
+            echo "Example: parapet tx 5KxP8p3bN...abc123"
+            exit 1
+        fi
+        echo -e "${GREEN}Checking transaction:${NC} $1"
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-scanner --bin tx-check -- "$@"
+        ;;
+    
+    "program")
+        shift
+        if [ -z "$1" ]; then
+            echo -e "${RED}Error:${NC} Program ID required"
+            echo "Usage: parapet program <PROGRAM_ID> [OPTIONS]"
+            echo "Example: parapet program TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+            exit 1
+        fi
+        echo -e "${GREEN}Analyzing program:${NC} $1"
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-scanner --bin program-analyzer -- "$@"
+        ;;
+    
+    "keygen")
+        shift
+        echo -e "${GREEN}Generating API key...${NC}"
+        cd "$SCRIPT_DIR"
+        cargo run --release -p parapet-proxy --bin keygen -- "$@"
+        ;;
+    
+    "build")
+        shift
+        echo -e "${GREEN}Building all Parapet components...${NC}"
+        cd "$SCRIPT_DIR"
+        cargo build --workspace --release "$@"
+        echo -e "${GREEN}Build complete!${NC}"
+        echo ""
+        echo "Binaries available at:"
+        echo "  ./target/release/parapet-proxy"
+        echo "  ./target/release/parapet-platform"
+        echo "  ./target/release/parapet-mcp"
+        echo "  ./target/release/wallet-scanner"
+        echo "  ./target/release/tx-check"
+        echo "  ./target/release/program-analyzer"
+        ;;
+    
+    "test")
+        shift
+        echo -e "${GREEN}Running tests...${NC}"
+        cd "$SCRIPT_DIR"
+        cargo test --workspace "$@"
+        ;;
+    
+    "bench")
+        shift
+        echo -e "${GREEN}Running benchmarks...${NC}"
+        cd "$SCRIPT_DIR"
+        cargo run --release -p rpc-perf -- --iterations 500 "$@"
+        echo ""
+        cargo bench -p flowbits-perf "$@"
+        ;;
+    
+    "check")
+        shift
+        echo -e "${GREEN}Checking code...${NC}"
+        cd "$SCRIPT_DIR"
+        cargo check --workspace "$@"
+        ;;
+    
+    *)
+        echo -e "${RED}Error:${NC} Unknown command '${COMMAND}'"
+        echo ""
+        echo "Run 'parapet --help' for usage information"
+        exit 1
+        ;;
+esac

@@ -25,7 +25,10 @@ graph TD
     M -->|Reject| F
 ```
 
+
+
 **Key Features Used:**
+
 - Real-time risk scoring on every trade
 - RugCheck integration for token verification
 - Automatic blocking of high-risk tokens
@@ -62,7 +65,10 @@ sequenceDiagram
     Agent-->>User: "⚠️ DANGER: This would grant unlimited token access. Rejecting for safety."
 ```
 
+
+
 **Key Features Used:**
+
 - HTTP JSON-RPC support for transaction submission
 - Rich metadata for agent decision-making
 - Automatic blocking of dangerous patterns
@@ -89,7 +95,10 @@ graph LR
     H --> J
 ```
 
+
+
 **Commands:**
+
 ```bash
 # Scan wallet
 cargo run -p parapet-scanner -- \
@@ -101,6 +110,7 @@ cat investigation.json | jq '.high_risk_transactions'
 ```
 
 **Key Features Used:**
+
 - Historical transaction analysis
 - Batch processing with rate limiting
 - Detailed risk scoring per transaction
@@ -129,7 +139,10 @@ graph TD
     L --> M[User can override if needed]
 ```
 
+
+
 **Configuration:**
+
 ```bash
 # Production proxy with strict rules
 docker run -d \
@@ -142,6 +155,7 @@ docker run -d \
 ```
 
 **Key Features Used:**
+
 - Transparent RPC proxy for all wallet types
 - Configurable risk thresholds
 - Redis caching for performance
@@ -170,7 +184,10 @@ graph TD
     K --> H
 ```
 
+
+
 **Example: Flash Loan Detection**
+
 ```rust
 pub struct FlashLoanAnalyzer;
 
@@ -192,6 +209,7 @@ impl Analyzer for FlashLoanAnalyzer {
 ```
 
 **Key Features Used:**
+
 - Custom analyzer API
 - Full transaction context access
 - Configurable rule weights
@@ -230,7 +248,10 @@ sequenceDiagram
     Parapet->>Treasury: ✅ Transfer executed
 ```
 
+
+
 **Key Features Used:**
+
 - Pre-approval simulation
 - Risk scoring for proposal review
 - Identity verification (Helius)
@@ -238,11 +259,14 @@ sequenceDiagram
 
 ## Summary
 
-| Use Case | Primary Tool | Key Benefit |
-|----------|-------------|-------------|
-| Trading Bot | Proxy | Real-time protection |
-| AI Agent | Proxy + MCP | Transaction security layer |
-| Audit | Scanner | Historical analysis |
-| DApp Protection | Proxy | User protection |
-| Custom Rules | Core Library | Protocol-specific detection |
-| Multisig | Proxy + API | Proposal risk assessment |
+
+| Use Case        | Primary Tool | Key Benefit                 |
+| --------------- | ------------ | --------------------------- |
+| Trading Bot     | Proxy        | Real-time protection        |
+| AI Agent        | Proxy + MCP  | Transaction security layer  |
+| Audit           | Scanner      | Historical analysis         |
+| DApp Protection | Proxy        | User protection             |
+| Custom Rules    | Core Library | Protocol-specific detection |
+| Multisig        | Proxy + API  | Proposal risk assessment    |
+
+

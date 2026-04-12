@@ -1,0 +1,47 @@
+# Parapet Core API Configuration
+# Copy this file to config.toml and customize
+
+[server]
+# Server binding configuration
+host = "0.0.0.0"
+port = 3000
+
+[runtime]
+# Tokio worker threads (optional, defaults to one per CPU core)
+# worker_threads = 4
+
+[redis]
+# Redis URL for dynamic rules, escalations, nonces, and temporary storage
+url = "redis://localhost:6379"
+
+[solana]
+# Solana RPC endpoint
+rpc_url = "https://api.devnet.solana.com"
+network = "devnet"
+
+[auth]
+# Wallet-based authentication (for rule/escalation management)
+# Comma-separated list of authorized wallet addresses
+authorized_wallets = []
+
+# Nonce TTL in seconds (for signature verification)
+nonce_ttl_seconds = 60
+
+# API key authentication (for MCP endpoints)
+# Comma-separated list of API keys
+# SECURITY: Use environment variables in production!
+mcp_api_keys = []
+
+[rate_limiting]
+# MCP concurrent scan limit (protects against resource exhaustion)
+max_concurrent_scans = 10
+
+# MCP scans per hour per API key
+scans_per_hour_per_key = 100
+
+# Environment Variable Overrides:
+# - REDIS_URL → overrides [redis].url
+# - SOLANA_RPC_URL → overrides [solana].rpc_url
+# - SOLANA_NETWORK → overrides [solana].network
+# - AUTHORIZED_WALLETS → overrides [auth].authorized_wallets (comma-separated)
+# - MCP_API_KEYS → overrides [auth].mcp_api_keys (comma-separated)

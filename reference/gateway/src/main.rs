@@ -92,7 +92,7 @@ async fn main() -> Result<()> {
         default_requests_per_month: 10_000,
         allowed_wallets: None, // Handled by auth provider
         blocked_programs: None, // Will use rules
-        rules_path: std::env::var("RULES_PATH").ok().or(Some("../../parapet/proxy/rules/presets/bot-essentials.json".to_string())),
+        rules_path: std::env::var("RULES_PATH").ok().or(Some("../../proxy/rules/presets/bot-essentials.json".to_string())),
         rule_action_override: None,
         wasm_analyzers_path: None, // No WASM analyzers in SaaS by default
         output_manager: Some(Arc::new(output_manager)),

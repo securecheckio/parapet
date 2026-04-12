@@ -22,7 +22,7 @@ sequenceDiagram
     Parapet->>Solana: Forward simulation
     Solana-->>Parapet: Simulation result
     Parapet->>Parapet: Analyze simulation result
-    Parapet-->>Agent: Result + solShield metadata
+    Parapet-->>Agent: Result + parapet metadata
     
     alt Risk Score < Threshold
         Agent->>Parapet: sendTransaction(tx)
@@ -36,6 +36,8 @@ sequenceDiagram
         Parapet-->>Agent: ❌ 403 Blocked (error -32004)
     end
 ```
+
+
 
 ## Quick Start
 
@@ -58,8 +60,9 @@ const wsConnection = new Connection('https://api.mainnet-beta.solana.com', 'conf
 ### 2. Use Standard RPC Methods
 
 **Supported HTTP JSON-RPC methods:**
+
 - `sendTransaction` - Analyzed before forwarding, blocked if risk > threshold
-- `simulateTransaction` - Returns enriched `solShield` metadata
+- `simulateTransaction` - Returns enriched `parapet` metadata
 - `getLatestBlockhash`, `getBalance`, etc. - Pass through directly
 
 ### 3. Handle Security Analysis
@@ -68,13 +71,13 @@ const wsConnection = new Connection('https://api.mainnet-beta.solana.com', 'conf
 
 ```typescript
 const simulation = await connection.simulateTransaction(tx);
-const solShield = simulation.value.solShield;
+const parapet = simulation.value.parapet;
 
-console.log(`Risk Score: ${solShield.riskScore}`);
-console.log(`Decision: ${solShield.decision}`); // "safe" | "alert" | "would_block"
+console.log(`Risk Score: ${parapet.riskScore}`);
+console.log(`Decision: ${parapet.decision}`); // "safe" | "alert" | "would_block"
 
-if (solShield.warnings.length > 0) {
-  solShield.warnings.forEach(w => {
+if (parapet.warnings.length > 0) {
+  parapet.warnings.forEach(w => {
     console.log(`[${w.severity}] ${w.message}`);
   });
 }
@@ -102,13 +105,13 @@ try {
 
 ## Response Structure
 
-### solShield Metadata
+### parapet Metadata
 
 Added to `simulateTransaction` responses:
 
 ```typescript
 {
-  version: "1.0.0",
+  version: "1.0",
   riskScore: 45,              // 0-100
   structuralRisk: 30,         // Risk from transaction structure
   simulationRisk: 15,         // Risk from simulation results
@@ -145,7 +148,7 @@ Added to `simulateTransaction` responses:
 graph TD
     A[Agent wants to transfer tokens] --> B[Build transaction]
     B --> C[simulateTransaction]
-    C --> D{Check solShield.riskScore}
+    C --> D{Check parapet.riskScore}
     D -->|< 30| E[✅ Low risk - send]
     D -->|30-60| F[⚠️ Medium risk - log warning & send]
     D -->|> 60| G[❌ High risk - abort]
@@ -155,6 +158,8 @@ graph TD
     I -->|200| J[✅ Transaction sent]
     I -->|403| K[🚫 Blocked - log security event]
 ```
+
+
 
 ### Use Case 2: Human-in-the-Loop Escalation
 
@@ -184,6 +189,8 @@ sequenceDiagram
     Parapet-->>Agent: ✅ Transaction sent
 ```
 
+
+
 ## Best Practices
 
 ### 1. Always Simulate First
@@ -191,13 +198,13 @@ sequenceDiagram
 ```typescript
 // 1. Simulate to check risk
 const sim = await connection.simulateTransaction(tx);
-if (sim.value.solShield?.wouldBlock) {
+if (sim.value.parapet?.wouldBlock) {
   console.log('Transaction would be blocked, aborting');
   return;
 }
 
 // 2. Check against your own risk tolerance
-if (sim.value.solShield?.riskScore > 50) {
+if (sim.value.parapet?.riskScore > 50) {
   console.log('Risk too high for agent tolerance');
   return;
 }
@@ -245,6 +252,7 @@ X_API_KEY=sk_your_api_key
 ## Example Integrations
 
 See working examples in `/examples`:
+
 - `agent-integration-example.ts` - TypeScript integration
 - `agent-integration-example.py` - Python integration
 - `openclaw-mcp-server.ts` - MCP server with escalation support
@@ -272,3 +280,4 @@ curl http://localhost:8899 \
 - Issues: GitHub Issues
 - Logs: Check Parapet proxy logs for detailed analysis
 - Testing: Use devnet/testnet before mainnet integration
+

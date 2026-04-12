@@ -1,0 +1,80 @@
+# Template: copy to `analyzers.toml` (gitignored) to customize which analyzers register.
+# If neither `analyzers.toml` nor `ANALYZERS_CONFIG_PATH` is present, ALL analyzers are
+# registered (same as an empty config — see `AnalyzersConfig::default()`).
+#
+#   cp analyzers.toml.example analyzers.toml
+#
+# Keys MUST match each analyzer's `name()` in parapet-core (see `proxy/src/server.rs`).
+
+[analyzers.basic]
+enabled = true
+description = "Basic transaction analysis (size, accounts, instructions)"
+
+[analyzers.core_security]
+enabled = true
+description = "Core security checks (delegations, blocked programs, risk)"
+
+[analyzers.token_instructions]
+enabled = true
+description = "SPL Token instruction analysis"
+
+[analyzers.system]
+enabled = true
+description = "System Program instruction analysis"
+
+[analyzers.complexity]
+enabled = true
+description = "Program complexity and risk scoring"
+
+[analyzers.logs]
+enabled = true
+description = "Transaction log analysis"
+
+[analyzers.padding]
+enabled = true
+description = "Instruction padding attack detection"
+
+[analyzers.inner_instruction]
+enabled = true
+description = "Inner instruction / CPI analysis"
+
+[analyzers.instruction_data]
+enabled = true
+description = "Instruction discriminator fingerprinting"
+
+[analyzers.helius_identity]
+enabled = true
+description = "Helius program identity and reputation"
+requires_api_key = "HELIUS_API_KEY"
+
+[analyzers.helius_transfer]
+enabled = true
+description = "Helius transfer velocity / patterns"
+requires_api_key = "HELIUS_API_KEY"
+
+[analyzers.helius_funding]
+enabled = true
+description = "Helius funding / sybil signals"
+requires_api_key = "HELIUS_API_KEY"
+
+[analyzers.ottersec]
+enabled = true
+description = "OtterSec cryptographic verification"
+
+[analyzers.rugcheck]
+enabled = false
+description = "Rugcheck token report API (external)"
+
+[analyzers.jupiter]
+enabled = false
+description = "Jupiter token metadata (requires proxy --features jupiter)"
+requires_feature = "jupiter"
+
+[analyzers.token_mint]
+enabled = false
+description = "Token mint authority analysis (requires proxy --features token-mint)"
+requires_feature = "token-mint"
+
+[analyzers.wasm]
+enabled = true
+description = "WASM analyzers from WASM_ANALYZERS_PATH or ./analyzers (requires --features wasm-analyzers)"

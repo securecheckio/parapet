@@ -17,11 +17,13 @@ Deploy Parapet RPC proxy to DigitalOcean with automatic HTTPS, rate limiting, an
 Choose between two deployment modes based on your needs. See [DEPLOYMENT_COMPARISON.md](DEPLOYMENT_COMPARISON.md) for detailed analysis.
 
 ### Docker Mode (Default) - Optimized for Ease
+
 ```hcl
 deployment_mode = "docker"
 ```
 
 **Pros:**
+
 - Easy setup and updates via container images
 - Portable across environments
 - Dependency isolation
@@ -29,23 +31,27 @@ deployment_mode = "docker"
 - Optimized with host networking and resource limits
 
 **Cons:**
+
 - ~2-5% network latency overhead (minimal for most use cases)
 - ~10-20MB extra memory usage
 
 **Best for:** Development, staging, open-source users, <5000 req/s
 
 ### Native Mode - Optimized for Performance
+
 ```hcl
 deployment_mode = "native"
 ```
 
 **Pros:**
+
 - Maximum performance (~2-5% lower latency than Docker)
 - Direct hardware access, no containerization overhead
 - Minimal memory footprint
 - Systemd security hardening
 
 **Cons:**
+
 - Less portable (platform-specific binaries)
 - Slightly more complex dependency management
 
@@ -73,6 +79,7 @@ nano terraform.tfvars
 ```
 
 **Minimum required variables:**
+
 ```hcl
 # DigitalOcean
 do_token = "your_token_here"
@@ -100,6 +107,7 @@ terraform apply
 ### 4. Test
 
 **Without HTTPS (port 8899):**
+
 ```bash
 curl -X POST http://YOUR_IP:8899 \
   -H "Content-Type: application/json" \
@@ -107,6 +115,7 @@ curl -X POST http://YOUR_IP:8899 \
 ```
 
 **With HTTPS (port 443):**
+
 ```bash
 curl -X POST https://rpc.yourdomain.com \
   -H "Content-Type: application/json" \
@@ -205,16 +214,19 @@ See [ENV_VARS_EXAMPLE.md](ENV_VARS_EXAMPLE.md) for complete guide.
 
 ## Performance Comparison
 
-| Metric | Docker (Optimized) | Native Binary |
-|--------|-------------------|---------------|
-| Latency overhead | ~2-5% | Baseline (0%) |
-| Memory overhead | +10-20MB | Minimal |
-| Deployment time | ~1 min | ~1-2 min |
-| Update complexity | Very easy | Easy |
-| Portability | Excellent | Platform-specific |
+
+| Metric              | Docker (Optimized)       | Native Binary           |
+| ------------------- | ------------------------ | ----------------------- |
+| Latency overhead    | ~2-5%                    | Baseline (0%)           |
+| Memory overhead     | +10-20MB                 | Minimal                 |
+| Deployment time     | ~1 min                   | ~1-2 min                |
+| Update complexity   | Very easy                | Easy                    |
+| Portability         | Excellent                | Platform-specific       |
 | **Recommended for** | Open-source, <5000 req/s | Production, >5000 req/s |
 
+
 **Real-world impact for RPC proxy:**
+
 - For a 10ms upstream RPC call, Docker adds ~0.2-0.5ms
 - For a 100ms call, Docker adds ~2-5ms
 - **Bottleneck is usually upstream RPC latency, not Docker**
@@ -222,6 +234,7 @@ See [ENV_VARS_EXAMPLE.md](ENV_VARS_EXAMPLE.md) for complete guide.
 ## Monitoring & Troubleshooting
 
 ### Quick Stats (Built-in Helper)
+
 ```bash
 ssh root@YOUR_IP
 
@@ -236,6 +249,7 @@ solshield-watch
 ```
 
 ### Check service status
+
 ```bash
 # Service status
 systemctl status parapet
@@ -248,11 +262,13 @@ journalctl -u parapet -f | grep -E "BLOCKED|ALERT"
 ```
 
 ### Check deployment mode
+
 ```bash
 cat /opt/parapet/deployment-info.txt
 ```
 
 ### Docker mode specific
+
 ```bash
 # Check container status
 docker ps -a | grep parapet
@@ -265,6 +281,7 @@ docker stats parapet-rpc-proxy
 ```
 
 ### Native mode specific
+
 ```bash
 # Verify binary
 ls -la /opt/parapet/
@@ -278,6 +295,7 @@ systemctl show parapet | grep -E 'NoNewPrivileges|ProtectSystem'
 ```
 
 ### Search logs for specific events
+
 ```bash
 # Find all blocks in last 24 hours
 journalctl -u parapet --since "24 hours ago" | grep "BLOCKED"
@@ -291,11 +309,13 @@ journalctl -u parapet --since today | grep -c "ALERT"
 ```
 
 ### Check cloud-init logs
+
 ```bash
 tail -100 /var/log/cloud-init-output.log
 ```
 
 ### Test RPC locally on server
+
 ```bash
 curl -X POST http://localhost:8899 \
   -H "Content-Type: application/json" \
@@ -307,12 +327,14 @@ See [MONITORING_LOGS.md](MONITORING_LOGS.md) for detailed log monitoring guide.
 ## Updating
 
 ### Update to latest release
+
 ```bash
 cd terraform/digitalocean  # or aws
 terraform apply  # Downloads latest binary automatically
 ```
 
 ### Create new release
+
 ```bash
 git tag v1.0.0
 git push origin v1.0.0
@@ -332,11 +354,13 @@ ssh_command  = "ssh root@104.131.164.61"
 ## Cost Estimates
 
 ### DigitalOcean
+
 - **Droplet**: $18/month (2 vCPU, 2GB RAM)
 - **Managed Redis** (optional): $15/month
 - **Total**: ~$18-33/month
 
 ### AWS
+
 - **EC2 t3.small**: ~$15/month
 - **ElastiCache** (optional): ~$12/month
 - **Total**: ~$15-27/month
@@ -344,6 +368,7 @@ ssh_command  = "ssh root@104.131.164.61"
 ## Support
 
 For issues, see:
+
 - [GitHub Issues](https://github.com/securecheckio/parapet/issues)
 - [HTTPS Setup Guide](HTTPS_SETUP.md)
 - [Environment Variables Guide](ENV_VARS_EXAMPLE.md)

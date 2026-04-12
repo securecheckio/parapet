@@ -20,6 +20,8 @@ graph TD
     I -->|Yes| J[✅ Deploy analyzer]
 ```
 
+
+
 ### Integration Flow
 
 ```mermaid
@@ -46,13 +48,15 @@ sequenceDiagram
     App->>App: Make decision based on risk
 ```
 
+
+
 ## Using Parapet as a Library
 
 ### Installation
 
 ```toml
 [dependencies]
-parapet-core = { path = "../path/to/parapet/core" }
+parapet-core = { path = "../core" }
 solana-sdk = "2.3"
 tokio = { version = "1", features = ["full"] }
 ```
@@ -60,7 +64,7 @@ tokio = { version = "1", features = ["full"] }
 ### Basic Usage
 
 ```rust
-use sol_shield_core::rules::{AnalyzerRegistry, RuleEngine, RiskLevel};
+use parapet_core::rules::{AnalyzerRegistry, RuleEngine, RiskLevel};
 use solana_sdk::transaction::Transaction;
 use std::sync::Arc;
 
@@ -92,7 +96,7 @@ async fn main() -> anyhow::Result<()> {
 ### 1. Create Analyzer
 
 ```rust
-use sol_shield_core::rules::{Analyzer, AnalysisContext, RuleResult};
+use parapet_core::rules::{Analyzer, AnalysisContext, RuleResult};
 use async_trait::async_trait;
 
 pub struct MyCustomAnalyzer;
@@ -151,13 +155,15 @@ registry.register("my_custom_analyzer", Box::new(MyCustomAnalyzer));
 Built-in analyzers in `core/src/rules/analyzers/`:
 
 ### Core Analyzers
+
 - `basic` - Account ownership, balance changes
 - `token_instructions` - Token transfers, delegations
-- `security` - Authority changes, dangerous instructions
-- `program_complexity` - Transaction complexity metrics
-- `system_program` - System program interactions
+- `core_security` - Authority changes, dangerous instructions
+- `complexity` - Transaction complexity metrics
+- `system` - System program interactions
 
 ### Third-Party Analyzers
+
 - `rugcheck` - Token risk scoring via RugCheck API
 - `helius_identity` - Wallet verification via Helius
 - `token_mint` - Token metadata validation
@@ -167,7 +173,7 @@ Built-in analyzers in `core/src/rules/analyzers/`:
 Analyzers can use enrichment services for external data:
 
 ```rust
-use sol_shield_core::enrichment::{EnrichmentService, rugcheck::RugCheckService};
+use parapet_core::enrichment::{EnrichmentService, rugcheck::RugCheckService};
 
 let rugcheck = RugCheckService::new("https://api.rugcheck.xyz");
 let report = rugcheck.get_token_report("EPjFWdd5...").await?;
@@ -235,5 +241,6 @@ parapet/
 ## Resources
 
 - Core library: `core/README.md`
-- Rule configuration: `proxy/RULES.md`
+- Proxy / rules: `proxy/README.md`
 - Analyzer examples: `core/src/rules/analyzers/`
+

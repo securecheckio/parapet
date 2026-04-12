@@ -29,10 +29,10 @@ parapet rule engine. Prints which rules matched, the action taken \
 \n\
 Examples:\n\
   tx-check 4BKBmAJn6TdsENij7... \\\n\
-    --rules ./rules/presets/drift-exploit-protection.json\n\
+    --rules ./rules/presets/default-protection.json\n\
 \n\
   tx-check 4BKBmAJn6TdsENij7... \\\n\
-    --rules ./rules/presets/comprehensive-protection.json \\\n\
+    --rules ../proxy/tests/fixtures/rules/presets/drift-exploit-protection.json \\\n\
     --rpc-url https://api.mainnet-beta.solana.com")]
 struct Args {
     /// Transaction signature (base58)
@@ -40,7 +40,7 @@ struct Args {
     signature: String,
 
     /// Rules JSON file to evaluate against
-    #[arg(short, long, default_value = "./rules/presets/drift-exploit-protection.json")]
+    #[arg(short, long, default_value = "./rules/presets/default-protection.json")]
     rules: String,
 
     /// Solana RPC endpoint URL
@@ -251,9 +251,9 @@ async fn main() -> Result<()> {
         let analyzer = match fingerprint_path.as_deref() {
             Some(path) if path.exists() => {
                 InstructionDataAnalyzer::from_config_file(path.to_str().unwrap_or(""))
-                    .unwrap_or_else(|_| InstructionDataAnalyzer::with_default_authority_names())
+                    .unwrap_or_else(|_| InstructionDataAnalyzer::with_authority_fingerprints_embedded())
             }
-            _ => InstructionDataAnalyzer::with_default_authority_names(),
+            _ => InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
         };
         registry.register(Arc::new(analyzer));
     }
@@ -286,7 +286,7 @@ async fn main() -> Result<()> {
         debug_registry.register(Arc::new(SystemProgramAnalyzer::new()));
         debug_registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
         debug_registry.register(Arc::new(TransactionLogAnalyzer::new()));
-        debug_registry.register(Arc::new(InstructionDataAnalyzer::with_default_authority_names()));
+        debug_registry.register(Arc::new(InstructionDataAnalyzer::with_authority_fingerprints_embedded()));
 
         let all_analyzers: Vec<String> = debug_registry.list_all();
         let fields = debug_registry

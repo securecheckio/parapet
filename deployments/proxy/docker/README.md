@@ -102,8 +102,8 @@ const connection = new Connection('http://localhost:8899');
 For AI agents (OpenClaw, Cursor):
 
 ```bash
-export SOL_SHIELD_RPC_URL=http://localhost:8899
-export SOL_SHIELD_API_URL=http://localhost:3001
+export PARAPET_RPC_URL=http://localhost:8899
+export PARAPET_API_URL=http://localhost:3001
 ```
 
 ## Usage Workflows
@@ -128,6 +128,10 @@ export SOL_SHIELD_API_URL=http://localhost:3001
 ## Configuration
 
 ### Environment Variables
+
+**For Docker deployments**, use `.env` files (Docker Compose standard).
+
+**Note:** For native/local development, prefer TOML config files (see [proxy/README.md](../../../proxy/README.md)).
 
 See `.env.example` for complete list. Key settings:
 

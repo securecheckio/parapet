@@ -1,15 +1,21 @@
 # Parapet
 
-> Fast, portable Solana transaction security
+### Fast, portable Solana transaction security
 
-**By SecureCheck**
+  **Open-source security platform for the Solana ecosystem**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+  [License: MIT](LICENSE)
+  [Rust](https://www.rust-lang.org/)
+  [Built for Solana](https://solana.com/)
+
+  [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
+
+---
 
 ## What is Parapet?
 
 Parapet is an open-source security platform for Solana that provides:
+
 - **Transaction analysis and threat detection** - Real-time rule-based security
 - **Wallet security scanning** - Comprehensive threat assessment for Solana wallets
 - **Phishing site analysis** - Detection and analysis of malicious sites
@@ -20,76 +26,127 @@ Parapet is an open-source security platform for Solana that provides:
 - **parapet-core** - Security analysis library
 - **parapet-proxy** - RPC proxy with rule engine
 - **parapet-scanner** - Wallet security scanner
-- **parapet-sentinel** - Phishing site analyzer
 - **parapet-mcp** - Model Context Protocol server integration
-- **parapet-api** - Rule management API
+- **parapet-platform** - Multi-tenant API platform
+- **parapet** - Unified CLI for all commands
 
-## For Community Operators
+## 🚀 Quick Start
 
-Parapet enables you to run your own secure RPC server for your community, DAO, or organization.
-
-### Quick Start
+### CLI Usage
 
 ```bash
-# Clone the repository
-git clone https://github.com/securecheckio/parapet
-cd parapet
+# Scan a wallet for threats
+./parapet wallet <WALLET_ADDRESS>
 
-# Deploy with Docker (easiest)
+# Check a transaction
+./parapet tx <SIGNATURE>
+
+# Analyze a program
+./parapet program <PROGRAM_ID>
+
+# Start RPC proxy
+./parapet proxy
+
+# See all commands
+./parapet --help
+```
+
+### Local Development
+
+```bash
+# 1. Configure using TOML files (recommended for local dev)
+cp proxy/config.toml.example proxy/config.toml
+nano proxy/config.toml
+
+# 2. Set secrets via environment
+export HELIUS_API_KEY=your_key
+export JUPITER_API_KEY=your_key
+
+# 3. Run proxy
+./parapet proxy
+```
+
+### Docker Deployment
+
+```bash
 cd deployments/proxy/docker
-cp .env.example .env
-# Edit .env with your settings
+cp .env.example .env      # Docker Compose uses .env files
+nano .env                 # Edit configuration
 docker-compose up -d
+```
 
-# Or deploy with Terraform (production)
+### Production Deployment
+
+```bash
+# Terraform (DigitalOcean)
 cd deployments/proxy/terraform/digitalocean
 cp terraform.tfvars.example terraform.tfvars
-# Edit terraform.tfvars
+nano terraform.tfvars
 terraform init
 terraform apply
 ```
 
-See [`docs/operators/`](docs/operators/) for complete deployment guides.
+See [docs/operators/](docs/operators/) for complete deployment guides.
 
-## Security Rules
+## 🛡️ Security Rules
 
-Parapet includes comprehensive security rules from SecureCheck:
-- All rules are free and open source
-- Licensed under CC BY-NC-SA 4.0 (non-commercial use)
-- Updated regularly via GitHub
-- Custom rule development available (consulting)
+Security rules for Parapet are maintained in a separate repository: [parapet-rules](https://github.com/securecheckio/parapet-rules)
 
-Rules are maintained in a separate repository: [parapet-rules](https://github.com/securecheckio/parapet-rules)
+## 📚 Reference Implementations
 
-## Reference Implementations
+The `reference/` directory contains example implementations for building a multi-tenant RPC user interface:
 
-The `reference/` directory contains example implementations for building a multi-tenant SaaS service:
 - **auth-api** - Multi-tenant authentication with PostgreSQL
-- **gateway** - SaaS RPC gateway wrapper
+- **gateway** - RPC gateway wrapper
 - **dashboard** - Web UI for users and operators
 
 These are provided as educational examples showing how to build on top of Parapet.
 
-## Development
+## 🛠️ Development
 
 ### Prerequisites
 
 - Rust 1.70+
-- Node.js 18+ (for Sentinel and dashboard)
-- PostgreSQL 15+ (for SaaS reference implementations)
-- Redis 7+ (optional, for caching and rate limiting)
+- Redis 7+ (recommended for production)
+- Node.js 18+ (for reference dashboard)
+- PostgreSQL 15+ (for reference implementations only)
+
+### Configuration
+
+**Use TOML config files** (recommended):
+
+```bash
+# Proxy
+cp proxy/config.toml.example proxy/config.toml
+nano proxy/config.toml
+
+# API
+cp api-core/config.example.toml api-core/config.toml
+nano api-core/config.toml
+```
+
+**Environment variables** for secrets only:
+
+```bash
+export HELIUS_API_KEY=your_key
+export JUPITER_API_KEY=your_key
+export MCP_API_KEYS=your_key
+```
 
 ### Build
 
 ```bash
-# Build all Rust components
+# Build all components
+./parapet build
+
+# Or use cargo directly
 cargo build --workspace --release
 
 # Run tests
-cargo test --workspace
+./parapet test
 
-# Run performance benchmarks
-cargo run --release -p rpc-perf -- --iterations 500
+# Run benchmarks
+./parapet bench
 ```
 
 ### Project Structure
@@ -99,46 +156,49 @@ parapet/
 ├── core/                    # Security analysis library
 ├── proxy/                   # RPC proxy with rule engine
 ├── scanner/                 # Wallet security scanner
-├── sentinel/                # Phishing site analyzer (TypeScript)
 ├── mcp/                     # MCP server
 ├── api/                     # Rule management API
-├── integrations/
-│   └── agent-kit/          # Solana Agent Kit plugin
-├── reference/              # SaaS reference implementations
+├── reference/              # Reference implementations
 │   ├── auth-api/           # Multi-tenant auth
-│   ├── gateway/            # SaaS gateway
+│   ├── gateway/            # RPC gateway wrapper
 │   └── dashboard/          # Web UI
 ├── tools/
-│   ├── rpc-perf/          # Performance benchmarking
+│   ├── rpc-perf/          # Proxy + rule-engine latency harness
+│   ├── flowbits-perf/     # Flowbits Criterion benchmarks
 │   └── risk-register/     # Risk database & analysis
 ├── docs/                   # Documentation
 ├── examples/               # Example configurations
 └── deployments/           # Deployment configurations
     ├── proxy/             # Standalone proxy deployment
-    └── reference/         # Full SaaS stack (optional)
+    └── reference/         # Reference stack (optional)
 ```
 
-## Documentation
+## 📖 Documentation
+
+### Getting Started
+
+- [OpenClaw Integration Guide](docs/OPENCLAW_SETUP.md) - Complete guide for AI agents
+- [Quick Start](docs/QUICKSTART.md) - Get running in 5 minutes
+
+### Deployment
 
 - [Deployment Guide](docs/operators/deployment-guide.md)
 - [Configuration Reference](docs/operators/configuration.md)
 
-## Community & Support
+## 🤝 Community & Support
 
 - **Issues**: [GitHub Issues](https://github.com/securecheckio/parapet/issues)
 - **Website**: [securecheck.io/parapet](https://securecheck.io/parapet)
 
-## Contributing
+## 🌟 Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-Security rules are licensed under CC BY-NC-SA 4.0 - see the [parapet-rules](https://github.com/securecheckio/parapet-rules) repository.
-
-## Acknowledgments
+## 💖 Acknowledgments
 
 Built with ❤️ for the Solana ecosystem by SecureCheck.
 

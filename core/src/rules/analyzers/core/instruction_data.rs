@@ -113,11 +113,35 @@ impl InstructionDataAnalyzer {
     pub fn from_config_file(path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| anyhow::anyhow!("Failed to read fingerprint config '{}': {}", path, e))?;
-        let config: FingerprintConfig = serde_json::from_str(&content)
-            .map_err(|e| anyhow::anyhow!("Failed to parse fingerprint config '{}': {}", path, e))?;
+        Self::from_json_str(&content).map_err(|e| {
+            anyhow::anyhow!("Failed to parse fingerprint config '{}': {}", path, e)
+        })
+    }
+
+    /// Same schema as [`Self::from_config_file`], but from a string (tests, embeds).
+    pub fn from_json_str(s: &str) -> Result<Self> {
+        let config: FingerprintConfig = serde_json::from_str(s).map_err(|e| {
+            anyhow::anyhow!("Failed to parse fingerprint config JSON: {}", e)
+        })?;
         Ok(Self::new(config.fingerprints))
     }
 
+    /// Canonical authority-change fingerprints: `authority-change.json` beside this analyzer (embedded at compile time).
+    pub fn with_authority_fingerprints_embedded() -> Self {
+        const EMBEDDED: &str = include_str!("authority-change.json");
+        match Self::from_json_str(EMBEDDED) {
+            Ok(a) => a,
+            Err(e) => {
+                log::error!(
+                    "Embedded authority-change fingerprints invalid: {} — using hardcoded fallback",
+                    e
+                );
+                Self::with_default_authority_names()
+            }
+        }
+    }
+
+    /// Fallback list if embedded JSON fails to parse (should not happen in release builds).
     /// Create with a default set of authority-change instruction names.
     /// All use the Anchor discriminator formula — no hardcoded bytes.
     pub fn with_default_authority_names() -> Self {

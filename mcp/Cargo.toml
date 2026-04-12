@@ -10,6 +10,11 @@ description = "MCP server for Parapet wallet and program security scanning"
 name = "parapet-mcp"
 path = "src/main.rs"
 
+# Also expose as a library for shared MCP tool implementations
+[lib]
+name = "parapet_mcp_server"
+path = "src/lib.rs"
+
 [dependencies]
 # Parapet scanner library with all features
 parapet-scanner = { path = "../scanner" }

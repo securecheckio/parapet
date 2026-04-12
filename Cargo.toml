@@ -4,17 +4,16 @@ members = [
     "core",
     "proxy",
     "scanner",
-    "api",
+    "api-core",
     "mcp",
     "tools/rpc-perf",
-    "reference/auth-api",
+    "tools/flowbits-perf",
+    "api-platform",
     "reference/gateway",
 ]
 exclude = [
     "core/tests/wasm_mock",
     "reference/dashboard",
-    "integrations/agent-kit",
-    "sentinel",
 ]
 
 [workspace.dependencies.blake3]
