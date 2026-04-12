@@ -1,4 +1,6 @@
-![Parapet Logo](parapet.png)
+<p align="center">
+  <img src="parapet.png" alt="Parapet Logo" width="400"/>
+</p>
 
 # Parapet
 
