@@ -68,13 +68,7 @@ async fn main() -> Result<()> {
                 .iter()
                 .copied()
                 .find(|&v| v == s.as_str())
-                .ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "unknown case '{}'. Valid: {}",
-                        s,
-                        valid.join(", ")
-                    )
-                })
+                .ok_or_else(|| anyhow::anyhow!("unknown case '{}'. Valid: {}", s, valid.join(", ")))
         })
         .collect::<Result<Vec<_>>>()?;
 

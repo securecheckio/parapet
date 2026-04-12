@@ -2,9 +2,9 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::classifier;
 use crate::history::ProgramEncounter;
 use crate::report::SuspiciousProgram;
-use crate::classifier;
 
 /// Threat severity levels
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -26,7 +26,7 @@ pub enum ThreatType {
         amount: u64,
         granted_at: Option<i64>,
     },
-    
+
     /// Delegation was granted but is now missing (possibly exploited)
     PossibleExploitedDelegation {
         token_account: String,
@@ -34,14 +34,14 @@ pub enum ThreatType {
         amount: u64,
         granted_at: i64,
     },
-    
+
     /// Account authority has been changed
     CompromisedAuthority {
         account: String,
         expected_owner: String,
         actual_owner: String,
     },
-    
+
     /// Suspicious transaction detected in history
     SuspiciousTransaction {
         signature: String,
@@ -49,7 +49,7 @@ pub enum ThreatType {
         risk_score: u8,
         timestamp: Option<i64>,
     },
-    
+
     /// Pattern of unusual activity
     UnusualPattern {
         pattern_description: String,
@@ -84,23 +84,23 @@ impl ThreatDetector {
         program_encounters: HashMap<String, ProgramEncounter>,
     ) -> Result<(Vec<ThreatAssessment>, Vec<SuspiciousProgram>)> {
         let mut all_threats = Vec::new();
-        
+
         // Add all active threats (highest priority)
         all_threats.extend(active_threats.clone());
-        
+
         // Check for exploited delegations (historical approval but no current delegation)
         let mut exploited = self.find_exploited_delegations(&active_threats, &historical_threats);
         all_threats.append(&mut exploited);
-        
+
         // Add remaining historical threats
         all_threats.extend(historical_threats);
-        
+
         // Process suspicious programs
         let suspicious_programs = self.process_suspicious_programs(program_encounters);
-        
+
         Ok((all_threats, suspicious_programs))
     }
-    
+
     /// Process program encounters into suspicious program list
     fn process_suspicious_programs(
         &self,
@@ -114,7 +114,7 @@ impl ThreatDetector {
                 // 2. Triggered security rules
                 let is_known = classifier::is_known_program(&program_id);
                 let has_rule_violation = encounter.rule_decision.is_some();
-                
+
                 if !is_known || has_rule_violation {
                     Some(classifier::create_suspicious_program(
                         program_id,
@@ -127,13 +127,13 @@ impl ThreatDetector {
                 }
             })
             .collect();
-        
+
         // Sort by risk score (highest first)
         suspicious.sort_by(|a, b| b.risk_score.cmp(&a.risk_score));
-        
+
         // Limit to top 20 for readability
         suspicious.truncate(20);
-        
+
         suspicious
     }
 
@@ -147,16 +147,17 @@ impl ThreatDetector {
 
         // Extract historical approvals
         for hist_threat in historical {
-            if let ThreatType::SuspiciousTransaction { 
-                threat_description, 
+            if let ThreatType::SuspiciousTransaction {
+                threat_description,
                 timestamp,
                 signature,
-                .. 
-            } = &hist_threat.threat_type {
+                ..
+            } = &hist_threat.threat_type
+            {
                 // Check if this was a delegation grant
-                if threat_description.contains("delegation") || 
-                   threat_description.contains("approve") {
-                    
+                if threat_description.contains("delegation")
+                    || threat_description.contains("approve")
+                {
                     // Check if there's a corresponding active delegation
                     let still_active = active.iter().any(|a| {
                         matches!(&a.threat_type, ThreatType::ActiveUnlimitedDelegation { .. })

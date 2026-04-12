@@ -37,7 +37,11 @@ fn test_account_creation_spam_detection() {
 
     // Simulate 5 account creations (at spam threshold)
     for _ in 0..5 {
-        manager.increment(&wallet, "account_creation_count", Some(Duration::from_secs(300)));
+        manager.increment(
+            &wallet,
+            "account_creation_count",
+            Some(Duration::from_secs(300)),
+        );
     }
 
     let count = manager.get_counter(&wallet, "account_creation_count");
@@ -52,7 +56,11 @@ fn test_blocked_transaction_count() {
 
     // Simulate 3 blocked transactions
     for _ in 0..3 {
-        manager.increment(&wallet, "blocked_transaction_count", Some(Duration::from_secs(3600)));
+        manager.increment(
+            &wallet,
+            "blocked_transaction_count",
+            Some(Duration::from_secs(3600)),
+        );
     }
 
     let count = manager.get_counter(&wallet, "blocked_transaction_count");
@@ -66,7 +74,11 @@ fn test_counter_expiration_after_ttl() {
     let wallet = Pubkey::new_unique();
 
     // Set counter with very short TTL
-    manager.increment(&wallet, "transaction_count", Some(Duration::from_millis(10)));
+    manager.increment(
+        &wallet,
+        "transaction_count",
+        Some(Duration::from_millis(10)),
+    );
     assert_eq!(manager.get_counter(&wallet, "transaction_count"), 1);
 
     // Wait for expiration
@@ -84,12 +96,20 @@ fn test_multiple_wallets_independent_counters() {
 
     // Wallet 1: 3 transactions
     for _ in 0..3 {
-        manager.increment(&wallet1, "transaction_count", Some(Duration::from_secs(600)));
+        manager.increment(
+            &wallet1,
+            "transaction_count",
+            Some(Duration::from_secs(600)),
+        );
     }
 
     // Wallet 2: 7 transactions
     for _ in 0..7 {
-        manager.increment(&wallet2, "transaction_count", Some(Duration::from_secs(600)));
+        manager.increment(
+            &wallet2,
+            "transaction_count",
+            Some(Duration::from_secs(600)),
+        );
     }
 
     assert_eq!(manager.get_counter(&wallet1, "transaction_count"), 3);
@@ -102,7 +122,11 @@ fn test_nonce_tracking() {
     let wallet = Pubkey::new_unique();
 
     // Track nonce usage
-    manager.set(&wallet, "nonce_used_recently", Some(Duration::from_secs(86400)));
+    manager.set(
+        &wallet,
+        "nonce_used_recently",
+        Some(Duration::from_secs(86400)),
+    );
 
     assert!(manager.is_set(&wallet, "nonce_used_recently"));
 }
@@ -120,7 +144,7 @@ fn test_pass_action_tracker_pattern() {
     // Simulate detection rule checking counter
     let count = manager.get_counter(&wallet, "transaction_count");
     assert_eq!(count, 3);
-    
+
     // Detection rule would evaluate: count >= 10 ? false (allow)
     assert!(count < 10, "Should not trigger block yet");
 }
@@ -128,16 +152,24 @@ fn test_pass_action_tracker_pattern() {
 #[test]
 fn test_memory_limit_with_ai_agent() {
     let mut manager = FlowbitStateManager::new(Some(1)); // Max 1 wallet (AI agent)
-    
+
     let wallet1 = Pubkey::new_unique();
     let wallet2 = Pubkey::new_unique();
 
     // Add first wallet
-    manager.increment(&wallet1, "transaction_count", Some(Duration::from_secs(600)));
+    manager.increment(
+        &wallet1,
+        "transaction_count",
+        Some(Duration::from_secs(600)),
+    );
     assert_eq!(manager.get_counter(&wallet1, "transaction_count"), 1);
 
     // Add second wallet - should evict first
-    manager.increment(&wallet2, "transaction_count", Some(Duration::from_secs(600)));
+    manager.increment(
+        &wallet2,
+        "transaction_count",
+        Some(Duration::from_secs(600)),
+    );
     assert_eq!(manager.get_counter(&wallet2, "transaction_count"), 1);
     assert_eq!(manager.get_counter(&wallet1, "transaction_count"), 0); // Evicted
 }
@@ -166,9 +198,9 @@ fn test_ai_agent_scenario_runaway_behavior() {
     // Simulate runaway AI agent sending 15 transactions rapidly
     for i in 1..=15 {
         manager.increment(&wallet, "transaction_count", Some(Duration::from_secs(600)));
-        
+
         let count = manager.get_counter(&wallet, "transaction_count");
-        
+
         if i < 10 {
             assert!(count < 10, "Should not trigger block at transaction {}", i);
         } else {
@@ -184,10 +216,14 @@ fn test_ai_agent_scenario_account_spam() {
 
     // Simulate AI agent creating accounts in a loop
     for i in 1..=7 {
-        manager.increment(&wallet, "account_creation_count", Some(Duration::from_secs(300)));
-        
+        manager.increment(
+            &wallet,
+            "account_creation_count",
+            Some(Duration::from_secs(300)),
+        );
+
         let count = manager.get_counter(&wallet, "account_creation_count");
-        
+
         if i < 5 {
             assert!(count < 5, "Should not trigger block at creation {}", i);
         } else {
@@ -203,10 +239,14 @@ fn test_repeated_block_detection() {
 
     // Simulate rule engine incrementing on each block
     for i in 1..=4 {
-        manager.increment(&wallet, "blocked_transaction_count", Some(Duration::from_secs(3600)));
-        
+        manager.increment(
+            &wallet,
+            "blocked_transaction_count",
+            Some(Duration::from_secs(3600)),
+        );
+
         let count = manager.get_counter(&wallet, "blocked_transaction_count");
-        
+
         if i < 3 {
             assert!(count < 3, "Should not trigger alert at block {}", i);
         } else {

@@ -30,22 +30,23 @@ pub async fn create_escalation(
     redis_url: &str,
 ) -> Result<Escalation> {
     let escalation_id = format!("esc_{}", Uuid::new_v4());
-    
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)?
-        .as_secs();
-    
+
+    let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
+
     let warnings = vec![format!("{} - {}", rule_name, rule_message)];
-    
+
     let suggested_rules = vec![SuggestedRule {
         rule_type: "whitelist".to_string(),
         name: format!("Allow {} (from escalation)", canonical_hash),
-        description: format!("Whitelists transactions matching canonical hash {} based on manual approval", canonical_hash),
+        description: format!(
+            "Whitelists transactions matching canonical hash {} based on manual approval",
+            canonical_hash
+        ),
         conditions: serde_json::json!({
             "canonical_transaction_hash": canonical_hash,
         }),
     }];
-    
+
     let escalation = Escalation {
         escalation_id: escalation_id.clone(),
         canonical_hash,
@@ -59,52 +60,53 @@ pub async fn create_escalation(
         created_at: now,
         expires_at: now + 300, // 5 minutes
     };
-    
+
     // Store escalation in Redis
     let client = redis::Client::open(redis_url)?;
     let mut conn = client.get_multiplexed_async_connection().await?;
-    
+
     // Store escalation data
     let escalation_key = format!("escalation:pending:{}", escalation_id);
     let escalation_json = serde_json::to_string(&escalation)?;
-    conn.set_ex::<_, _, ()>(&escalation_key, &escalation_json, 300).await?;
-    
+    conn.set_ex::<_, _, ()>(&escalation_key, &escalation_json, 300)
+        .await?;
+
     // Store transaction bytes for fast-path (50 second TTL)
     let tx_bytes = bincode::serialize(transaction)?;
     let tx_key = format!("pending_tx:{}", escalation_id);
     conn.set_ex::<_, _, ()>(&tx_key, &tx_bytes, 50).await?;
-    
+
     // Add to approver's pending set
     let approver_key = format!("escalation:pending:approver:{}", approver_wallet);
     conn.sadd::<_, _, ()>(&approver_key, &escalation_id).await?;
     conn.expire::<_, ()>(&approver_key, 300).await?;
-    
+
     log::info!(
         "📋 Escalation created: {} (rule: {} / {}) for wallet {}",
-        escalation_id, rule_id, rule_name, approver_wallet
+        escalation_id,
+        rule_id,
+        rule_name,
+        approver_wallet
     );
-    
+
     Ok(escalation)
 }
 
 /// Publish escalation event to WebSocket subscribers
-pub async fn publish_escalation_event(
-    escalation: &Escalation,
-    redis_url: &str,
-) -> Result<()> {
+pub async fn publish_escalation_event(escalation: &Escalation, redis_url: &str) -> Result<()> {
     let client = redis::Client::open(redis_url)?;
     let mut conn = client.get_multiplexed_async_connection().await?;
-    
+
     let event = EscalationEvent::Created {
         escalation: escalation.clone(),
     };
-    
+
     let event_json = serde_json::to_string(&event)?;
     let channel = format!("escalation:events:{}", escalation.approver_wallet);
-    
+
     conn.publish::<_, _, ()>(&channel, &event_json).await?;
-    
+
     log::debug!("📡 Published escalation event to channel: {}", channel);
-    
+
     Ok(())
 }

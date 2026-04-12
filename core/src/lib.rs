@@ -28,8 +28,8 @@
 //! ```
 
 // Rules engine module
-pub mod rules;
 pub mod enrichment;
+pub mod rules;
 
 // Program analysis module (optional)
 #[cfg(feature = "program-analysis")]

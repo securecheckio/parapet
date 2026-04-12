@@ -10,7 +10,7 @@ use solana_sdk::{
 use std::collections::HashMap;
 
 /// Canonical Transaction Analyzer
-/// 
+///
 /// Computes a deterministic hash of transaction excluding blockhash and signatures.
 /// This allows consent to remain valid even when the transaction is rebuilt with a fresh blockhash.
 pub struct CanonicalTransactionAnalyzer;
@@ -19,32 +19,32 @@ impl CanonicalTransactionAnalyzer {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Compute canonical hash of transaction
     pub fn compute_canonical_hash(tx: &Transaction) -> Result<String> {
         use sha2::{Digest, Sha256};
-        
+
         let canonical = CanonicalTransaction::from_transaction(tx)?;
         let serialized = borsh::to_vec(&canonical)?;
-        
+
         let mut hasher = Sha256::new();
         hasher.update(&serialized);
         let hash = hasher.finalize();
-        
+
         Ok(bs58::encode(&hash).into_string())
     }
-    
+
     /// Compute canonical hash of versioned transaction
     pub fn compute_canonical_hash_versioned(tx: &VersionedTransaction) -> Result<String> {
         use sha2::{Digest, Sha256};
-        
+
         let canonical = CanonicalTransaction::from_versioned_transaction(tx)?;
         let serialized = borsh::to_vec(&canonical)?;
-        
+
         let mut hasher = Sha256::new();
         hasher.update(&serialized);
         let hash = hasher.finalize();
-        
+
         Ok(bs58::encode(&hash).into_string())
     }
 }
@@ -61,13 +61,13 @@ impl TransactionAnalyzer for CanonicalTransactionAnalyzer {
 
     async fn analyze(&self, tx: &Transaction) -> Result<HashMap<String, Value>> {
         let canonical_hash = Self::compute_canonical_hash(tx)?;
-        
+
         let mut result = HashMap::new();
         result.insert(
             "canonical_transaction_hash".to_string(),
             json!(canonical_hash),
         );
-        
+
         Ok(result)
     }
 
@@ -96,35 +96,38 @@ impl CanonicalTransaction {
     /// Create canonical transaction from regular transaction
     pub fn from_transaction(tx: &Transaction) -> Result<Self> {
         // Normalize instructions (remove compute budget, keep deterministic order)
-        let instructions = Self::normalize_instructions(&tx.message.instructions, &tx.message.account_keys);
-        
+        let instructions =
+            Self::normalize_instructions(&tx.message.instructions, &tx.message.account_keys);
+
         Ok(Self {
             instructions,
             account_keys: tx.message.account_keys.clone(),
         })
     }
-    
+
     /// Create canonical transaction from versioned transaction
     pub fn from_versioned_transaction(tx: &VersionedTransaction) -> Result<Self> {
         // Extract message and handle both v0 and legacy
         let (instructions, account_keys) = match &tx.message {
-            VersionedMessage::V0(v0_msg) => {
-                (v0_msg.instructions.as_slice(), v0_msg.account_keys.as_slice())
-            }
-            VersionedMessage::Legacy(legacy_msg) => {
-                (legacy_msg.instructions.as_slice(), legacy_msg.account_keys.as_slice())
-            }
+            VersionedMessage::V0(v0_msg) => (
+                v0_msg.instructions.as_slice(),
+                v0_msg.account_keys.as_slice(),
+            ),
+            VersionedMessage::Legacy(legacy_msg) => (
+                legacy_msg.instructions.as_slice(),
+                legacy_msg.account_keys.as_slice(),
+            ),
         };
-        
+
         // Normalize instructions
         let normalized_instructions = Self::normalize_instructions(instructions, account_keys);
-        
+
         Ok(Self {
             instructions: normalized_instructions,
             account_keys: account_keys.to_vec(),
         })
     }
-    
+
     /// Normalize instructions for canonical hashing
     /// - Remove compute budget instructions (priority fees can vary)
     /// - Keep instruction order (security relevant)
@@ -133,7 +136,7 @@ impl CanonicalTransaction {
         account_keys: &[Pubkey],
     ) -> Vec<CanonicalInstruction> {
         const COMPUTE_BUDGET_PROGRAM: &str = "ComputeBudget111111111111111111111111111111";
-        
+
         instructions
             .iter()
             .filter(|ix| {
@@ -157,10 +160,7 @@ impl CanonicalTransaction {
 mod tests {
     use super::*;
     use solana_sdk::{
-        pubkey::Pubkey,
-        signature::Keypair,
-        signer::Signer,
-        transaction::Transaction,
+        pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
     };
     use solana_system_interface::instruction as system_instruction;
 
@@ -168,24 +168,32 @@ mod tests {
     async fn test_canonical_hash_excludes_blockhash() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         // Create two transactions with same instructions but different blockhashes
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
-        
+
         let mut tx1 = Transaction::new_with_payer(&[instruction.clone()], Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let mut tx2 = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let analyzer = CanonicalTransactionAnalyzer::new();
-        
+
         let result1 = analyzer.analyze(&tx1).await.unwrap();
         let result2 = analyzer.analyze(&tx2).await.unwrap();
-        
-        let hash1 = result1.get("canonical_transaction_hash").unwrap().as_str().unwrap();
-        let hash2 = result2.get("canonical_transaction_hash").unwrap().as_str().unwrap();
-        
+
+        let hash1 = result1
+            .get("canonical_transaction_hash")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        let hash2 = result2
+            .get("canonical_transaction_hash")
+            .unwrap()
+            .as_str()
+            .unwrap();
+
         // Same canonical hash despite different blockhashes
         assert_eq!(hash1, hash2);
     }
@@ -195,24 +203,32 @@ mod tests {
         let from = Keypair::new();
         let to1 = Pubkey::new_unique();
         let to2 = Pubkey::new_unique();
-        
+
         let ix1 = system_instruction::transfer(&from.pubkey(), &to1, 1_000_000);
         let ix2 = system_instruction::transfer(&from.pubkey(), &to2, 1_000_000);
-        
+
         let mut tx1 = Transaction::new_with_payer(&[ix1], Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let mut tx2 = Transaction::new_with_payer(&[ix2], Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let analyzer = CanonicalTransactionAnalyzer::new();
-        
+
         let result1 = analyzer.analyze(&tx1).await.unwrap();
         let result2 = analyzer.analyze(&tx2).await.unwrap();
-        
-        let hash1 = result1.get("canonical_transaction_hash").unwrap().as_str().unwrap();
-        let hash2 = result2.get("canonical_transaction_hash").unwrap().as_str().unwrap();
-        
+
+        let hash1 = result1
+            .get("canonical_transaction_hash")
+            .unwrap()
+            .as_str()
+            .unwrap();
+        let hash2 = result2
+            .get("canonical_transaction_hash")
+            .unwrap()
+            .as_str()
+            .unwrap();
+
         // Different hashes for different recipients
         assert_ne!(hash1, hash2);
     }
@@ -241,20 +257,20 @@ mod tests {
     async fn test_canonical_hash_excludes_signatures() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
-        
+
         let mut tx1 = Transaction::new_with_payer(&[instruction.clone()], Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
         tx1.sign(&[&from], tx1.message.recent_blockhash);
-        
+
         let mut tx2 = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
         // Don't sign tx2
-        
+
         let hash1 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx1).unwrap();
         let hash2 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx2).unwrap();
-        
+
         // Same canonical hash regardless of signatures
         assert_eq!(hash1, hash2);
     }
@@ -263,19 +279,19 @@ mod tests {
     async fn test_canonical_hash_different_amounts() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let ix1 = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let ix2 = system_instruction::transfer(&from.pubkey(), &to, 2_000_000);
-        
+
         let mut tx1 = Transaction::new_with_payer(&[ix1], Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let mut tx2 = Transaction::new_with_payer(&[ix2], Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let hash1 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx1).unwrap();
         let hash2 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx2).unwrap();
-        
+
         // Different amounts = different hashes
         assert_ne!(hash1, hash2);
     }
@@ -285,19 +301,20 @@ mod tests {
         let from = Keypair::new();
         let to1 = Pubkey::new_unique();
         let to2 = Pubkey::new_unique();
-        
+
         let ix1 = system_instruction::transfer(&from.pubkey(), &to1, 1_000_000);
         let ix2 = system_instruction::transfer(&from.pubkey(), &to2, 1_000_000);
-        
-        let mut tx1 = Transaction::new_with_payer(&[ix1.clone(), ix2.clone()], Some(&from.pubkey()));
+
+        let mut tx1 =
+            Transaction::new_with_payer(&[ix1.clone(), ix2.clone()], Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let mut tx2 = Transaction::new_with_payer(&[ix2, ix1], Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let hash1 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx1).unwrap();
         let hash2 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx2).unwrap();
-        
+
         // Different order = different hashes
         assert_ne!(hash1, hash2);
     }
@@ -306,13 +323,13 @@ mod tests {
     fn test_canonical_transaction_from_transaction() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let mut tx = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let canonical = CanonicalTransaction::from_transaction(&tx).unwrap();
-        
+
         assert_eq!(canonical.instructions.len(), 1);
         assert_eq!(canonical.account_keys.len(), tx.message.account_keys.len());
     }
@@ -321,15 +338,18 @@ mod tests {
     fn test_canonical_instruction_structure() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let mut tx = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let canonical = CanonicalTransaction::from_transaction(&tx).unwrap();
         let canonical_ix = &canonical.instructions[0];
-        
-        assert_eq!(canonical_ix.program_id_index, tx.message.instructions[0].program_id_index);
+
+        assert_eq!(
+            canonical_ix.program_id_index,
+            tx.message.instructions[0].program_id_index
+        );
         assert_eq!(canonical_ix.accounts, tx.message.instructions[0].accounts);
         assert_eq!(canonical_ix.data, tx.message.instructions[0].data);
     }
@@ -338,16 +358,16 @@ mod tests {
     async fn test_canonical_hash_is_base58() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let mut tx = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let hash = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx).unwrap();
-        
+
         // Should be valid base58
         assert!(bs58::decode(&hash).into_vec().is_ok());
-        
+
         // SHA256 hash is 32 bytes, base58 encoded should be ~44 chars
         assert!(hash.len() > 40 && hash.len() < 50);
     }
@@ -356,16 +376,16 @@ mod tests {
     async fn test_canonical_hash_deterministic() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let mut tx = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         // Compute hash multiple times
         let hash1 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx).unwrap();
         let hash2 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx).unwrap();
         let hash3 = CanonicalTransactionAnalyzer::compute_canonical_hash(&tx).unwrap();
-        
+
         // Should always produce same hash
         assert_eq!(hash1, hash2);
         assert_eq!(hash2, hash3);
@@ -377,16 +397,16 @@ mod tests {
         let to1 = Pubkey::new_unique();
         let to2 = Pubkey::new_unique();
         let to3 = Pubkey::new_unique();
-        
+
         let ix1 = system_instruction::transfer(&from.pubkey(), &to1, 1_000_000);
         let ix2 = system_instruction::transfer(&from.pubkey(), &to2, 2_000_000);
         let ix3 = system_instruction::transfer(&from.pubkey(), &to3, 3_000_000);
-        
+
         let mut tx = Transaction::new_with_payer(&[ix1, ix2, ix3], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let canonical = CanonicalTransaction::from_transaction(&tx).unwrap();
-        
+
         assert_eq!(canonical.instructions.len(), 3);
     }
 
@@ -394,20 +414,24 @@ mod tests {
     fn test_canonical_transaction_serialization() {
         let from = Keypair::new();
         let to = Pubkey::new_unique();
-        
+
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
         let mut tx = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
         tx.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
-        
+
         let canonical = CanonicalTransaction::from_transaction(&tx).unwrap();
-        
+
         // Should be serializable with borsh
         let serialized = borsh::to_vec(&canonical).unwrap();
         assert!(!serialized.is_empty());
-        
+
         // Should be deserializable
-        let deserialized: CanonicalTransaction = borsh::BorshDeserialize::try_from_slice(&serialized).unwrap();
-        assert_eq!(deserialized.instructions.len(), canonical.instructions.len());
+        let deserialized: CanonicalTransaction =
+            borsh::BorshDeserialize::try_from_slice(&serialized).unwrap();
+        assert_eq!(
+            deserialized.instructions.len(),
+            canonical.instructions.len()
+        );
     }
 
     #[test]
@@ -417,11 +441,12 @@ mod tests {
             accounts: vec![0, 1, 2],
             data: vec![1, 2, 3, 4],
         };
-        
+
         let serialized = borsh::to_vec(&ix).unwrap();
         assert!(!serialized.is_empty());
-        
-        let deserialized: CanonicalInstruction = borsh::BorshDeserialize::try_from_slice(&serialized).unwrap();
+
+        let deserialized: CanonicalInstruction =
+            borsh::BorshDeserialize::try_from_slice(&serialized).unwrap();
         assert_eq!(deserialized.program_id_index, ix.program_id_index);
         assert_eq!(deserialized.accounts, ix.accounts);
         assert_eq!(deserialized.data, ix.data);

@@ -30,30 +30,30 @@ impl DecoderRegistry {
             program_names: Self::init_known_programs(),
         }
     }
-    
+
     /// Create registry with default base Solana program decoders
     pub fn with_defaults() -> Self {
         let mut registry = Self::new();
-        
+
         // Register built-in decoders for base Solana programs
         registry.register(Box::new(SystemProgramDecoder));
         registry.register(Box::new(TokenProgramDecoder));
         registry.register(Box::new(ComputeBudgetDecoder));
-        
+
         registry
     }
-    
+
     /// Register a decoder
     pub fn register(&mut self, decoder: Box<dyn ProgramDecoder>) {
         let program_id = decoder.program_id();
         let name = decoder.program_name().to_string();
-        
+
         log::info!("📝 Registered decoder: {} ({})", name, program_id);
-        
+
         self.decoders.insert(program_id, decoder);
         self.program_names.insert(program_id, name);
     }
-    
+
     /// Decode a full transaction
     pub fn decode_transaction(&self, tx: &Transaction) -> Vec<DecodedInstruction> {
         tx.message
@@ -62,24 +62,29 @@ impl DecoderRegistry {
             .map(|ix| self.decode_instruction(ix, &tx.message.account_keys))
             .collect()
     }
-    
+
     /// Decode a versioned transaction
-    pub fn decode_versioned_transaction(&self, tx: &VersionedTransaction) -> Vec<DecodedInstruction> {
+    pub fn decode_versioned_transaction(
+        &self,
+        tx: &VersionedTransaction,
+    ) -> Vec<DecodedInstruction> {
         let (instructions, account_keys) = match &tx.message {
-            VersionedMessage::V0(v0_msg) => {
-                (v0_msg.instructions.as_slice(), v0_msg.account_keys.as_slice())
-            }
-            VersionedMessage::Legacy(legacy_msg) => {
-                (legacy_msg.instructions.as_slice(), legacy_msg.account_keys.as_slice())
-            }
+            VersionedMessage::V0(v0_msg) => (
+                v0_msg.instructions.as_slice(),
+                v0_msg.account_keys.as_slice(),
+            ),
+            VersionedMessage::Legacy(legacy_msg) => (
+                legacy_msg.instructions.as_slice(),
+                legacy_msg.account_keys.as_slice(),
+            ),
         };
-        
+
         instructions
             .iter()
             .map(|ix| self.decode_instruction(ix, account_keys))
             .collect()
     }
-    
+
     /// Decode a single instruction
     pub fn decode_instruction(
         &self,
@@ -87,14 +92,14 @@ impl DecoderRegistry {
         account_keys: &[Pubkey],
     ) -> DecodedInstruction {
         let program_id = account_keys[ix.program_id_index as usize];
-        
+
         // Try registered decoder
         if let Some(decoder) = self.decoders.get(&program_id) {
             if let Some(decoded) = decoder.decode(ix, account_keys) {
                 return decoded;
             }
         }
-        
+
         // Unknown program - display as raw data
         DecodedInstruction::Unknown {
             program_id,
@@ -103,11 +108,11 @@ impl DecoderRegistry {
             account_count: ix.accounts.len(),
         }
     }
-    
+
     /// Initialize map of known program names
     fn init_known_programs() -> HashMap<Pubkey, String> {
         let mut map = HashMap::new();
-        
+
         // Common programs
         if let Ok(pid) = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4".parse() {
             map.insert(pid, "Jupiter Aggregator v6".to_string());
@@ -118,7 +123,7 @@ impl DecoderRegistry {
         if let Ok(pid) = "MarBmsSgKXdrN1egZf5sqe1TMai9K1rChYNDJgjq7aD".parse() {
             map.insert(pid, "Marinade Staking".to_string());
         }
-        
+
         map
     }
 }
@@ -164,7 +169,11 @@ pub enum DecodedInstruction {
 impl DecodedInstruction {
     pub fn to_human_readable(&self) -> String {
         match self {
-            Self::Transfer { from, to, amount_lamports } => {
+            Self::Transfer {
+                from,
+                to,
+                amount_lamports,
+            } => {
                 format!(
                     "Transfer {} SOL from {}... to {}...",
                     *amount_lamports as f64 / 1_000_000_000.0,
@@ -172,7 +181,9 @@ impl DecodedInstruction {
                     &to[..8]
                 )
             }
-            Self::TokenTransfer { from, to, amount, .. } => {
+            Self::TokenTransfer {
+                from, to, amount, ..
+            } => {
                 format!(
                     "Token transfer: {} tokens from {}... to {}...",
                     amount,
@@ -180,7 +191,11 @@ impl DecodedInstruction {
                     &to[..8]
                 )
             }
-            Self::TokenApprove { owner, delegate, amount } => {
+            Self::TokenApprove {
+                owner,
+                delegate,
+                amount,
+            } => {
                 format!(
                     "Token approve: {} tokens to {}... (owner: {}...)",
                     amount,
@@ -188,7 +203,10 @@ impl DecodedInstruction {
                     &owner[..8]
                 )
             }
-            Self::ComputeBudget { compute_units, priority_fee_lamports } => {
+            Self::ComputeBudget {
+                compute_units,
+                priority_fee_lamports,
+            } => {
                 let mut parts = Vec::new();
                 if let Some(cu) = compute_units {
                     parts.push(format!("{} CU", cu));
@@ -198,10 +216,13 @@ impl DecodedInstruction {
                 }
                 format!("Compute Budget: {}", parts.join(", "))
             }
-            Self::Unknown { program_id, program_name, instruction_data, account_count } => {
-                let name = program_name
-                    .as_deref()
-                    .unwrap_or("Unknown Program");
+            Self::Unknown {
+                program_id,
+                program_name,
+                instruction_data,
+                account_count,
+            } => {
+                let name = program_name.as_deref().unwrap_or("Unknown Program");
                 format!(
                     "{} ({}...): {} bytes data, {} accounts",
                     name,
@@ -225,11 +246,11 @@ impl ProgramDecoder for SystemProgramDecoder {
     fn program_id(&self) -> Pubkey {
         solana_sdk::system_program::id()
     }
-    
+
     fn program_name(&self) -> &str {
         "System Program"
     }
-    
+
     fn decode(
         &self,
         ix: &CompiledInstruction,
@@ -238,20 +259,20 @@ impl ProgramDecoder for SystemProgramDecoder {
         if ix.data.len() < 4 {
             return None;
         }
-        
+
         let discriminator = u32::from_le_bytes(ix.data[0..4].try_into().ok()?);
-        
+
         match discriminator {
             2 => {
                 // Transfer
                 if ix.data.len() < 12 || ix.accounts.len() < 2 {
                     return None;
                 }
-                
+
                 let lamports = u64::from_le_bytes(ix.data[4..12].try_into().ok()?);
                 let from = account_keys[ix.accounts[0] as usize];
                 let to = account_keys[ix.accounts[1] as usize];
-                
+
                 Some(DecodedInstruction::Transfer {
                     from: from.to_string(),
                     to: to.to_string(),
@@ -270,11 +291,11 @@ impl ProgramDecoder for TokenProgramDecoder {
     fn program_id(&self) -> Pubkey {
         spl_token::ID
     }
-    
+
     fn program_name(&self) -> &str {
         "SPL Token Program"
     }
-    
+
     fn decode(
         &self,
         ix: &CompiledInstruction,
@@ -283,20 +304,20 @@ impl ProgramDecoder for TokenProgramDecoder {
         if ix.data.is_empty() {
             return None;
         }
-        
+
         let instruction_type = ix.data[0];
-        
+
         match instruction_type {
             3 => {
                 // Transfer
                 if ix.data.len() < 9 || ix.accounts.len() < 3 {
                     return None;
                 }
-                
+
                 let amount = u64::from_le_bytes(ix.data[1..9].try_into().ok()?);
                 let from = account_keys[ix.accounts[0] as usize];
                 let to = account_keys[ix.accounts[1] as usize];
-                
+
                 Some(DecodedInstruction::TokenTransfer {
                     from: from.to_string(),
                     to: to.to_string(),
@@ -309,11 +330,11 @@ impl ProgramDecoder for TokenProgramDecoder {
                 if ix.data.len() < 9 || ix.accounts.len() < 3 {
                     return None;
                 }
-                
+
                 let amount = u64::from_le_bytes(ix.data[1..9].try_into().ok()?);
                 let owner = account_keys[ix.accounts[0] as usize];
                 let delegate = account_keys[ix.accounts[1] as usize];
-                
+
                 Some(DecodedInstruction::TokenApprove {
                     owner: owner.to_string(),
                     delegate: delegate.to_string(),
@@ -332,11 +353,11 @@ impl ProgramDecoder for ComputeBudgetDecoder {
     fn program_id(&self) -> Pubkey {
         solana_sdk::compute_budget::ID
     }
-    
+
     fn program_name(&self) -> &str {
         "Compute Budget"
     }
-    
+
     fn decode(
         &self,
         ix: &CompiledInstruction,
@@ -345,16 +366,16 @@ impl ProgramDecoder for ComputeBudgetDecoder {
         if ix.data.is_empty() {
             return None;
         }
-        
+
         let instruction_type = ix.data[0];
-        
+
         match instruction_type {
             0 => {
                 // Request units (deprecated)
                 if ix.data.len() >= 9 {
                     let units = u32::from_le_bytes(ix.data[1..5].try_into().ok()?);
                     let additional_fee = u32::from_le_bytes(ix.data[5..9].try_into().ok()?);
-                    
+
                     return Some(DecodedInstruction::ComputeBudget {
                         compute_units: Some(units),
                         priority_fee_lamports: Some(additional_fee as u64),
@@ -392,9 +413,9 @@ impl ProgramDecoder for ComputeBudgetDecoder {
 // Stub SPL token ID (normally from spl_token crate)
 mod spl_token {
     use solana_sdk::pubkey::Pubkey;
-    
+
     pub const ID: Pubkey = Pubkey::new_from_array([
-        6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235, 121, 172, 28, 180,
-        133, 237, 95, 91, 55, 145, 58, 140, 245, 133, 126, 255, 0, 169,
+        6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235, 121, 172, 28, 180, 133,
+        237, 95, 91, 55, 145, 58, 140, 245, 133, 126, 255, 0, 169,
     ]);
 }

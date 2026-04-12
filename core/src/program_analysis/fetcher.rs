@@ -4,10 +4,7 @@
 use anyhow::{anyhow, Result};
 use log::{debug, info, warn};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{
-    pubkey::Pubkey,
-    commitment_config::CommitmentConfig,
-};
+use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
 use std::time::Instant;
 
 use super::types::ProgramData;
@@ -80,26 +77,35 @@ impl ProgramFetcher {
 
         let fetch_duration = start_time.elapsed();
         info!("Program data fetched in {:?}", fetch_duration);
-        info!("Executable data size: {} bytes", program_data.executable_data.len());
+        info!(
+            "Executable data size: {} bytes",
+            program_data.executable_data.len()
+        );
 
         Ok(program_data)
     }
 
     /// Fetch upgradeable program's actual bytecode and authority
-    async fn fetch_upgradeable_program_data(&self, program_address: &Pubkey) -> Result<(Vec<u8>, Option<Pubkey>)> {
+    async fn fetch_upgradeable_program_data(
+        &self,
+        program_address: &Pubkey,
+    ) -> Result<(Vec<u8>, Option<Pubkey>)> {
         // For upgradeable programs, the program account contains metadata,
         // and we need to find the program data account
-        
+
         // Try to parse the program account data as upgradeable loader state
         let account = self.rpc_client.get_account(program_address)?;
-        
+
         if account.data.len() < 36 {
             return Err(anyhow!("Account data too small for upgradeable program"));
         }
 
         // The first 4 bytes indicate the account type, followed by the program data account pubkey
         let account_type = u32::from_le_bytes([
-            account.data[0], account.data[1], account.data[2], account.data[3]
+            account.data[0],
+            account.data[1],
+            account.data[2],
+            account.data[3],
         ]);
 
         if account_type != 2 {
@@ -107,7 +113,8 @@ impl ProgramFetcher {
         }
 
         // Extract the program data account pubkey (bytes 4-36)
-        let program_data_pubkey_bytes: [u8; 32] = account.data[4..36].try_into()
+        let program_data_pubkey_bytes: [u8; 32] = account.data[4..36]
+            .try_into()
             .map_err(|_| anyhow!("Invalid program data pubkey"))?;
         let program_data_pubkey = Pubkey::new_from_array(program_data_pubkey_bytes);
 
@@ -115,7 +122,7 @@ impl ProgramFetcher {
 
         // Fetch the program data account
         let program_data_account = self.rpc_client.get_account(&program_data_pubkey)?;
-        
+
         // Program data account structure:
         // - 4 bytes: account type (should be 3 for program data)
         // - 32 bytes: upgrade authority (optional)
@@ -127,10 +134,10 @@ impl ProgramFetcher {
         }
 
         let data_account_type = u32::from_le_bytes([
-            program_data_account.data[0], 
-            program_data_account.data[1], 
-            program_data_account.data[2], 
-            program_data_account.data[3]
+            program_data_account.data[0],
+            program_data_account.data[1],
+            program_data_account.data[2],
+            program_data_account.data[3],
         ]);
 
         if data_account_type != 3 {
@@ -140,7 +147,8 @@ impl ProgramFetcher {
         // Check if there's an upgrade authority
         let has_authority = program_data_account.data[36] != 0;
         let authority = if has_authority {
-            let authority_bytes: [u8; 32] = program_data_account.data[4..36].try_into()
+            let authority_bytes: [u8; 32] = program_data_account.data[4..36]
+                .try_into()
                 .map_err(|_| anyhow!("Invalid authority pubkey"))?;
             Some(Pubkey::new_from_array(authority_bytes))
         } else {
@@ -160,8 +168,7 @@ impl ProgramFetcher {
 
     fn is_bpf_loader(&self, owner: &Pubkey) -> bool {
         // BPF Loader v1 and v2 program IDs
-        *owner == solana_sdk::bpf_loader::id() || 
-        *owner == solana_sdk::bpf_loader_deprecated::id()
+        *owner == solana_sdk::bpf_loader::id() || *owner == solana_sdk::bpf_loader_deprecated::id()
     }
 
     /// Validate RPC connection health
@@ -171,9 +178,7 @@ impl ProgramFetcher {
                 info!("RPC connection healthy");
                 Ok(())
             }
-            Err(e) => {
-                Err(anyhow!("RPC connection failed: {}", e))
-            }
+            Err(e) => Err(anyhow!("RPC connection failed: {}", e)),
         }
     }
 

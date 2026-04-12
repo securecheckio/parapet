@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use axum::http::HeaderMap;
 use chrono::{Datelike, Timelike, Utc};
-use redis::AsyncCommands;
 use parapet_proxy::auth::{AuthContext, AuthProvider, AuthResult};
+use redis::AsyncCommands;
 use sqlx::PgPool;
 
 pub struct SaasAuthProvider {
@@ -21,7 +21,6 @@ struct User {
     credits_reset_at: chrono::DateTime<chrono::Utc>,
     blocking_threshold: i32,
 }
-
 
 impl SaasAuthProvider {
     pub fn new(db: PgPool, redis: redis::Client) -> Self {
@@ -58,7 +57,7 @@ impl SaasAuthProvider {
         // Also cache by user_id to enable invalidation when user settings change
         let user_json = serde_json::to_string(&user)?;
         let _: () = conn.set_ex(&cache_key, &user_json, 300).await?;
-        
+
         let user_cache_key = format!("auth:user:{}", user.id);
         let _: () = conn.set_ex(&user_cache_key, user_json, 300).await?;
 
@@ -115,7 +114,7 @@ impl SaasAuthProvider {
 
         // Calculate actual remaining credits based on DB value
         let actual_remaining = user.credits_balance - actual_used;
-        
+
         // Log RPC usage for transparency (non-blocking, ignore errors)
         let user_id_for_log = user.id.clone();
         let method_for_log = method.to_string();
@@ -123,14 +122,14 @@ impl SaasAuthProvider {
         tokio::spawn(async move {
             let _ = sqlx::query(
                 "INSERT INTO rpc_usage_logs (user_id, method, success) 
-                 VALUES ($1, $2, true)"
+                 VALUES ($1, $2, true)",
             )
             .bind(&user_id_for_log)
             .bind(&method_for_log)
             .execute(&db_for_log)
             .await;
         });
-        
+
         // Publish stats update to Redis for WebSocket clients with ACTUAL values
         match self.redis.get_multiplexed_async_connection().await {
             Ok(mut conn) => {
@@ -144,7 +143,11 @@ impl SaasAuthProvider {
                 let payload = serde_json::to_string(&update).unwrap();
                 match conn.publish::<_, _, ()>(&channel, &payload).await {
                     Ok(_) => {
-                        log::debug!("📤 Published stats update to {} (remaining: {})", channel, actual_remaining);
+                        log::debug!(
+                            "📤 Published stats update to {} (remaining: {})",
+                            channel,
+                            actual_remaining
+                        );
                     }
                     Err(e) => {
                         log::error!("❌ Failed to publish stats update: {}", e);
@@ -179,7 +182,9 @@ impl AuthProvider for SaasAuthProvider {
             .unwrap_or((true, 0, 0));
 
         if !allowed {
-            return Err(anyhow!("Credits exhausted. Purchase more with xLABS tokens."));
+            return Err(anyhow!(
+                "Credits exhausted. Purchase more with xLABS tokens."
+            ));
         }
 
         let context = AuthContext {
@@ -188,24 +193,28 @@ impl AuthProvider for SaasAuthProvider {
             scopes: get_tier_scopes(&user.tier),
             tier: Some(user.tier.clone()),
             metadata: std::collections::HashMap::from([
-                ("wallet_address".into(), serde_json::json!(user.wallet_address)),
+                (
+                    "wallet_address".into(),
+                    serde_json::json!(user.wallet_address),
+                ),
                 ("tier".into(), serde_json::json!(user.tier)),
-                ("credits_balance".into(), serde_json::json!(user.credits_balance)),
+                (
+                    "credits_balance".into(),
+                    serde_json::json!(user.credits_balance),
+                ),
                 ("credits_remaining".into(), serde_json::json!(remaining)),
                 ("credits_used".into(), serde_json::json!(used)),
-                ("blocking_threshold".into(), serde_json::json!(user.blocking_threshold)),
+                (
+                    "blocking_threshold".into(),
+                    serde_json::json!(user.blocking_threshold),
+                ),
             ]),
         };
 
         Ok(AuthResult::success(context).with_quota(remaining as u64, 0))
     }
 
-    async fn on_success(
-        &self,
-        context: &AuthContext,
-        method: &str,
-        _status: u16,
-    ) -> Result<()> {
+    async fn on_success(&self, context: &AuthContext, method: &str, _status: u16) -> Result<()> {
         log::info!(
             "user={} tier={} method={}",
             context.identity,
@@ -222,12 +231,7 @@ impl AuthProvider for SaasAuthProvider {
         error: &str,
     ) -> Result<()> {
         if let Some(ctx) = context {
-            log::warn!(
-                "user={} method={} error={}",
-                ctx.identity,
-                method,
-                error
-            );
+            log::warn!("user={} method={} error={}", ctx.identity, method, error);
         } else {
             log::warn!("method={} error={}", method, error);
         }

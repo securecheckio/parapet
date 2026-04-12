@@ -15,10 +15,30 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("sol_balance_change").unwrap().as_f64().unwrap(), -0.5);
-        assert_eq!(fields.get("total_sol_outflow").unwrap().as_f64().unwrap(), 0.5);
-        assert_eq!(fields.get("accounts_losing_balance").unwrap().as_u64().unwrap(), 1);
-        assert_eq!(fields.get("largest_balance_decrease").unwrap().as_f64().unwrap(), 0.5);
+        assert_eq!(
+            fields.get("sol_balance_change").unwrap().as_f64().unwrap(),
+            -0.5
+        );
+        assert_eq!(
+            fields.get("total_sol_outflow").unwrap().as_f64().unwrap(),
+            0.5
+        );
+        assert_eq!(
+            fields
+                .get("accounts_losing_balance")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            fields
+                .get("largest_balance_decrease")
+                .unwrap()
+                .as_f64()
+                .unwrap(),
+            0.5
+        );
     }
 
     #[tokio::test]
@@ -33,7 +53,11 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        let percent = fields.get("sol_balance_change_percent").unwrap().as_f64().unwrap();
+        let percent = fields
+            .get("sol_balance_change_percent")
+            .unwrap()
+            .as_f64()
+            .unwrap();
         assert!((percent - (-50.0)).abs() < 0.01);
     }
 
@@ -68,10 +92,26 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("token_transfers_out").unwrap().as_u64().unwrap(), 1);
-        assert_eq!(fields.get("token_transfers_in").unwrap().as_u64().unwrap(), 0);
-        assert_eq!(fields.get("tokens_fully_drained").unwrap().as_u64().unwrap(), 1);
-        assert_eq!(fields.get("net_token_changes").unwrap().as_i64().unwrap(), -1);
+        assert_eq!(
+            fields.get("token_transfers_out").unwrap().as_u64().unwrap(),
+            1
+        );
+        assert_eq!(
+            fields.get("token_transfers_in").unwrap().as_u64().unwrap(),
+            0
+        );
+        assert_eq!(
+            fields
+                .get("tokens_fully_drained")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            1
+        );
+        assert_eq!(
+            fields.get("net_token_changes").unwrap().as_i64().unwrap(),
+            -1
+        );
     }
 
     #[tokio::test]
@@ -118,8 +158,11 @@ mod tests {
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
         assert_eq!(fields.get("log_count").unwrap().as_u64().unwrap(), 5);
-        assert_eq!(fields.get("has_error_logs").unwrap().as_bool().unwrap(), true);
-        
+        assert_eq!(
+            fields.get("has_error_logs").unwrap().as_bool().unwrap(),
+            true
+        );
+
         let error_messages = fields.get("error_messages").unwrap().as_array().unwrap();
         assert!(error_messages.len() > 0);
     }
@@ -137,10 +180,19 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("suspicious_keywords").unwrap().as_bool().unwrap(), true);
-        
+        assert_eq!(
+            fields
+                .get("suspicious_keywords")
+                .unwrap()
+                .as_bool()
+                .unwrap(),
+            true
+        );
+
         let error_messages = fields.get("error_messages").unwrap().as_array().unwrap();
-        assert!(error_messages.iter().any(|msg| msg.as_str().unwrap().contains("drain")));
+        assert!(error_messages
+            .iter()
+            .any(|msg| msg.as_str().unwrap().contains("drain")));
     }
 
     #[tokio::test]
@@ -169,8 +221,18 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("has_cpi_calls").unwrap().as_bool().unwrap(), true);
-        assert_eq!(fields.get("cpi_instruction_count").unwrap().as_u64().unwrap(), 1);
+        assert_eq!(
+            fields.get("has_cpi_calls").unwrap().as_bool().unwrap(),
+            true
+        );
+        assert_eq!(
+            fields
+                .get("cpi_instruction_count")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            1
+        );
         assert_eq!(fields.get("cpi_depth").unwrap().as_u64().unwrap(), 1);
     }
 
@@ -191,9 +253,19 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("simulation_failed").unwrap().as_bool().unwrap(), true);
-        assert_eq!(fields.get("has_simulation_error").unwrap().as_bool().unwrap(), true);
-        
+        assert_eq!(
+            fields.get("simulation_failed").unwrap().as_bool().unwrap(),
+            true
+        );
+        assert_eq!(
+            fields
+                .get("has_simulation_error")
+                .unwrap()
+                .as_bool()
+                .unwrap(),
+            true
+        );
+
         let error_msg = fields.get("simulation_error").unwrap().as_str().unwrap();
         assert!(error_msg.contains("InstructionError"));
     }
@@ -215,7 +287,10 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("partial_failure").unwrap().as_bool().unwrap(), true);
+        assert_eq!(
+            fields.get("partial_failure").unwrap().as_bool().unwrap(),
+            true
+        );
     }
 
     #[tokio::test]
@@ -233,9 +308,16 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("compute_units_used").unwrap().as_u64().unwrap(), 150000);
-        let usage_percent = fields.get("compute_usage_percent").unwrap().as_f64().unwrap();
-        assert!((usage_percent - 75.0).abs() < 0.1);  // 150k / 200k = 75%
+        assert_eq!(
+            fields.get("compute_units_used").unwrap().as_u64().unwrap(),
+            150000
+        );
+        let usage_percent = fields
+            .get("compute_usage_percent")
+            .unwrap()
+            .as_f64()
+            .unwrap();
+        assert!((usage_percent - 75.0).abs() < 0.1); // 150k / 200k = 75%
     }
 
     #[tokio::test]
@@ -253,13 +335,16 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(fields.get("excessive_compute").unwrap().as_bool().unwrap(), true);
+        assert_eq!(
+            fields.get("excessive_compute").unwrap().as_bool().unwrap(),
+            true
+        );
     }
 
     #[tokio::test]
     async fn test_simulation_registry() {
         let mut registry = SimulationAnalyzerRegistry::new();
-        
+
         registry.register(Box::new(SimulationBalanceAnalyzer::new()));
         registry.register(Box::new(SimulationTokenAnalyzer::new()));
         registry.register(Box::new(SimulationLogAnalyzer::new()));

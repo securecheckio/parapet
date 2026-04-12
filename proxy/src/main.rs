@@ -4,7 +4,7 @@ use parapet_proxy::{config, server};
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     env_logger::init();
-    
+
     // Load configuration
     // Priority: config.toml (if exists) + env overrides, else env only (backwards compat)
     let config = if std::path::Path::new("config.toml").exists() {
@@ -27,7 +27,7 @@ async fn main() -> anyhow::Result<()> {
         "wallet_allowlist" => server::AuthMode::WalletAllowlist,
         _ => server::AuthMode::None,
     };
-    
+
     // Convert feed sources from config format
     let rules_feed_sources = if !config.rule_feeds.sources.is_empty() {
         Some(
@@ -39,7 +39,8 @@ async fn main() -> anyhow::Result<()> {
                     url: src.url.clone(),
                     name: src.name.clone(),
                     priority: src.priority,
-                    min_request_interval: src.min_interval
+                    min_request_interval: src
+                        .min_interval
                         .unwrap_or(config.rule_feeds.default_min_interval),
                 })
                 .collect(),
@@ -84,7 +85,11 @@ async fn main() -> anyhow::Result<()> {
 fn parse_bind_address(addr: &str) -> [u8; 4] {
     let parts: Vec<&str> = addr.split('.').collect();
     if parts.len() == 4 {
-        if let Ok(octets) = parts.iter().map(|s| s.parse::<u8>()).collect::<Result<Vec<_>, _>>() {
+        if let Ok(octets) = parts
+            .iter()
+            .map(|s| s.parse::<u8>())
+            .collect::<Result<Vec<_>, _>>()
+        {
             return [octets[0], octets[1], octets[2], octets[3]];
         }
     }

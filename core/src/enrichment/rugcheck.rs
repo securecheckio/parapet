@@ -118,8 +118,8 @@ impl RugcheckClient {
             log::info!("✅ RugcheckClient: initialized (FREE API, no key required)");
             ApiRateLimiter::from_env_or_default(
                 "RUGCHECK_RATE_LIMIT",
-                10,  // Very conservative: 10 requests per minute (API limit is 15)
-                60,  // 60 second window
+                10, // Very conservative: 10 requests per minute (API limit is 15)
+                60, // 60 second window
             )
         };
 
@@ -154,19 +154,22 @@ impl RugcheckClient {
         let _permit = self.rate_limiter.acquire().await;
 
         // Fetch from API
-        let url = format!("https://api.rugcheck.xyz/v1/tokens/{}/report", token_address);
-        
+        let url = format!(
+            "https://api.rugcheck.xyz/v1/tokens/{}/report",
+            token_address
+        );
+
         log::debug!("Fetching Rugcheck data for token: {}", token_address);
 
         let max_retries = 3;
         for attempt in 1..=max_retries {
             let mut request = self.http_client.get(&url);
-            
+
             // Add API key header if authenticated
             if let Some(ref key) = self.api_key {
                 request = request.header("X-API-KEY", key);
             }
-            
+
             let response = request.send().await?;
 
             // Log rate limit headers for monitoring
@@ -177,7 +180,7 @@ impl RugcheckClient {
                         remaining.to_str().unwrap_or("?"),
                         limit.to_str().unwrap_or("?")
                     );
-                    
+
                     // Warn if getting close to limit
                     if let Ok(remaining_str) = remaining.to_str() {
                         if let Ok(remaining_num) = remaining_str.parse::<u32>() {
@@ -194,7 +197,10 @@ impl RugcheckClient {
 
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 if attempt >= max_retries {
-                    return Err(anyhow!("Rugcheck API rate limited after {} retries", max_retries));
+                    return Err(anyhow!(
+                        "Rugcheck API rate limited after {} retries",
+                        max_retries
+                    ));
                 }
                 log::warn!(
                     "🚨 Rugcheck returned 429 (rate limit exceeded) - backing off (attempt {}/{})",
@@ -337,7 +343,10 @@ impl RugcheckClient {
         }
 
         if !response.status().is_success() {
-            return Err(anyhow!("Rugcheck insiders API error: {}", response.status()));
+            return Err(anyhow!(
+                "Rugcheck insiders API error: {}",
+                response.status()
+            ));
         }
 
         let networks: InsiderNetworksResponse = response.json().await?;
@@ -594,10 +603,7 @@ impl RugcheckClient {
 
             let url = "https://api.rugcheck.xyz/v1/bulk/tokens/summary";
 
-            log::debug!(
-                "Fetching bulk Rugcheck data for {} tokens",
-                chunk.len()
-            );
+            log::debug!("Fetching bulk Rugcheck data for {} tokens", chunk.len());
 
             let body = serde_json::json!({
                 "mints": chunk
@@ -635,7 +641,7 @@ impl RugcheckClient {
             for (token, summary) in bulk_response.summaries.unwrap_or_default() {
                 if let Some(summary) = summary {
                     let data = Self::parse_bulk_summary(&token, summary);
-                    
+
                     // Cache result
                     {
                         let mut cache = self.cache.write().await;
@@ -647,7 +653,7 @@ impl RugcheckClient {
                             },
                         );
                     }
-                    
+
                     results.insert(token, data);
                 }
             }

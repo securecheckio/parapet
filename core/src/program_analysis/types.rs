@@ -9,29 +9,29 @@ pub struct ProgramAnalysisResult {
     pub program_id: String,
     pub bytecode_hash: Option<String>,
     pub tier_used: String,
-    
+
     // Risk assessment
     pub risk_score: f64,
     pub risk_level: RiskLevel,
     pub is_safe: bool,
-    
+
     // Tier 1: Superficial
     pub helius_identity: Option<serde_json::Value>,
     pub ottersec_verified: bool,
-    
+
     // Tier 2: Deep
     pub bytecode_analysis: Option<BytecodeAnalysis>,
     pub suspicious_patterns: Vec<String>,
-    
+
     // Tier 3: AI
     pub ai_analysis: Option<AiAnalysis>,
     pub vulnerabilities: Vec<Vulnerability>,
     pub recommendations: Vec<String>,
-    
+
     // Worker attribution
     pub worker_wallet_address: Option<String>,
     pub worker_signature: Option<String>,
-    
+
     // Metadata
     pub cached: bool,
     pub analysis_time_ms: u64,

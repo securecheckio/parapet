@@ -108,12 +108,12 @@ impl AuthProvider for ApiKeyAuth {
                 .and_then(|h| h.strip_prefix("Bearer ").or(Some(h)))
         } else {
             // Fall back to X-API-Key header (alternative)
-            headers
-                .get("X-API-Key")
-                .and_then(|h| h.to_str().ok())
+            headers.get("X-API-Key").and_then(|h| h.to_str().ok())
         };
 
-        let key = key.ok_or_else(|| anyhow!("Missing API key (use Authorization: Bearer header or X-API-Key header)"))?;
+        let key = key.ok_or_else(|| {
+            anyhow!("Missing API key (use Authorization: Bearer header or X-API-Key header)")
+        })?;
 
         // Lookup user
         let user_info = self

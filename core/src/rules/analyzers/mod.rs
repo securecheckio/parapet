@@ -1,8 +1,13 @@
 pub mod core;
-pub mod third_party;
 pub mod simulation;
+pub mod third_party;
 
-#[cfg(any(feature = "helius", feature = "ottersec", feature = "jupiter", feature = "rugcheck"))]
+#[cfg(any(
+    feature = "helius",
+    feature = "ottersec",
+    feature = "jupiter",
+    feature = "rugcheck"
+))]
 pub mod feed_updater;
 
 #[cfg(test)]
@@ -21,12 +26,17 @@ pub use core::{
 // Re-export simulation analyzers
 pub use simulation::{
     SimulationAnalyzer, SimulationAnalyzerRegistry, SimulationBalanceAnalyzer,
-    SimulationCpiAnalyzer, SimulationComputeAnalyzer, SimulationFailureAnalyzer,
+    SimulationComputeAnalyzer, SimulationCpiAnalyzer, SimulationFailureAnalyzer,
     SimulationLogAnalyzer, SimulationTokenAnalyzer,
 };
 
 // Re-export feed updater (requires reqwest)
-#[cfg(any(feature = "helius", feature = "ottersec", feature = "jupiter", feature = "rugcheck"))]
+#[cfg(any(
+    feature = "helius",
+    feature = "ottersec",
+    feature = "jupiter",
+    feature = "rugcheck"
+))]
 pub use feed_updater::FeedUpdater;
 
 // Re-export third-party analyzers
@@ -34,7 +44,7 @@ pub use feed_updater::FeedUpdater;
 pub use third_party::TokenMintAnalyzer;
 
 #[cfg(feature = "helius")]
-pub use third_party::{HeliusIdentityAnalyzer, HeliusTransferAnalyzer, HeliusFundingAnalyzer};
+pub use third_party::{HeliusFundingAnalyzer, HeliusIdentityAnalyzer, HeliusTransferAnalyzer};
 
 #[cfg(feature = "ottersec")]
 pub use third_party::OtterSecVerifiedAnalyzer;

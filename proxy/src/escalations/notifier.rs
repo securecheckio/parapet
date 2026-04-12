@@ -30,33 +30,35 @@ impl NotifierRegistry {
             notifiers: Vec::new(),
         }
     }
-    
+
     /// Register a notification provider
     pub fn register(&mut self, notifier: Box<dyn EscalationNotifier>) {
         log::info!("📬 Registered notification provider: {}", notifier.name());
         self.notifiers.push(notifier);
     }
-    
+
     /// Send notification via all registered providers
     pub async fn notify_all(&self, notification: &EscalationNotification) -> Result<()> {
         if self.notifiers.is_empty() {
             log::debug!("No external notification providers configured");
             return Ok(());
         }
-        
-        let futs: Vec<_> = self.notifiers.iter()
+
+        let futs: Vec<_> = self
+            .notifiers
+            .iter()
             .map(|n| n.send_notification(notification))
             .collect();
-        
+
         let results: Vec<Result<()>> = futures::future::join_all(futs).await;
-        
+
         // Log failures but don't fail the operation
         for (idx, result) in results.iter().enumerate() {
             if let Err(e) = result {
                 log::warn!("Notification provider {} failed: {}", idx, e);
             }
         }
-        
+
         Ok(())
     }
 }
@@ -86,7 +88,7 @@ impl EscalationNotifier for WebhookNotifier {
     fn name(&self) -> &str {
         "webhook"
     }
-    
+
     async fn send_notification(&self, notif: &EscalationNotification) -> Result<()> {
         let client = reqwest::Client::new();
         client

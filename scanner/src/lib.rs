@@ -1,23 +1,23 @@
-mod state;
-mod history;
-mod detector;
-mod report;
 pub mod classifier;
+mod detector;
+mod history;
+mod report;
+mod state;
 
-pub use report::{ScanReport, ScanStats, ScanConfig, SuspiciousProgram};
-pub use detector::{ThreatType, Severity, ThreatAssessment};
+pub use detector::{Severity, ThreatAssessment, ThreatType};
+pub use report::{ScanConfig, ScanReport, ScanStats, SuspiciousProgram};
 
 use anyhow::Result;
 use log::{info, warn};
-use solana_client::rpc_client::RpcClient;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
+use solana_client::rpc_client::RpcClient;
 use std::sync::Arc;
 
 #[cfg(feature = "reqwest")]
 use parapet_core::enrichment::EnrichmentService;
 
-use state::StateScanner;
 use detector::ThreatDetector;
+use state::StateScanner;
 
 /// Main wallet scanner that orchestrates security analysis
 pub struct WalletScanner {
@@ -54,7 +54,7 @@ impl WalletScanner {
             enrichment: None,
         })
     }
-    
+
     /// Enable enrichment service for rules to access off-chain data
     #[cfg(feature = "reqwest")]
     pub fn with_enrichment(mut self, service: Arc<EnrichmentService>) -> Self {
@@ -62,7 +62,7 @@ impl WalletScanner {
         self.enrichment = Some(service);
         self
     }
-    
+
     /// Get reference to enrichment service (for passing to history scanner)
     #[cfg(feature = "reqwest")]
     pub fn enrichment(&self) -> Option<Arc<EnrichmentService>> {
@@ -76,15 +76,11 @@ impl WalletScanner {
             if let Some(registry) = &self.analyzer_registry {
                 let recommended = registry.get_recommended_delay_ms();
                 if recommended > 0 {
-                    log::info!(
-                        "📊 Auto-calculated delay from analyzers: {}ms",
-                        recommended
-                    );
+                    log::info!("📊 Auto-calculated delay from analyzers: {}ms", recommended);
                     config.rpc_delay_ms = recommended;
                 }
             }
         }
-        
 
         let start_time = std::time::Instant::now();
         info!("🔍 Starting wallet scan for: {}", wallet);
@@ -98,7 +94,9 @@ impl WalletScanner {
         };
 
         // Scan history only if analyzers provided and requested
-        let (historical_threats, program_encounters, transactions_analyzed) = if config.check_historical {
+        let (historical_threats, program_encounters, transactions_analyzed) = if config
+            .check_historical
+        {
             if let (Some(registry), Some(engine)) = (&self.analyzer_registry, &self.rule_engine) {
                 info!("Scanning transaction history...");
                 let result = history::HistoryScanner::scan_history(
@@ -111,7 +109,11 @@ impl WalletScanner {
                     self.enrichment.as_ref(),
                 )
                 .await?;
-                (result.threats, result.program_encounters, result.transactions_analyzed)
+                (
+                    result.threats,
+                    result.program_encounters,
+                    result.transactions_analyzed,
+                )
             } else {
                 warn!("Historical scan requested but no analyzers provided - skipping");
                 (Vec::new(), std::collections::HashMap::new(), 0)
@@ -129,12 +131,13 @@ impl WalletScanner {
         // Generate final report
         let scan_duration_ms = start_time.elapsed().as_millis() as u64;
         report::generate_report(
-            wallet, 
-            all_threats, 
-            suspicious_programs, 
+            wallet,
+            all_threats,
+            suspicious_programs,
             transactions_analyzed,
             config.time_window_days.unwrap_or(30),
-            scan_duration_ms
-        ).await
+            scan_duration_ms,
+        )
+        .await
     }
 }

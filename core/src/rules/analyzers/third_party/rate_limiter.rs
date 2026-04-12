@@ -15,16 +15,16 @@ pub struct ApiRateLimiter {
 
 impl ApiRateLimiter {
     /// Create a new rate limiter
-    /// 
+    ///
     /// # Arguments
     /// * `requests_per_window` - Maximum requests allowed in the time window
     /// * `window_duration` - Duration of the rate limit window
-    /// 
+    ///
     /// # Example
     /// ```
     /// // Jupiter free tier: 60 requests per 60 seconds
     /// let limiter = ApiRateLimiter::new(60, Duration::from_secs(60));
-    /// 
+    ///
     /// // Helius: 10,000 requests per day (conservative: ~100/min)
     /// let limiter = ApiRateLimiter::new(100, Duration::from_secs(60));
     /// ```
@@ -38,7 +38,7 @@ impl ApiRateLimiter {
     }
 
     /// Create from environment variable or use default
-    /// 
+    ///
     /// Expects format: "REQUESTS/SECONDS" (e.g., "60/60" or "100/10")
     /// If not set or invalid, uses the provided defaults
     pub fn from_env_or_default(
@@ -61,14 +61,14 @@ impl ApiRateLimiter {
             .unwrap_or((default_requests, default_window_secs));
 
         let limiter = Self::new(requests, Duration::from_secs(window_secs));
-        
+
         log::info!(
             "🚦 Rate limiter configured: {} requests per {} seconds (env: {})",
             requests,
             window_secs,
             env_var
         );
-        
+
         limiter
     }
 
@@ -162,7 +162,10 @@ impl RateLimitPermit {
 
 impl Drop for RateLimitPermit {
     fn drop(&mut self) {
-        log::trace!("🔓 Rate limit permit released (held: {:?})", self.held_duration());
+        log::trace!(
+            "🔓 Rate limit permit released (held: {:?})",
+            self.held_duration()
+        );
     }
 }
 

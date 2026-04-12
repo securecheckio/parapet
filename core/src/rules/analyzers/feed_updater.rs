@@ -1,13 +1,13 @@
 /// Feed Updater for Known-Safe Programs and Owners
-/// 
+///
 /// Allows open-source users to pull curated lists from the SaaS platform
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
-use std::path::Path;
 use std::fs;
+use std::path::Path;
 
-use super::core::inner_instruction::{KnownSafeProgramsConfig, KnownSafeOwnersConfig};
+use super::core::inner_instruction::{KnownSafeOwnersConfig, KnownSafeProgramsConfig};
 
 /// Feed metadata and update info
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,11 +31,15 @@ impl FeedUpdater {
                 .unwrap_or_else(|_| reqwest::blocking::Client::new()),
         }
     }
-    
+
     /// Update safe programs list from remote feed
-    pub fn update_programs<P: AsRef<Path>>(&self, local_path: P, feed_url: Option<&str>) -> Result<bool> {
+    pub fn update_programs<P: AsRef<Path>>(
+        &self,
+        local_path: P,
+        feed_url: Option<&str>,
+    ) -> Result<bool> {
         let local_path = local_path.as_ref();
-        
+
         // Determine feed URL (explicit arg > config file > default)
         let url = if let Some(url) = feed_url {
             url.to_string()
@@ -44,7 +48,9 @@ impl FeedUpdater {
             if local_path.exists() {
                 if let Ok(content) = fs::read_to_string(local_path) {
                     if let Ok(config) = serde_json::from_str::<KnownSafeProgramsConfig>(&content) {
-                        config.feed_url.unwrap_or_else(|| self.default_programs_feed_url())
+                        config
+                            .feed_url
+                            .unwrap_or_else(|| self.default_programs_feed_url())
                     } else {
                         self.default_programs_feed_url()
                     }
@@ -55,15 +61,17 @@ impl FeedUpdater {
                 self.default_programs_feed_url()
             }
         };
-        
+
         info!("📡 Fetching safe programs feed from: {}", url);
-        
+
         // Fetch remote feed
-        let response = self.client.get(&url)
+        let response = self
+            .client
+            .get(&url)
             .header("User-Agent", "Parapet/1.0")
             .send()
             .with_context(|| format!("Failed to fetch safe programs feed from: {}", url))?;
-        
+
         if !response.status().is_success() {
             return Err(anyhow::anyhow!(
                 "Feed server returned error: {} {}",
@@ -71,15 +79,17 @@ impl FeedUpdater {
                 response.status().canonical_reason().unwrap_or("Unknown")
             ));
         }
-        
+
         // Parse remote config
-        let remote_config: KnownSafeProgramsConfig = response.json()
+        let remote_config: KnownSafeProgramsConfig = response
+            .json()
             .context("Failed to parse remote safe programs feed")?;
-        
+
         // Check if update is needed
         let needs_update = if local_path.exists() {
             if let Ok(content) = fs::read_to_string(local_path) {
-                if let Ok(local_config) = serde_json::from_str::<KnownSafeProgramsConfig>(&content) {
+                if let Ok(local_config) = serde_json::from_str::<KnownSafeProgramsConfig>(&content)
+                {
                     // Compare versions or last_updated
                     local_config.version != remote_config.version
                 } else {
@@ -91,38 +101,49 @@ impl FeedUpdater {
         } else {
             true
         };
-        
+
         if !needs_update {
-            info!("✅ Safe programs list is already up to date (version: {})", remote_config.version);
+            info!(
+                "✅ Safe programs list is already up to date (version: {})",
+                remote_config.version
+            );
             return Ok(false);
         }
-        
+
         // Create parent directory if needed
         if let Some(parent) = local_path.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
         }
-        
+
         // Write updated config
         let json = serde_json::to_string_pretty(&remote_config)
             .context("Failed to serialize remote config")?;
-        
-        fs::write(local_path, json)
-            .with_context(|| format!("Failed to write updated config to: {}", local_path.display()))?;
-        
+
+        fs::write(local_path, json).with_context(|| {
+            format!(
+                "Failed to write updated config to: {}",
+                local_path.display()
+            )
+        })?;
+
         info!(
             "✅ Updated safe programs list: {} programs (version: {})",
             remote_config.programs.len(),
             remote_config.version
         );
-        
+
         Ok(true)
     }
-    
+
     /// Update safe owners list from remote feed
-    pub fn update_owners<P: AsRef<Path>>(&self, local_path: P, feed_url: Option<&str>) -> Result<bool> {
+    pub fn update_owners<P: AsRef<Path>>(
+        &self,
+        local_path: P,
+        feed_url: Option<&str>,
+    ) -> Result<bool> {
         let local_path = local_path.as_ref();
-        
+
         // Determine feed URL
         let url = if let Some(url) = feed_url {
             url.to_string()
@@ -130,7 +151,9 @@ impl FeedUpdater {
             if local_path.exists() {
                 if let Ok(content) = fs::read_to_string(local_path) {
                     if let Ok(config) = serde_json::from_str::<KnownSafeOwnersConfig>(&content) {
-                        config.feed_url.unwrap_or_else(|| self.default_owners_feed_url())
+                        config
+                            .feed_url
+                            .unwrap_or_else(|| self.default_owners_feed_url())
                     } else {
                         self.default_owners_feed_url()
                     }
@@ -141,15 +164,17 @@ impl FeedUpdater {
                 self.default_owners_feed_url()
             }
         };
-        
+
         info!("📡 Fetching safe owners feed from: {}", url);
-        
+
         // Fetch remote feed
-        let response = self.client.get(&url)
+        let response = self
+            .client
+            .get(&url)
             .header("User-Agent", "Parapet/1.0")
             .send()
             .with_context(|| format!("Failed to fetch safe owners feed from: {}", url))?;
-        
+
         if !response.status().is_success() {
             return Err(anyhow::anyhow!(
                 "Feed server returned error: {} {}",
@@ -157,11 +182,12 @@ impl FeedUpdater {
                 response.status().canonical_reason().unwrap_or("Unknown")
             ));
         }
-        
+
         // Parse remote config
-        let remote_config: KnownSafeOwnersConfig = response.json()
+        let remote_config: KnownSafeOwnersConfig = response
+            .json()
             .context("Failed to parse remote safe owners feed")?;
-        
+
         // Check if update is needed
         let needs_update = if local_path.exists() {
             if let Ok(content) = fs::read_to_string(local_path) {
@@ -176,62 +202,69 @@ impl FeedUpdater {
         } else {
             true
         };
-        
+
         if !needs_update {
-            info!("✅ Safe owners list is already up to date (version: {})", remote_config.version);
+            info!(
+                "✅ Safe owners list is already up to date (version: {})",
+                remote_config.version
+            );
             return Ok(false);
         }
-        
+
         // Create parent directory if needed
         if let Some(parent) = local_path.parent() {
             fs::create_dir_all(parent)
                 .with_context(|| format!("Failed to create directory: {}", parent.display()))?;
         }
-        
+
         // Write updated config
         let json = serde_json::to_string_pretty(&remote_config)
             .context("Failed to serialize remote config")?;
-        
-        fs::write(local_path, json)
-            .with_context(|| format!("Failed to write updated config to: {}", local_path.display()))?;
-        
+
+        fs::write(local_path, json).with_context(|| {
+            format!(
+                "Failed to write updated config to: {}",
+                local_path.display()
+            )
+        })?;
+
         info!(
             "✅ Updated safe owners list: {} owners (version: {})",
             remote_config.owners.len(),
             remote_config.version
         );
-        
+
         Ok(true)
     }
-    
+
     /// Update both programs and owners from remote feeds
     pub fn update_all<P: AsRef<Path>>(&self, config_dir: P) -> Result<(bool, bool)> {
         let config_dir = config_dir.as_ref();
-        
+
         let programs_path = config_dir.join("known-safe-programs.json");
         let owners_path = config_dir.join("known-safe-owners.json");
-        
-        let programs_updated = self.update_programs(&programs_path, None)
+
+        let programs_updated = self
+            .update_programs(&programs_path, None)
             .unwrap_or_else(|e| {
                 warn!("Failed to update safe programs: {}", e);
                 false
             });
-        
-        let owners_updated = self.update_owners(&owners_path, None)
-            .unwrap_or_else(|e| {
-                warn!("Failed to update safe owners: {}", e);
-                false
-            });
-        
+
+        let owners_updated = self.update_owners(&owners_path, None).unwrap_or_else(|e| {
+            warn!("Failed to update safe owners: {}", e);
+            false
+        });
+
         Ok((programs_updated, owners_updated))
     }
-    
+
     /// Get default feed URL for programs
     fn default_programs_feed_url(&self) -> String {
         std::env::var("SAFE_PROGRAMS_FEED_URL")
             .unwrap_or_else(|_| "https://api.securecheck.sh/v1/safe-programs/feed.json".to_string())
     }
-    
+
     /// Get default feed URL for owners
     fn default_owners_feed_url(&self) -> String {
         std::env::var("SAFE_OWNERS_FEED_URL")

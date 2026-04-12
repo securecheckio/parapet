@@ -32,11 +32,10 @@ pub struct TokenInfo {
     pub logo: String,
 }
 
-
 pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     let content = std::fs::read_to_string(path)
         .with_context(|| format!("Failed to read platform config from {}", path))?;
-    
+
     #[derive(Deserialize)]
     struct TomlConfig {
         database: DatabaseConfig,
@@ -45,17 +44,17 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         payments: PaymentsConfig,
         display: DisplayConfig,
     }
-    
+
     #[derive(Deserialize)]
     struct DatabaseConfig {
         url: String,
     }
-    
+
     #[derive(Deserialize)]
     struct FrontendConfig {
         url: String,
     }
-    
+
     #[derive(Deserialize)]
     struct PushNotificationsConfig {
         #[serde(default)]
@@ -65,7 +64,7 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         #[serde(default)]
         private_key: String,
     }
-    
+
     #[derive(Deserialize)]
     struct PaymentsConfig {
         #[serde(default)]
@@ -81,23 +80,35 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         #[serde(default = "default_token_logo")]
         token_logo: String,
     }
-    
+
     #[derive(Deserialize)]
     struct DisplayConfig {
         #[serde(default = "default_rules_path")]
         rules_path: String,
     }
-    
-    fn default_token_mint() -> String { "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz".to_string() }
-    fn default_token_name() -> String { "xLABS".to_string() }
-    fn default_token_symbol() -> String { "xLABS".to_string() }
-    fn default_token_decimals() -> u8 { 6 }
-    fn default_token_logo() -> String { "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz/logo.png".to_string() }
-    fn default_rules_path() -> String { "../../proxy/rules/presets/bot-essentials.json".to_string() }
-    
+
+    fn default_token_mint() -> String {
+        "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz".to_string()
+    }
+    fn default_token_name() -> String {
+        "xLABS".to_string()
+    }
+    fn default_token_symbol() -> String {
+        "xLABS".to_string()
+    }
+    fn default_token_decimals() -> u8 {
+        6
+    }
+    fn default_token_logo() -> String {
+        "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz/logo.png".to_string()
+    }
+    fn default_rules_path() -> String {
+        "../../proxy/rules/presets/bot-essentials.json".to_string()
+    }
+
     let toml_config: TomlConfig = toml::from_str(&content)
         .with_context(|| format!("Failed to parse platform config from {}", path))?;
-    
+
     // Build config with env var overrides
     let mut config = PlatformConfig {
         database_url: toml_config.database.url,
@@ -127,35 +138,35 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         },
         rules_display_path: toml_config.display.rules_path,
     };
-    
+
     // Apply environment variable overrides
     if let Ok(db_url) = std::env::var("DATABASE_URL") {
         log::info!("  ↳ Overriding database.url from DATABASE_URL env var");
         config.database_url = db_url;
     }
-    
+
     if let Ok(frontend) = std::env::var("FRONTEND_URL") {
         log::info!("  ↳ Overriding frontend.url from FRONTEND_URL env var");
         config.frontend_url = frontend;
     }
-    
+
     if let Ok(key) = std::env::var("VAPID_PUBLIC_KEY") {
         log::info!("  ↳ Overriding VAPID public key from env var");
         config.push_notifications.public_key = Some(key);
     }
-    
+
     if let Ok(key) = std::env::var("VAPID_PRIVATE_KEY") {
         log::info!("  ↳ Overriding VAPID private key from env var");
         config.push_notifications.private_key = Some(key);
     }
-    
+
     if let Ok(enabled) = std::env::var("PAYMENTS_ENABLED") {
         if let Ok(b) = enabled.parse::<bool>() {
             log::info!("  ↳ Overriding payments.enabled from PAYMENTS_ENABLED env var");
             config.payments.enabled = b;
         }
     }
-    
+
     if let Ok(mint) = std::env::var("PAYMENT_TOKEN_MINT") {
         config.payments.token.mint = mint;
     }
@@ -173,6 +184,6 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     if let Ok(logo) = std::env::var("PAYMENT_TOKEN_LOGO") {
         config.payments.token.logo = logo;
     }
-    
+
     Ok(config)
 }

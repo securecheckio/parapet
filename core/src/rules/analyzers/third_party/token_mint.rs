@@ -56,8 +56,8 @@ impl TokenMintAnalyzer {
         // Free RPC: ~40 req/10s, Paid: varies by provider
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "RPC_RATE_LIMIT",
-            40,  // Conservative free tier default
-            10,  // 10 second window
+            40, // Conservative free tier default
+            10, // 10 second window
         );
 
         Self {
@@ -85,7 +85,7 @@ impl TokenMintAnalyzer {
         // Cache miss or expired - fetch from RPC
         // Acquire rate limit permit
         let _permit = self.rate_limiter.acquire().await;
-        
+
         let pubkey = Pubkey::from_str(mint_address)?;
         let account_data = self.rpc_client.get_account(&pubkey)?;
 
@@ -126,7 +126,8 @@ impl TokenMintAnalyzer {
         };
 
         // Check if this is Token-2022 and parse extensions
-        let is_token_2022 = account_data.owner.to_string() == "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+        let is_token_2022 =
+            account_data.owner.to_string() == "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
         let extensions = if is_token_2022 {
             self.parse_token_2022_extensions(&account_data.data)
         } else {
@@ -167,36 +168,39 @@ impl TokenMintAnalyzer {
         // Extensions start at byte 165 (82 base + 83 padding to account discriminator)
         // Actually, extensions start right after the base mint at byte 82
         const BASE_MINT_SIZE: usize = 82;
-        
+
         if data.len() <= BASE_MINT_SIZE {
             return ext_data; // No extensions
         }
 
         // Parse TLV entries starting at offset 82
         let mut offset = BASE_MINT_SIZE;
-        
+
         while offset + 4 <= data.len() {
             // Read extension type (2 bytes, little-endian)
             let ext_type = u16::from_le_bytes([data[offset], data[offset + 1]]);
-            
+
             // Read extension length (2 bytes, little-endian)
             let ext_length = u16::from_le_bytes([data[offset + 2], data[offset + 3]]) as usize;
-            
+
             offset += 4; // Move past type and length
-            
+
             // Ensure we have enough data for the value
             if offset + ext_length > data.len() {
-                log::warn!("Token-2022: Invalid extension length at offset {}", offset - 4);
+                log::warn!(
+                    "Token-2022: Invalid extension length at offset {}",
+                    offset - 4
+                );
                 break;
             }
-            
+
             // Parse extension based on type
             // Extension type IDs from: https://github.com/solana-labs/solana-program-library
             match ext_type {
                 1 => {
                     // TransferFeeConfig (type 1)
-                    // Layout: config_authority (32 bytes), withdraw_withheld_authority (32 bytes), 
-                    //         withheld_amount (8 bytes), older_epoch (8 bytes), 
+                    // Layout: config_authority (32 bytes), withdraw_withheld_authority (32 bytes),
+                    //         withheld_amount (8 bytes), older_epoch (8 bytes),
                     //         older_max_fee (8 bytes), older_fee_bps (2 bytes), newer_epoch (8 bytes),
                     //         newer_max_fee (8 bytes), newer_fee_bps (2 bytes)
                     if ext_length >= 96 {
@@ -204,10 +208,14 @@ impl TokenMintAnalyzer {
                         let fee_bps = u16::from_le_bytes([data[offset + 94], data[offset + 95]]);
                         ext_data.has_transfer_fee = true;
                         ext_data.transfer_fee_basis_points = Some(fee_bps);
-                        
+
                         let fee_pct = fee_bps as f64 / 100.0;
                         if fee_pct > 10.0 {
-                            log::warn!("⚠️ HIGH: Transfer fee detected: {}% ({}bps)", fee_pct, fee_bps);
+                            log::warn!(
+                                "⚠️ HIGH: Transfer fee detected: {}% ({}bps)",
+                                fee_pct,
+                                fee_bps
+                            );
                         }
                     }
                 }
@@ -254,7 +262,10 @@ impl TokenMintAnalyzer {
                         let delegate_address = bs58::encode(delegate_bytes).into_string();
                         ext_data.has_permanent_delegate = true;
                         ext_data.permanent_delegate_address = Some(delegate_address.clone());
-                        log::warn!("🚨 CRITICAL: Permanent Delegate detected at {}", delegate_address);
+                        log::warn!(
+                            "🚨 CRITICAL: Permanent Delegate detected at {}",
+                            delegate_address
+                        );
                     }
                 }
                 12 => {
@@ -282,13 +293,17 @@ impl TokenMintAnalyzer {
                     // GroupMemberPointer (type 16)
                 }
                 _ => {
-                    log::debug!("Token-2022: Unknown extension type {} at offset {}", ext_type, offset - 4);
+                    log::debug!(
+                        "Token-2022: Unknown extension type {} at offset {}",
+                        ext_type,
+                        offset - 4
+                    );
                 }
             }
-            
+
             // Move to next extension
             offset += ext_length;
-            
+
             // Extensions are padded to 8-byte alignment
             let padding = (8 - (ext_length % 8)) % 8;
             offset += padding;
@@ -376,7 +391,7 @@ impl TransactionAnalyzer for TokenMintAnalyzer {
             "has_transfer_fee".to_string(),
             "max_transfer_fee_bps".to_string(),
             "has_metadata_pointer".to_string(),
-            "has_default_frozen_state".to_string()
+            "has_default_frozen_state".to_string(),
         ]
     }
 
@@ -414,7 +429,7 @@ impl TransactionAnalyzer for TokenMintAnalyzer {
         let mut freeze_authorities = Vec::new();
         let mut mint_authorities = Vec::new();
         let mut mint_details_map = serde_json::Map::new();
-        
+
         // Extension aggregation
         let mut permanent_delegate_addresses = Vec::new();
         let mut transfer_hook_programs = Vec::new();
@@ -444,7 +459,8 @@ impl TransactionAnalyzer for TokenMintAnalyzer {
                         transfer_hook_programs.push(prog.clone());
                     }
                     if let Some(fee_bps) = ext.transfer_fee_basis_points {
-                        max_fee_bps = Some(max_fee_bps.map_or(fee_bps, |existing| existing.max(fee_bps)));
+                        max_fee_bps =
+                            Some(max_fee_bps.map_or(fee_bps, |existing| existing.max(fee_bps)));
                     }
 
                     // Add to details map
@@ -515,16 +531,33 @@ impl TransactionAnalyzer for TokenMintAnalyzer {
         let has_transfer_hook = !transfer_hook_programs.is_empty();
         let has_transfer_fee = max_fee_bps.is_some();
         let has_metadata_pointer = mint_infos.iter().any(|m| m.extensions.has_metadata_pointer);
-        let has_default_frozen = mint_infos.iter().any(|m| m.extensions.has_default_frozen_state);
+        let has_default_frozen = mint_infos
+            .iter()
+            .any(|m| m.extensions.has_default_frozen_state);
 
-        fields.insert("has_permanent_delegate".to_string(), json!(has_permanent_delegate));
-        fields.insert("permanent_delegate_addresses".to_string(), json!(permanent_delegate_addresses));
+        fields.insert(
+            "has_permanent_delegate".to_string(),
+            json!(has_permanent_delegate),
+        );
+        fields.insert(
+            "permanent_delegate_addresses".to_string(),
+            json!(permanent_delegate_addresses),
+        );
         fields.insert("has_transfer_hook".to_string(), json!(has_transfer_hook));
-        fields.insert("transfer_hook_programs".to_string(), json!(transfer_hook_programs));
+        fields.insert(
+            "transfer_hook_programs".to_string(),
+            json!(transfer_hook_programs),
+        );
         fields.insert("has_transfer_fee".to_string(), json!(has_transfer_fee));
         fields.insert("max_transfer_fee_bps".to_string(), json!(max_fee_bps));
-        fields.insert("has_metadata_pointer".to_string(), json!(has_metadata_pointer));
-        fields.insert("has_default_frozen_state".to_string(), json!(has_default_frozen));
+        fields.insert(
+            "has_metadata_pointer".to_string(),
+            json!(has_metadata_pointer),
+        );
+        fields.insert(
+            "has_default_frozen_state".to_string(),
+            json!(has_default_frozen),
+        );
 
         Ok(fields)
     }

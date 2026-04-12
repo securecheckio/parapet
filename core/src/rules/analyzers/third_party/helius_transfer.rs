@@ -49,11 +49,7 @@ impl HeliusTransferAnalyzer {
             log::info!("✅ HeliusTransferAnalyzer: API key configured");
         }
 
-        let rate_limiter = ApiRateLimiter::from_env_or_default(
-            "HELIUS_RATE_LIMIT",
-            20,
-            60,
-        );
+        let rate_limiter = ApiRateLimiter::from_env_or_default("HELIUS_RATE_LIMIT", 20, 60);
 
         Self {
             api_key,
@@ -68,7 +64,11 @@ impl HeliusTransferAnalyzer {
     }
 
     /// Fetch wallet transfers from Helius API
-    async fn get_wallet_transfers(&self, address: &str, hours: u32) -> Result<Vec<TransferActivity>> {
+    async fn get_wallet_transfers(
+        &self,
+        address: &str,
+        hours: u32,
+    ) -> Result<Vec<TransferActivity>> {
         let api_key = self
             .api_key
             .as_ref()
@@ -98,11 +98,7 @@ impl HeliusTransferAnalyzer {
 
         log::debug!("Fetching transfers for wallet: {}", address);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).send().await?;
 
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
             return Err(anyhow!("Helius API rate limited"));
@@ -151,7 +147,9 @@ impl HeliusTransferAnalyzer {
         // Count max transfers to same address
         let mut counterparty_counts: HashMap<String, u32> = HashMap::new();
         for transfer in &outgoing {
-            *counterparty_counts.entry(transfer.counterparty.clone()).or_insert(0) += 1;
+            *counterparty_counts
+                .entry(transfer.counterparty.clone())
+                .or_insert(0) += 1;
         }
 
         let max_to_same_address = counterparty_counts.values().max().copied().unwrap_or(0);
@@ -176,7 +174,9 @@ impl HeliusTransferAnalyzer {
         // Count transfers per counterparty
         let mut counterparty_counts: HashMap<String, u32> = HashMap::new();
         for transfer in &outgoing {
-            *counterparty_counts.entry(transfer.counterparty.clone()).or_insert(0) += 1;
+            *counterparty_counts
+                .entry(transfer.counterparty.clone())
+                .or_insert(0) += 1;
         }
 
         // Find top counterparty
@@ -187,7 +187,10 @@ impl HeliusTransferAnalyzer {
             .unwrap_or_default();
 
         // Calculate concentration (top counterparty / total outgoing)
-        let top_count = counterparty_counts.get(&top_counterparty).copied().unwrap_or(0);
+        let top_count = counterparty_counts
+            .get(&top_counterparty)
+            .copied()
+            .unwrap_or(0);
         let concentration = if outgoing.len() > 0 {
             top_count as f32 / outgoing.len() as f32
         } else {
@@ -245,10 +248,16 @@ impl TransactionAnalyzer for HeliusTransferAnalyzer {
         // Build fields
         let mut fields = HashMap::new();
         fields.insert("outgoing_tx_per_hour".to_string(), json!(outgoing_count));
-        fields.insert("max_transfers_to_same_address".to_string(), json!(max_to_same));
+        fields.insert(
+            "max_transfers_to_same_address".to_string(),
+            json!(max_to_same),
+        );
         fields.insert("is_high_velocity".to_string(), json!(is_high_velocity));
         fields.insert("top_counterparty".to_string(), json!(top_counterparty));
-        fields.insert("counterparty_concentration".to_string(), json!(concentration));
+        fields.insert(
+            "counterparty_concentration".to_string(),
+            json!(concentration),
+        );
 
         Ok(fields)
     }

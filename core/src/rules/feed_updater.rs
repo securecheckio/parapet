@@ -78,11 +78,9 @@ async fn fetch_rules_from_feed_cached(
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(10))
         .build()?;
-    
-    let mut request = client
-        .get(url)
-        .header("User-Agent", "parapet-proxy/1.0");
-    
+
+    let mut request = client.get(url).header("User-Agent", "parapet-proxy/1.0");
+
     // Add caching headers if we have cache
     if let Some(cache) = cache_entry {
         if let Some(etag) = &cache.etag {
@@ -92,9 +90,9 @@ async fn fetch_rules_from_feed_cached(
             request = request.header("If-Modified-Since", last_mod);
         }
     }
-    
+
     let response = request.send().await?;
-    
+
     // 304 Not Modified - use cached version
     if response.status() == 304 {
         if let Some(cache) = cache_entry {
@@ -105,27 +103,31 @@ async fn fetch_rules_from_feed_cached(
         }
         anyhow::bail!("Got 304 but no cached feed available");
     }
-    
+
     if !response.status().is_success() {
         anyhow::bail!("Feed request failed: {}", response.status());
     }
-    
+
     // Extract caching headers
     let etag = response
         .headers()
         .get("etag")
         .and_then(|v| v.to_str().ok())
         .map(String::from);
-    
+
     let last_modified = response
         .headers()
         .get("last-modified")
         .and_then(|v| v.to_str().ok())
         .map(String::from);
-    
+
     let feed: RuleFeed = response.json().await?;
-    log::info!("📥 Fetched rule feed v{} with {} rules", feed.version, feed.rules.len());
-    
+    log::info!(
+        "📥 Fetched rule feed v{} with {} rules",
+        feed.version,
+        feed.rules.len()
+    );
+
     Ok(FetchResult::Updated {
         feed,
         etag,
@@ -167,12 +169,12 @@ impl FeedUpdater {
         let mut all_rules: HashMap<String, (super::types::RuleDefinition, u32)> = HashMap::new();
         let mut all_deprecated = Vec::new();
         let mut sources = Vec::new();
-        
+
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_secs();
-        
+
         for source in &self.config.feed_sources {
             // Check rate limit
             let should_fetch = {
@@ -184,33 +186,36 @@ impl FeedUpdater {
                     true
                 }
             };
-            
+
             if !should_fetch {
                 log::debug!("⏳ Skipping {} (rate limited)", source.url);
                 continue;
             }
-            
+
             // Fetch with caching
             let cache_entry = self.cache.read().await.get(&source.url).cloned();
-            
-            let result = match fetch_rules_from_feed_cached(&source.url, cache_entry.as_ref()).await {
+
+            let result = match fetch_rules_from_feed_cached(&source.url, cache_entry.as_ref()).await
+            {
                 Ok(result) => result,
                 Err(e) => {
                     log::warn!("Failed to fetch from {}: {}", source.url, e);
                     continue;
                 }
             };
-            
+
             let (feed, etag, last_modified) = match result {
-                FetchResult::Updated { feed, etag, last_modified } => {
-                    (feed, etag, last_modified)
-                }
+                FetchResult::Updated {
+                    feed,
+                    etag,
+                    last_modified,
+                } => (feed, etag, last_modified),
                 FetchResult::NotModified(feed) => {
                     log::debug!("📦 Using cached feed from {}", source.url);
                     (feed, None, None)
                 }
             };
-            
+
             // Update cache
             {
                 let mut cache = self.cache.write().await;
@@ -219,25 +224,31 @@ impl FeedUpdater {
                     source.url.clone(),
                     FeedCacheEntry {
                         etag: etag.or_else(|| old_entry.as_ref().and_then(|e| e.etag.clone())),
-                        last_modified: last_modified.or_else(|| old_entry.as_ref().and_then(|e| e.last_modified.clone())),
+                        last_modified: last_modified
+                            .or_else(|| old_entry.as_ref().and_then(|e| e.last_modified.clone())),
                         last_fetch: now,
                         cached_feed: Some(feed.clone()),
                     },
                 );
             }
-            
-            let source_name = source.name.as_deref()
+
+            let source_name = source
+                .name
+                .as_deref()
                 .or(feed.source.as_deref())
                 .unwrap_or(&source.url);
             sources.push(source_name.to_string());
-            
+
             // Merge rules (priority-based conflict resolution)
             for rule in feed.rules {
                 let rule_id = rule.id.clone();
                 match all_rules.get(&rule_id) {
                     Some((_, existing_priority)) => {
                         if source.priority < *existing_priority {
-                            log::debug!("🔄 Overriding rule {} from higher priority source", rule_id);
+                            log::debug!(
+                                "🔄 Overriding rule {} from higher priority source",
+                                rule_id
+                            );
                             all_rules.insert(rule_id, (rule, source.priority));
                         }
                     }
@@ -246,19 +257,23 @@ impl FeedUpdater {
                     }
                 }
             }
-            
+
             // Collect deprecated rules
             all_deprecated.extend(feed.deprecated_rule_ids);
         }
-        
+
         // Deduplicate deprecated rules
         all_deprecated.sort();
         all_deprecated.dedup();
-        
+
         let rules: Vec<_> = all_rules.into_values().map(|(rule, _)| rule).collect();
-        
-        log::info!("📊 Merged {} rules from {} sources", rules.len(), sources.len());
-        
+
+        log::info!(
+            "📊 Merged {} rules from {} sources",
+            rules.len(),
+            sources.len()
+        );
+
         Ok(MergedRuleFeed {
             rules,
             deprecated_rule_ids: all_deprecated,
@@ -268,11 +283,9 @@ impl FeedUpdater {
 
     #[cfg(not(feature = "reqwest"))]
     pub async fn fetch_all_sources(&self) -> Result<MergedRuleFeed> {
-        anyhow::bail!(
-            "parapet-core was built without `reqwest`; rule feed updates are unavailable"
-        )
+        anyhow::bail!("parapet-core was built without `reqwest`; rule feed updates are unavailable")
     }
-    
+
     /// Start background polling task
     pub async fn start_polling<F>(self, on_update: F)
     where
@@ -282,26 +295,37 @@ impl FeedUpdater {
             log::info!("📭 Rule feed updates disabled");
             return;
         }
-        
+
         log::info!("📡 Starting multi-source rule feed updater");
-        log::info!("   {} feed sources configured", self.config.feed_sources.len());
+        log::info!(
+            "   {} feed sources configured",
+            self.config.feed_sources.len()
+        );
         log::info!("   Polling every {} seconds", self.config.poll_interval);
-        
+
         for (i, source) in self.config.feed_sources.iter().enumerate() {
             let name = source.name.as_deref().unwrap_or("unnamed");
-            log::info!("   [{}] {} (priority: {}, rate limit: {}s)", 
-                i + 1, name, source.priority, source.min_request_interval);
+            log::info!(
+                "   [{}] {} (priority: {}, rate limit: {}s)",
+                i + 1,
+                name,
+                source.priority,
+                source.min_request_interval
+            );
         }
-        
+
         let updater = Arc::new(self);
-        
+
         tokio::spawn(async move {
             loop {
                 sleep(Duration::from_secs(updater.config.poll_interval)).await;
-                
+
                 match updater.fetch_all_sources().await {
                     Ok(merged) => {
-                        log::info!("✅ Rule feed update received from {} sources", merged.sources.len());
+                        log::info!(
+                            "✅ Rule feed update received from {} sources",
+                            merged.sources.len()
+                        );
                         if let Err(e) = on_update(merged) {
                             log::error!("Failed to apply rule updates: {}", e);
                         }
@@ -318,7 +342,7 @@ impl FeedUpdater {
 #[cfg(all(test, feature = "reqwest"))]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_multi_source_fetch() {
         let config = FeedConfig {
@@ -333,13 +357,16 @@ mod tests {
             poll_interval: 3600,
             enabled: true,
         };
-        
+
         let updater = FeedUpdater::new(config);
-        
+
         match updater.fetch_all_sources().await {
             Ok(merged) => {
-                println!("✅ Fetched {} rules from {} sources", 
-                    merged.rules.len(), merged.sources.len());
+                println!(
+                    "✅ Fetched {} rules from {} sources",
+                    merged.rules.len(),
+                    merged.sources.len()
+                );
             }
             Err(e) => {
                 println!("⚠️  Feed not available yet: {}", e);

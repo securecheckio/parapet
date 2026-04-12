@@ -142,7 +142,7 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
 
     // Wrap rule engine in Arc<RwLock> for live updates
     let rule_engine = Arc::new(tokio::sync::RwLock::new(rule_engine));
-    
+
     // Start automatic rule feed updater if enabled
     if config.rules_feed_enabled {
         if let Some(feed_sources) = config.rules_feed_sources {
@@ -159,31 +159,39 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
                 poll_interval: config.rules_feed_poll_interval,
                 enabled: true,
             };
-            
+
             let updater = rules::FeedUpdater::new(feed_config);
             let engine_clone = rule_engine.clone();
-            
-            updater.start_polling(move |merged| {
-                let engine = engine_clone.clone();
-                tokio::spawn(async move {
-                    log::info!("🔄 Applying {} rule updates from {} sources", 
-                        merged.rules.len(), merged.sources.len());
-                    
-                    let mut engine = engine.write().await;
-                    
-                    // Load new rules (merges with existing)
-                    if let Err(e) = engine.load_rules(merged.rules) {
-                        log::error!("Failed to load updated rules: {}", e);
-                        return;
-                    }
-                    
-                    // TODO: Remove deprecated rules
-                    // engine.remove_rules(&merged.deprecated_rule_ids)?;
-                    
-                    log::info!("✅ Rule engine updated: {} total rules", engine.rule_count());
-                });
-                Ok(())
-            }).await;
+
+            updater
+                .start_polling(move |merged| {
+                    let engine = engine_clone.clone();
+                    tokio::spawn(async move {
+                        log::info!(
+                            "🔄 Applying {} rule updates from {} sources",
+                            merged.rules.len(),
+                            merged.sources.len()
+                        );
+
+                        let mut engine = engine.write().await;
+
+                        // Load new rules (merges with existing)
+                        if let Err(e) = engine.load_rules(merged.rules) {
+                            log::error!("Failed to load updated rules: {}", e);
+                            return;
+                        }
+
+                        // TODO: Remove deprecated rules
+                        // engine.remove_rules(&merged.deprecated_rule_ids)?;
+
+                        log::info!(
+                            "✅ Rule engine updated: {} total rules",
+                            engine.rule_count()
+                        );
+                    });
+                    Ok(())
+                })
+                .await;
         } else {
             log::warn!("⚠️  RULES_FEED_ENABLED=true but no RULES_FEED_SOURCES provided");
         }
@@ -200,10 +208,8 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
         circuit_breaker_timeout_secs: config.upstream_circuit_breaker_timeout_secs.unwrap_or(60),
     };
 
-    let upstream_client = upstream::UpstreamClient::new_with_config(
-        config.upstream_url.clone(),
-        upstream_config,
-    );
+    let upstream_client =
+        upstream::UpstreamClient::new_with_config(config.upstream_url.clone(), upstream_config);
     log::info!("✅ Upstream client initialized");
 
     // Initialize usage tracker if enabled
@@ -309,7 +315,8 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
     };
 
     // Initialize simulation analyzer registry
-    let mut simulation_registry = parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
+    let mut simulation_registry =
+        parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     simulation_registry.register(Box::new(
         parapet_core::rules::analyzers::SimulationBalanceAnalyzer::new(),
     ));
@@ -426,7 +433,10 @@ fn load_analyzers_config() -> rules::AnalyzersConfig {
         if Path::new(&p).exists() {
             match AnalyzersConfig::from_file(&p) {
                 Ok(c) => {
-                    log::info!("📋 Loaded analyzer config from {} (ANALYZERS_CONFIG_PATH)", p);
+                    log::info!(
+                        "📋 Loaded analyzer config from {} (ANALYZERS_CONFIG_PATH)",
+                        p
+                    );
                     return c;
                 }
                 Err(e) => log::warn!("⚠️ Failed to load ANALYZERS_CONFIG_PATH {}: {}", p, e),

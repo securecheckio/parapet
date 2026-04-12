@@ -1,34 +1,34 @@
 use anyhow::{anyhow, Result};
-use base64::Engine;
 use base64::engine::general_purpose;
+use base64::Engine;
 use log::{debug, info, warn};
+use parapet_core::rules::{AnalyzerRegistry, RuleAction, RuleDecision, RuleEngine};
 use solana_client::rpc_client::RpcClient;
-use solana_client::rpc_config::{RpcTransactionConfig};
+use solana_client::rpc_config::RpcTransactionConfig;
 use solana_sdk::{
+    bs58,
     commitment_config::CommitmentConfig,
+    message::{Message, VersionedMessage},
     pubkey::Pubkey,
     signature::Signature,
     transaction::Transaction,
-    message::{Message, VersionedMessage},
     transaction::VersionedTransaction,
-    bs58,
 };
 use solana_transaction_status::{
-    EncodedTransaction, EncodedTransactionWithStatusMeta, UiTransactionEncoding,
-    UiInstruction, option_serializer::OptionSerializer,
+    option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta,
+    UiInstruction, UiTransactionEncoding,
 };
-use parapet_core::rules::{AnalyzerRegistry, RuleEngine, RuleDecision, RuleAction};
+use std::io::Write;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::io::Write;
 
 #[cfg(feature = "reqwest")]
 use parapet_core::enrichment::EnrichmentService;
 
 use crate::detector::{Severity, ThreatAssessment, ThreatType};
 use crate::report::ScanConfig;
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
+use std::collections::HashMap;
 
 /// Extended transaction data including metadata (inner instructions, logs, etc.)
 #[allow(dead_code)]
@@ -83,17 +83,16 @@ impl HistoryScanner {
         rule_engine: &Arc<RuleEngine>,
         wallet: &str,
         config: &ScanConfig,
-        #[cfg(feature = "reqwest")]
-        enrichment: Option<&Arc<EnrichmentService>>,
+        #[cfg(feature = "reqwest")] enrichment: Option<&Arc<EnrichmentService>>,
     ) -> Result<HistoryScanResult> {
-        let wallet_pubkey = Pubkey::from_str(wallet)
-            .map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
+        let wallet_pubkey =
+            Pubkey::from_str(wallet).map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
 
         // Fetch transaction signatures
         info!("Fetching transaction history for wallet: {}", wallet);
         let signatures = Self::fetch_signatures(rpc, &wallet_pubkey, config)?;
         info!("Found {} transactions to analyze", signatures.len());
-        
+
         // ENRICHMENT STEP 1: Extract all unique token addresses from transactions (if enrichment enabled)
         #[cfg(feature = "reqwest")]
         let enrichment_cache = if enrichment.is_some() {
@@ -109,7 +108,10 @@ impl HistoryScanner {
                 }
             }
 
-            info!("📊 Found {} unique addresses, enriching token data...", unique_tokens.len());
+            info!(
+                "📊 Found {} unique addresses, enriching token data...",
+                unique_tokens.len()
+            );
 
             // ENRICHMENT STEP 2: Bulk enrich all tokens (1 API call per 50 tokens)
             if let Some(service) = enrichment {
@@ -120,7 +122,10 @@ impl HistoryScanner {
                         cache
                     }
                     Err(e) => {
-                        warn!("⚠️  Failed to enrich tokens: {} - continuing without enrichment", e);
+                        warn!(
+                            "⚠️  Failed to enrich tokens: {} - continuing without enrichment",
+                            e
+                        );
                         std::collections::HashMap::new()
                     }
                 }
@@ -143,7 +148,7 @@ impl HistoryScanner {
         let mut program_encounters: HashMap<String, ProgramEncounter> = HashMap::new();
         let mut error_count = 0;
         let total = signatures.len();
-        
+
         for (idx, (signature, block_time)) in signatures.iter().enumerate() {
             // Progress output every transaction (visible to user)
             let progress = idx + 1;
@@ -170,7 +175,7 @@ impl HistoryScanner {
                     if let Some(threat) = threat_opt {
                         threats.push(threat);
                     }
-                    
+
                     // Track program encounters
                     for (program_id, rule_decision) in programs {
                         program_encounters
@@ -186,7 +191,9 @@ impl HistoryScanner {
                                 program_id,
                                 transaction_signatures: vec![signature.to_string()],
                                 first_seen: block_time
-                                    .map(|t| DateTime::from_timestamp(t, 0).unwrap_or_else(Utc::now))
+                                    .map(|t| {
+                                        DateTime::from_timestamp(t, 0).unwrap_or_else(Utc::now)
+                                    })
                                     .unwrap_or_else(Utc::now),
                                 rule_decision: rule_decision.clone(),
                             });
@@ -195,18 +202,20 @@ impl HistoryScanner {
                 Err(e) => {
                     error_count += 1;
                     let error_msg = e.to_string();
-                    
+
                     // Check if it's a rate limit error
                     if error_msg.contains("429") || error_msg.contains("Too Many Requests") {
                         // Clear progress line and show error
                         eprint!("\r");
                         eprintln!("⚠️  Rate limit hit at transaction {}/{}", progress, total);
-                        eprintln!("    Waiting 5s before retry... (or stop and increase --rpc-delay-ms)");
+                        eprintln!(
+                            "    Waiting 5s before retry... (or stop and increase --rpc-delay-ms)"
+                        );
                         warn!("RPC rate limit (429) at transaction {}: {}", signature, e);
-                        
+
                         // Wait longer then retry this transaction
                         tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
-                        
+
                         // Retry once
                         match Self::analyze_transaction_with_programs(
                             rpc,
@@ -221,7 +230,7 @@ impl HistoryScanner {
                                 if let Some(threat) = threat_opt {
                                     threats.push(threat);
                                 }
-                                
+
                                 for (program_id, rule_decision) in programs {
                                     program_encounters
                                         .entry(program_id.clone())
@@ -235,7 +244,10 @@ impl HistoryScanner {
                                             program_id,
                                             transaction_signatures: vec![signature.to_string()],
                                             first_seen: block_time
-                                                .map(|t| DateTime::from_timestamp(t, 0).unwrap_or_else(Utc::now))
+                                                .map(|t| {
+                                                    DateTime::from_timestamp(t, 0)
+                                                        .unwrap_or_else(Utc::now)
+                                                })
                                                 .unwrap_or_else(Utc::now),
                                             rule_decision: rule_decision.clone(),
                                         });
@@ -256,18 +268,19 @@ impl HistoryScanner {
 
         // Clear progress line
         eprint!("\r");
-        eprintln!("✓ Completed analysis of {} transactions{}", 
+        eprintln!(
+            "✓ Completed analysis of {} transactions{}",
             signatures.len(),
-            if error_count > 0 { 
-                format!(" ({} errors, consider slower --rpc-delay-ms)", error_count) 
-            } else { 
-                String::new() 
+            if error_count > 0 {
+                format!(" ({} errors, consider slower --rpc-delay-ms)", error_count)
+            } else {
+                String::new()
             }
         );
 
         info!("Found {} threats in historical transactions", threats.len());
         info!("Encountered {} unique programs", program_encounters.len());
-        
+
         Ok(HistoryScanResult {
             threats,
             program_encounters,
@@ -282,10 +295,10 @@ impl HistoryScanner {
         config: &ScanConfig,
     ) -> Result<Vec<(Signature, Option<i64>)>> {
         use solana_client::rpc_client::GetConfirmedSignaturesForAddress2Config;
-        
+
         // Fetch signatures with limit
         let limit = config.max_transactions.unwrap_or(100);
-        
+
         // Create config with limit
         let fetch_config = GetConfirmedSignaturesForAddress2Config {
             before: None,
@@ -293,20 +306,21 @@ impl HistoryScanner {
             limit: Some(limit),
             commitment: Some(config.commitment),
         };
-        
+
         // Fetch with limit
-        let sigs = rpc.get_signatures_for_address_with_config(
-            wallet,
-            fetch_config,
-        )?;
-        
-        info!("RPC returned {} signatures (requested limit: {})", sigs.len(), limit);
-        
+        let sigs = rpc.get_signatures_for_address_with_config(wallet, fetch_config)?;
+
+        info!(
+            "RPC returned {} signatures (requested limit: {})",
+            sigs.len(),
+            limit
+        );
+
         let mut results = Vec::new();
         for sig_info in sigs.iter() {
             let signature = Signature::from_str(&sig_info.signature)?;
             let block_time = sig_info.block_time;
-            
+
             // Filter by time window if configured
             if let Some(window_days) = config.time_window_days {
                 if let Some(time) = block_time {
@@ -318,10 +332,10 @@ impl HistoryScanner {
                     }
                 }
             }
-            
+
             results.push((signature, block_time));
         }
-        
+
         Ok(results)
     }
 
@@ -331,28 +345,30 @@ impl HistoryScanner {
         signature: &Signature,
     ) -> Result<TransactionWithMetadata> {
         // Get transaction with Base64 encoding (for transaction) + metadata
-        let tx_response = rpc.get_transaction_with_config(
-            signature,
-            RpcTransactionConfig {
-                encoding: Some(UiTransactionEncoding::Base64),
-                commitment: Some(CommitmentConfig::confirmed()),
-                max_supported_transaction_version: Some(0),
-            },
-        ).map_err(|e| {
-            let error_str = e.to_string();
-            if error_str.contains("invalid type: null, expected struct") {
-                anyhow!("Transaction not found or too old: {}", signature)
-            } else {
-                anyhow!("RPC error fetching transaction: {}", e)
-            }
-        })?;
+        let tx_response = rpc
+            .get_transaction_with_config(
+                signature,
+                RpcTransactionConfig {
+                    encoding: Some(UiTransactionEncoding::Base64),
+                    commitment: Some(CommitmentConfig::confirmed()),
+                    max_supported_transaction_version: Some(0),
+                },
+            )
+            .map_err(|e| {
+                let error_str = e.to_string();
+                if error_str.contains("invalid type: null, expected struct") {
+                    anyhow!("Transaction not found or too old: {}", signature)
+                } else {
+                    anyhow!("RPC error fetching transaction: {}", e)
+                }
+            })?;
 
         // Extract transaction and metadata
         let tx_with_meta = tx_response.transaction;
-        
+
         // Parse inner instructions from metadata (preserved even with Base64 encoding)
         let inner_instructions = Self::parse_inner_instructions(&tx_with_meta)?;
-        
+
         // Decode the transaction itself
         let encoded_tx = match &tx_with_meta {
             EncodedTransactionWithStatusMeta {
@@ -377,65 +393,64 @@ impl HistoryScanner {
 
         // Convert to legacy Transaction format for analyzers
         let transaction = Self::convert_to_legacy_transaction(versioned_tx)?;
-        
+
         // Extract all program IDs from inner instructions
-        let program_ids_from_inner = Self::extract_inner_program_ids(&inner_instructions, &transaction);
-        
+        let program_ids_from_inner =
+            Self::extract_inner_program_ids(&inner_instructions, &transaction);
+
         debug!(
             "Transaction {}: {} inner instruction sets, {} unique inner programs",
             signature,
             inner_instructions.len(),
             program_ids_from_inner.len()
         );
-        
+
         Ok(TransactionWithMetadata {
             transaction,
             inner_instructions,
             program_ids_from_inner,
         })
     }
-    
+
     /// Parse inner instructions from transaction metadata
     fn parse_inner_instructions(
         tx_with_meta: &EncodedTransactionWithStatusMeta,
     ) -> Result<Vec<InnerInstructionSet>> {
         let mut result = Vec::new();
-        
+
         if let Some(ref meta) = tx_with_meta.meta {
             // Handle OptionSerializer - convert to Option
             let inner_instructions_opt = match &meta.inner_instructions {
                 OptionSerializer::Some(inner) => Some(inner),
                 OptionSerializer::None | OptionSerializer::Skip => None,
             };
-            
+
             if let Some(inner_instructions) = inner_instructions_opt {
                 for ui_inner in inner_instructions {
                     let mut parsed_instructions = Vec::new();
-                    
+
                     for ui_instruction in &ui_inner.instructions {
                         if let Some(parsed) = Self::parse_ui_instruction(ui_instruction) {
                             parsed_instructions.push(parsed);
                         }
                     }
-                    
+
                     result.push(InnerInstructionSet {
                         instructions: parsed_instructions,
                     });
                 }
             }
         }
-        
+
         Ok(result)
     }
-    
+
     /// Parse a UI instruction into our format
     fn parse_ui_instruction(ui_inst: &UiInstruction) -> Option<ParsedInnerInstruction> {
         match ui_inst {
             UiInstruction::Compiled(compiled) => {
-                let data = bs58::decode(&compiled.data)
-                    .into_vec()
-                    .ok()?;
-                
+                let data = bs58::decode(&compiled.data).into_vec().ok()?;
+
                 Some(ParsedInnerInstruction {
                     program_id: compiled.program_id_index.to_string(),
                     accounts: compiled.accounts.clone(),
@@ -445,14 +460,14 @@ impl HistoryScanner {
             _ => None, // Skip parsed instructions for now
         }
     }
-    
+
     /// Extract program IDs from inner instructions
     fn extract_inner_program_ids(
         inner_instructions: &[InnerInstructionSet],
         transaction: &Transaction,
     ) -> Vec<String> {
         let mut program_ids = std::collections::HashSet::new();
-        
+
         for inner_set in inner_instructions {
             for inner_inst in &inner_set.instructions {
                 // Convert program_id_index to actual pubkey
@@ -463,7 +478,7 @@ impl HistoryScanner {
                 }
             }
         }
-        
+
         program_ids.into_iter().collect()
     }
 
@@ -486,7 +501,7 @@ impl HistoryScanner {
                     recent_blockhash: v0_message.recent_blockhash,
                     instructions: v0_message.instructions,
                 };
-                
+
                 Ok(Transaction {
                     signatures: versioned_tx.signatures,
                     message,
@@ -502,20 +517,23 @@ impl HistoryScanner {
         rule_engine: &Arc<RuleEngine>,
         signature: &Signature,
         block_time: Option<i64>,
-    ) -> Result<(Option<ThreatAssessment>, Vec<(String, Option<RuleDecision>)>)> {
+    ) -> Result<(
+        Option<ThreatAssessment>,
+        Vec<(String, Option<RuleDecision>)>,
+    )> {
         // Fetch transaction with full metadata (including inner instructions)
         let tx_with_meta = Self::fetch_transaction(rpc, signature).await?;
 
         // Extract program IDs from both top-level and inner instructions
         let mut all_program_ids = Self::extract_program_ids(&tx_with_meta.transaction);
-        
+
         // Add programs from inner instructions (CPIs)
         for inner_program in &tx_with_meta.program_ids_from_inner {
             if !all_program_ids.contains(inner_program) {
                 all_program_ids.push(inner_program.clone());
             }
         }
-        
+
         debug!(
             "Transaction {}: {} top-level programs, {} inner programs, {} total unique",
             signature,
@@ -529,21 +547,20 @@ impl HistoryScanner {
 
         // Convert to threat assessment
         let threat = Self::rule_decision_to_threat(signature, block_time, rule_decision.clone())?;
-        
+
         // Attach rule decision to programs if there was a threat
         let programs_with_decisions = if threat.is_some() {
-            all_program_ids.into_iter()
+            all_program_ids
+                .into_iter()
                 .map(|p| (p, Some(rule_decision.clone())))
                 .collect()
         } else {
-            all_program_ids.into_iter()
-                .map(|p| (p, None))
-                .collect()
+            all_program_ids.into_iter().map(|p| (p, None)).collect()
         };
 
         Ok((threat, programs_with_decisions))
     }
-    
+
     /// Extract all program IDs from top-level transaction instructions
     fn extract_program_ids(tx: &Transaction) -> Vec<String> {
         tx.message

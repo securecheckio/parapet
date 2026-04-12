@@ -1,5 +1,5 @@
 //! Simple API key generator for Parapet
-//! 
+//!
 //! Usage:
 //!   cargo run --bin keygen
 //!   cargo run --bin keygen -- --count 5
@@ -11,7 +11,7 @@ use std::env;
 fn generate_api_key(prefix: &str) -> String {
     const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     const KEY_LENGTH: usize = 48; // 48 chars = 286 bits of entropy
-    
+
     let mut rng = rand::thread_rng();
     let random_part: String = (0..KEY_LENGTH)
         .map(|_| {
@@ -19,16 +19,16 @@ fn generate_api_key(prefix: &str) -> String {
             CHARSET[idx] as char
         })
         .collect();
-    
+
     format!("{}_{}", prefix, random_part)
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    
+
     let mut count = 1;
     let mut prefix = "sc_test".to_string();
-    
+
     // Parse arguments
     let mut i = 1;
     while i < args.len() {
@@ -69,10 +69,13 @@ fn main() {
         }
         i += 1;
     }
-    
-    println!("🔑 Generating {} API key(s) with prefix '{}'", count, prefix);
+
+    println!(
+        "🔑 Generating {} API key(s) with prefix '{}'",
+        count, prefix
+    );
     println!();
-    
+
     let mut keys = Vec::new();
     for i in 1..=count {
         let key = generate_api_key(&prefix);
@@ -83,7 +86,7 @@ fn main() {
             println!("Key {}: {}", i, key);
         }
     }
-    
+
     println!();
     println!("📝 Add to your .env file:");
     if count == 1 {

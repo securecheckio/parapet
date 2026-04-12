@@ -16,7 +16,7 @@ pub use parapet_core::rules;
 
 // Re-export for external use
 pub use auth::{AuthContext, AuthProvider, AuthResult};
+pub use parapet_core;
 pub use rpc_handler::handle_rpc;
 pub use server::{build_app_router, AuthMode, FeedSourceConfig, ServerConfig};
-pub use parapet_core;
 pub use types::AppState;

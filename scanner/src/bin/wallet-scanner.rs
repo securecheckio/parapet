@@ -2,18 +2,19 @@ use anyhow::{anyhow, Context, Result};
 use base64::Engine;
 use clap::{Parser, ValueEnum};
 use colored::Colorize;
-use parapet_scanner::{WalletScanner, ScanConfig, ScanReport, Severity, ThreatType};
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
+use parapet_scanner::{ScanConfig, ScanReport, Severity, ThreatType, WalletScanner};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{
-    commitment_config::CommitmentConfig,
-    message::Message,
-    pubkey::Pubkey,
-    signature::read_keypair_file,
-    transaction::Transaction,
+    commitment_config::CommitmentConfig, message::Message, pubkey::Pubkey,
+    signature::read_keypair_file, transaction::Transaction,
 };
 use spl_token::instruction as token_instruction;
-use std::{io::{self, Write}, str::FromStr, sync::Arc};
+use std::{
+    io::{self, Write},
+    str::FromStr,
+    sync::Arc,
+};
 
 #[derive(Parser, Debug)]
 #[command(name = "wallet-scanner")]
@@ -87,9 +88,24 @@ async fn main() -> Result<()> {
     let args = Args::parse();
 
     println!();
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_blue().bold());
-    println!("{}", "            Parapet Wallet Security Scanner".bright_blue().bold());
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_blue().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════"
+            .bright_blue()
+            .bold()
+    );
+    println!(
+        "{}",
+        "            Parapet Wallet Security Scanner"
+            .bright_blue()
+            .bold()
+    );
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════"
+            .bright_blue()
+            .bold()
+    );
     println!();
 
     // Validate wallet address
@@ -100,7 +116,8 @@ async fn main() -> Result<()> {
     println!("🔍 Scanning wallet: {}", args.wallet.bright_cyan());
     println!("🌐 Network: {}", args.network.bright_yellow());
     println!("📡 RPC: {}", args.rpc_url.bright_black());
-    println!("📊 Scope: {} transactions, {} days back", 
+    println!(
+        "📊 Scope: {} transactions, {} days back",
         args.max_transactions.to_string().bright_yellow(),
         args.days.to_string().bright_yellow()
     );
@@ -109,7 +126,7 @@ async fn main() -> Result<()> {
     // Initialize analyzers and rule engine (just like the proxy does)
     println!("⚙️  Initializing analyzers and rule engine...");
     let (registry, engine) = initialize_analyzers_and_rules(args.safe_programs_file.clone())?;
-    
+
     // Calculate recommended delay based on active analyzers (dynamic!)
     let analyzer_delay = registry.get_recommended_delay_ms();
     let effective_delay = if args.rpc_delay_ms == 0 {
@@ -119,31 +136,32 @@ async fn main() -> Result<()> {
         // Use the slower of user-specified or analyzer-recommended
         args.rpc_delay_ms.max(analyzer_delay)
     };
-    
+
     if effective_delay > 0 {
-        println!("⏱️  Rate coordination: {}ms delay between transactions", 
+        println!(
+            "⏱️  Rate coordination: {}ms delay between transactions",
             effective_delay.to_string().bright_black()
         );
         if analyzer_delay > 0 && args.rpc_delay_ms == 0 {
-            println!("    (auto-calculated from active analyzers)", );
+            println!("    (auto-calculated from active analyzers)",);
         } else if args.rpc_delay_ms > analyzer_delay {
-            println!("    (user override, analyzer recommends {}ms)", analyzer_delay);
+            println!(
+                "    (user override, analyzer recommends {}ms)",
+                analyzer_delay
+            );
         }
     }
     println!();
-    
+
     // Create scanner WITH analyzers for full capability
-    let scanner = WalletScanner::with_analyzers(
-        args.rpc_url.clone(),
-        registry,
-        engine,
-    ).context("Failed to create wallet scanner")?;
+    let scanner = WalletScanner::with_analyzers(args.rpc_url.clone(), registry, engine)
+        .context("Failed to create wallet scanner")?;
 
     // Configure scan - full historical analysis
     let config = ScanConfig {
         max_transactions: Some(args.max_transactions),
         time_window_days: Some(args.days),
-        rpc_delay_ms: effective_delay,  // Use calculated effective delay
+        rpc_delay_ms: effective_delay, // Use calculated effective delay
         check_active_threats: true,
         check_historical: true,
         commitment: CommitmentConfig::confirmed(),
@@ -178,7 +196,9 @@ async fn main() -> Result<()> {
 }
 
 /// Initialize analyzers and rule engine (same as proxy does)
-fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
+fn initialize_analyzers_and_rules(
+    safe_programs_file: Option<String>,
+) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
     use parapet_core::rules::analyzers::*;
 
     // Helper to register analyzers
@@ -191,12 +211,12 @@ fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<
         registry.register(Arc::new(TokenInstructionAnalyzer::new()));
         registry.register(Arc::new(SystemProgramAnalyzer::new()));
         registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
-        
+
         // Register instruction padding analyzer (protection against padding attacks)
         registry.register(Arc::new(
-            parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer::new()
+            parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer::new(),
         ));
-        
+
         // Deep scanning: Inner instruction (CPI) analysis
         // Load with custom safe programs list if provided
         let inner_analyzer = if let Some(ref path) = safe_programs_file {
@@ -206,7 +226,10 @@ fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<
                     analyzer
                 }
                 Err(e) => {
-                    eprintln!("⚠️  Failed to load custom safe programs from {}: {}", path, e);
+                    eprintln!(
+                        "⚠️  Failed to load custom safe programs from {}: {}",
+                        path, e
+                    );
                     eprintln!("   Using default safe programs list");
                     InnerInstructionAnalyzer::new()
                 }
@@ -219,19 +242,19 @@ fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<
         // Register third-party analyzers (always enabled for comprehensive analysis)
         // Helius Identity: Provides program names, categories, and reputation
         registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
-        
+
         // Helius Transfer: Detects velocity and counterparty patterns (active drains)
         registry.register(Arc::new(HeliusTransferAnalyzer::new()));
-        
+
         // Helius Funding: Detects sybil attacks and bot farms
         registry.register(Arc::new(HeliusFundingAnalyzer::new()));
-        
+
         // OtterSec Verification: Checks if programs are cryptographically verified
         registry.register(Arc::new(OtterSecVerifiedAnalyzer::new()));
-        
+
         // Jupiter Token: Provides token metadata and verification
         registry.register(Arc::new(JupiterTokenAnalyzer::new()));
-        
+
         // Rugcheck: Scam/rugpull detection (FREE - no API key required)
         registry.register(Arc::new(RugcheckAnalyzer::new()));
     }
@@ -244,30 +267,29 @@ fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<
     let mut engine = RuleEngine::new(engine_registry);
 
     // Load rules from default location or environment
-    let rules_path = std::env::var("RULES_PATH")
-        .ok()
-        .or_else(|| {
-            // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
-            let enhanced_candidates = vec![
-                "../../proxy/rules/presets/wallet-scan-enhanced.json",
-                "../proxy/rules/presets/wallet-scan-enhanced.json",
-                "./rules/presets/wallet-scan-enhanced.json",
-                "rules/presets/wallet-scan-enhanced.json",
-            ];
-            
-            // Fallback to bot-essentials if enhanced not found
-            let fallback_candidates = vec![
-                "../../proxy/rules/presets/bot-essentials.json",
-                "../proxy/rules/presets/bot-essentials.json",
-                "./rules/presets/bot-essentials.json",
-                "rules/presets/bot-essentials.json",
-            ];
-            
-            enhanced_candidates.iter()
-                .chain(fallback_candidates.iter())
-                .find(|p| std::path::Path::new(p).exists())
-                .map(|s| s.to_string())
-        });
+    let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
+        // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
+        let enhanced_candidates = vec![
+            "../../proxy/rules/presets/wallet-scan-enhanced.json",
+            "../proxy/rules/presets/wallet-scan-enhanced.json",
+            "./rules/presets/wallet-scan-enhanced.json",
+            "rules/presets/wallet-scan-enhanced.json",
+        ];
+
+        // Fallback to bot-essentials if enhanced not found
+        let fallback_candidates = vec![
+            "../../proxy/rules/presets/bot-essentials.json",
+            "../proxy/rules/presets/bot-essentials.json",
+            "./rules/presets/bot-essentials.json",
+            "rules/presets/bot-essentials.json",
+        ];
+
+        enhanced_candidates
+            .iter()
+            .chain(fallback_candidates.iter())
+            .find(|p| std::path::Path::new(p).exists())
+            .map(|s| s.to_string())
+    });
 
     if let Some(path) = rules_path {
         engine.load_rules_from_file(&path)?;
@@ -285,9 +307,15 @@ fn initialize_analyzers_and_rules(safe_programs_file: Option<String>) -> Result<
 
 fn print_pretty_report(report: &ScanReport) {
     // Security Score Header
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!("{}", "  SECURITY ASSESSMENT".bright_white().bold());
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!();
 
     // Security Score with color coding
@@ -299,55 +327,89 @@ fn print_pretty_report(report: &ScanReport) {
         _ => ("bright green", "green", "✅"),
     };
 
-    println!("  {} Security Score: {} / 100", 
+    println!(
+        "  {} Security Score: {} / 100",
         icon,
-        format!("{}", report.security_score).color(score_color).bold()
+        format!("{}", report.security_score)
+            .color(score_color)
+            .bold()
     );
-    println!("  Risk Level: {}", 
+    println!(
+        "  Risk Level: {}",
         report.risk_level.color(risk_color).bold()
     );
     println!();
 
     // Statistics
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!("{}", "  SCAN STATISTICS".bright_white().bold());
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!();
-    
+
     println!("  📅 Time Range: {} days", report.stats.time_range_days);
     if report.stats.transactions_analyzed > 0 {
-        println!("  📝 Transactions Analyzed: {}", report.stats.transactions_analyzed);
+        println!(
+            "  📝 Transactions Analyzed: {}",
+            report.stats.transactions_analyzed
+        );
     } else {
-        println!("  📝 Transactions Analyzed: {} (no recent transactions found)", 
+        println!(
+            "  📝 Transactions Analyzed: {} (no recent transactions found)",
             report.stats.transactions_analyzed
         );
     }
-    
+
     println!("  ⚠️  Total Threats Found: {}", report.stats.threats_found);
     println!();
-    
+
     if report.stats.threats_found > 0 {
         println!("  Threat Breakdown:");
         if report.stats.critical_count > 0 {
-            println!("    {} Critical", format!("{:>3}", report.stats.critical_count).bright_red().bold());
+            println!(
+                "    {} Critical",
+                format!("{:>3}", report.stats.critical_count)
+                    .bright_red()
+                    .bold()
+            );
         }
         if report.stats.high_count > 0 {
-            println!("    {} High", format!("{:>3}", report.stats.high_count).red());
+            println!(
+                "    {} High",
+                format!("{:>3}", report.stats.high_count).red()
+            );
         }
         if report.stats.medium_count > 0 {
-            println!("    {} Medium", format!("{:>3}", report.stats.medium_count).yellow());
+            println!(
+                "    {} Medium",
+                format!("{:>3}", report.stats.medium_count).yellow()
+            );
         }
         if report.stats.low_count > 0 {
-            println!("    {} Low", format!("{:>3}", report.stats.low_count).bright_black());
+            println!(
+                "    {} Low",
+                format!("{:>3}", report.stats.low_count).bright_black()
+            );
         }
         println!();
     }
 
     // Threats Detail
     if !report.threats.is_empty() {
-        println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+        );
         println!("{}", "  DETECTED THREATS".bright_white().bold());
-        println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+        );
         println!();
 
         for (idx, threat) in report.threats.iter().enumerate() {
@@ -358,45 +420,70 @@ fn print_pretty_report(report: &ScanReport) {
                 Severity::Low => ("ℹ️ ", "bright black"),
             };
 
-            println!("  {} {} {}", 
+            println!(
+                "  {} {} {}",
                 format!("[{}]", idx + 1).bright_black(),
                 severity_icon,
-                format!("{:?}", threat.severity).color(severity_color).bold()
+                format!("{:?}", threat.severity)
+                    .color(severity_color)
+                    .bold()
             );
-            
+
             // Extract details based on threat type
             match &threat.threat_type {
-                ThreatType::ActiveUnlimitedDelegation { token_account, delegate, .. } => {
+                ThreatType::ActiveUnlimitedDelegation {
+                    token_account,
+                    delegate,
+                    ..
+                } => {
                     println!("     Type: Active Unlimited Delegation");
                     println!("     Token: {}", token_account.bright_black());
                     println!("     Delegate: {}", delegate.bright_black());
                 }
-                ThreatType::PossibleExploitedDelegation { token_account, delegate, .. } => {
+                ThreatType::PossibleExploitedDelegation {
+                    token_account,
+                    delegate,
+                    ..
+                } => {
                     println!("     Type: Possibly Exploited Delegation");
                     println!("     Token: {}", token_account.bright_black());
                     println!("     Delegate: {}", delegate.bright_black());
                 }
-                ThreatType::CompromisedAuthority { account, expected_owner, actual_owner } => {
+                ThreatType::CompromisedAuthority {
+                    account,
+                    expected_owner,
+                    actual_owner,
+                } => {
                     println!("     Type: Compromised Authority");
                     println!("     Account: {}", account.bright_black());
-                    println!("     Expected: {} → Actual: {}", 
-                        expected_owner.bright_black(), 
+                    println!(
+                        "     Expected: {} → Actual: {}",
+                        expected_owner.bright_black(),
                         actual_owner.bright_red()
                     );
                 }
-                ThreatType::SuspiciousTransaction { signature, threat_description, risk_score, .. } => {
+                ThreatType::SuspiciousTransaction {
+                    signature,
+                    threat_description,
+                    risk_score,
+                    ..
+                } => {
                     println!("     Type: Suspicious Transaction");
                     println!("     Description: {}", threat_description);
                     println!("     Risk Score: {}/100", risk_score);
                     println!("     Transaction: {}", signature.bright_black());
                 }
-                ThreatType::UnusualPattern { pattern_description, occurrences, .. } => {
+                ThreatType::UnusualPattern {
+                    pattern_description,
+                    occurrences,
+                    ..
+                } => {
                     println!("     Type: Unusual Pattern");
                     println!("     Description: {}", pattern_description);
                     println!("     Occurrences: {}", occurrences);
                 }
             }
-            
+
             println!("     📌 Action: {}", threat.recommendation.bright_yellow());
             println!();
         }
@@ -404,9 +491,15 @@ fn print_pretty_report(report: &ScanReport) {
 
     // Suspicious Programs
     if !report.suspicious_programs.is_empty() {
-        println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+        );
         println!("{}", "  SUSPICIOUS PROGRAMS".bright_white().bold());
-        println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+        println!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+        );
         println!();
 
         for program in &report.suspicious_programs {
@@ -419,12 +512,13 @@ fn print_pretty_report(report: &ScanReport) {
             };
 
             println!("  Program: {}", program.program_id.bright_cyan());
-            println!("    Risk Score: {}/100", 
+            println!(
+                "    Risk Score: {}/100",
                 format!("{}", program.risk_score).color(risk_color).bold()
             );
             println!("    Type: {}", program.threat_type);
             println!("    Occurrences: {}", program.occurrence_count);
-            
+
             // Show transaction signatures (up to 3, then indicate if there are more)
             if !program.transaction_signatures.is_empty() {
                 print!("    Transactions: ");
@@ -437,29 +531,47 @@ fn print_pretty_report(report: &ScanReport) {
                     print!("{}", sig.bright_black());
                 }
                 if program.transaction_signatures.len() > max_to_show {
-                    print!(" {} {} more", 
-                        "+".bright_yellow(), 
-                        (program.transaction_signatures.len() - max_to_show).to_string().bright_yellow()
+                    print!(
+                        " {} {} more",
+                        "+".bright_yellow(),
+                        (program.transaction_signatures.len() - max_to_show)
+                            .to_string()
+                            .bright_yellow()
                     );
                 }
                 println!();
             }
-            
+
             println!("    Summary: {}", program.analysis_summary);
-            println!("    📌 Recommendation: {}", program.recommendation.bright_yellow());
+            println!(
+                "    📌 Recommendation: {}",
+                program.recommendation.bright_yellow()
+            );
             println!();
         }
     }
 
     // Final recommendation
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!("{}", "  RECOMMENDATION".bright_white().bold());
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!();
 
     match report.security_score {
         0..=30 => {
-            println!("  {} {}", "🚨".bright_red(), "CRITICAL: This wallet shows signs of compromise!".bright_red().bold());
+            println!(
+                "  {} {}",
+                "🚨".bright_red(),
+                "CRITICAL: This wallet shows signs of compromise!"
+                    .bright_red()
+                    .bold()
+            );
             println!();
             println!("  Immediate Actions:");
             println!("    1. Stop using this wallet immediately");
@@ -469,7 +581,13 @@ fn print_pretty_report(report: &ScanReport) {
             println!("    5. Review how the compromise occurred");
         }
         31..=50 => {
-            println!("  {} {}", "⚠️ ".bright_red(), "HIGH RISK: Multiple security concerns detected".red().bold());
+            println!(
+                "  {} {}",
+                "⚠️ ".bright_red(),
+                "HIGH RISK: Multiple security concerns detected"
+                    .red()
+                    .bold()
+            );
             println!();
             println!("  Recommended Actions:");
             println!("    1. Review all detected threats carefully");
@@ -478,7 +596,13 @@ fn print_pretty_report(report: &ScanReport) {
             println!("    4. Enable additional security measures");
         }
         51..=75 => {
-            println!("  {} {}", "⚠️ ".yellow(), "MODERATE RISK: Some security concerns found".yellow().bold());
+            println!(
+                "  {} {}",
+                "⚠️ ".yellow(),
+                "MODERATE RISK: Some security concerns found"
+                    .yellow()
+                    .bold()
+            );
             println!();
             println!("  Recommended Actions:");
             println!("    1. Review the detected issues");
@@ -486,14 +610,22 @@ fn print_pretty_report(report: &ScanReport) {
             println!("    3. Be cautious with future transactions");
         }
         76..=90 => {
-            println!("  {} {}", "✓".bright_green(), "LOW RISK: Minor concerns detected".green());
+            println!(
+                "  {} {}",
+                "✓".bright_green(),
+                "LOW RISK: Minor concerns detected".green()
+            );
             println!();
             println!("  Suggested Actions:");
             println!("    1. Review low-priority items");
             println!("    2. Continue monitoring wallet activity");
         }
         _ => {
-            println!("  {} {}", "✅".bright_green(), "SAFE: No security threats detected".bright_green().bold());
+            println!(
+                "  {} {}",
+                "✅".bright_green(),
+                "SAFE: No security threats detected".bright_green().bold()
+            );
             println!();
             println!("  Your wallet appears secure. Continue best practices:");
             println!("    • Only connect to trusted dApps");
@@ -503,7 +635,10 @@ fn print_pretty_report(report: &ScanReport) {
     }
 
     println!();
-    println!("{}", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black());
+    println!(
+        "{}",
+        "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━".bright_black()
+    );
     println!();
 }
 
@@ -522,24 +657,26 @@ fn print_brief_report(report: &ScanReport) {
         "🚨"
     };
 
-    println!("{} {} - Security Score: {}/100 - Risk: {}", 
-        status_icon,
-        report.wallet,
-        report.security_score,
-        report.risk_level
+    println!(
+        "{} {} - Security Score: {}/100 - Risk: {}",
+        status_icon, report.wallet, report.security_score, report.risk_level
     );
-    
+
     if report.stats.threats_found > 0 {
-        println!("   Threats: {} critical, {} high, {} medium, {} low",
+        println!(
+            "   Threats: {} critical, {} high, {} medium, {} low",
             report.stats.critical_count,
             report.stats.high_count,
             report.stats.medium_count,
             report.stats.low_count
         );
     }
-    
+
     if !report.suspicious_programs.is_empty() {
-        println!("   Suspicious programs: {}", report.suspicious_programs.len());
+        println!(
+            "   Suspicious programs: {}",
+            report.suspicious_programs.len()
+        );
     }
 }
 
@@ -552,7 +689,10 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
         "medium" => Severity::Medium,
         "low" => Severity::Low,
         _ => {
-            eprintln!("⚠️  Invalid severity threshold '{}', using 'high'", args.severity_threshold);
+            eprintln!(
+                "⚠️  Invalid severity threshold '{}', using 'high'",
+                args.severity_threshold
+            );
             Severity::High
         }
     };
@@ -575,11 +715,31 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
 
         // Extract approval threats
         match &threat.threat_type {
-            ThreatType::ActiveUnlimitedDelegation { token_account, delegate, amount, .. } => {
-                dangerous_approvals.push((token_account.clone(), delegate.clone(), *amount, threat.severity.clone()));
+            ThreatType::ActiveUnlimitedDelegation {
+                token_account,
+                delegate,
+                amount,
+                ..
+            } => {
+                dangerous_approvals.push((
+                    token_account.clone(),
+                    delegate.clone(),
+                    *amount,
+                    threat.severity.clone(),
+                ));
             }
-            ThreatType::PossibleExploitedDelegation { token_account, delegate, amount, .. } => {
-                dangerous_approvals.push((token_account.clone(), delegate.clone(), *amount, threat.severity.clone()));
+            ThreatType::PossibleExploitedDelegation {
+                token_account,
+                delegate,
+                amount,
+                ..
+            } => {
+                dangerous_approvals.push((
+                    token_account.clone(),
+                    delegate.clone(),
+                    *amount,
+                    threat.severity.clone(),
+                ));
             }
             _ => {}
         }
@@ -587,20 +747,40 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
 
     if dangerous_approvals.is_empty() {
         println!();
-        println!("{}", "═══════════════════════════════════════════════════════════".bright_green());
-        println!("  ✅ No dangerous approvals found meeting {} severity threshold", args.severity_threshold);
-        println!("{}", "═══════════════════════════════════════════════════════════".bright_green());
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════".bright_green()
+        );
+        println!(
+            "  ✅ No dangerous approvals found meeting {} severity threshold",
+            args.severity_threshold
+        );
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════".bright_green()
+        );
         println!();
         return Ok(());
     }
 
     // Show dangerous approvals
     println!();
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_red().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════"
+            .bright_red()
+            .bold()
+    );
     println!("  {} DANGEROUS APPROVALS DETECTED", "🚨".bright_red());
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_red().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════"
+            .bright_red()
+            .bold()
+    );
     println!();
-    println!("Found {} dangerous approvals meeting '{}' severity threshold:", 
+    println!(
+        "Found {} dangerous approvals meeting '{}' severity threshold:",
         dangerous_approvals.len().to_string().bright_red().bold(),
         args.severity_threshold.bright_yellow()
     );
@@ -620,7 +800,8 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
             amount.to_string()
         };
 
-        println!("  {}. [{}] Token Account: {}", 
+        println!(
+            "  {}. [{}] Token Account: {}",
             (i + 1).to_string().bright_white().bold(),
             severity_str,
             token_account.bright_cyan()
@@ -632,12 +813,17 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
 
     // Ask for confirmation unless auto-revoke
     if !args.auto_revoke {
-        print!("{} ", "Do you want to revoke these approvals? [y/N]:".bright_yellow().bold());
+        print!(
+            "{} ",
+            "Do you want to revoke these approvals? [y/N]:"
+                .bright_yellow()
+                .bold()
+        );
         io::stdout().flush()?;
-        
+
         let mut response = String::new();
         io::stdin().read_line(&mut response)?;
-        
+
         if !response.trim().eq_ignore_ascii_case("y") {
             println!("Revoke cancelled.");
             return Ok(());
@@ -649,15 +835,18 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
     println!();
 
     // Extract token accounts
-    let token_accounts: Vec<String> = dangerous_approvals.iter()
+    let token_accounts: Vec<String> = dangerous_approvals
+        .iter()
         .map(|(account, _, _, _)| account.clone())
         .collect();
 
     // Build revoke transactions
     let rpc_client = RpcClient::new(args.rpc_url.clone());
-    let revoke_txs = build_batch_revoke_transactions(&args.wallet, &token_accounts, &rpc_client).await?;
+    let revoke_txs =
+        build_batch_revoke_transactions(&args.wallet, &token_accounts, &rpc_client).await?;
 
-    println!("Generated {} transaction(s) to revoke {} approvals", 
+    println!(
+        "Generated {} transaction(s) to revoke {} approvals",
         revoke_txs.len().to_string().bright_green(),
         dangerous_approvals.len().to_string().bright_green()
     );
@@ -680,8 +869,7 @@ async fn build_batch_revoke_transactions(
     token_accounts: &[String],
     rpc_client: &RpcClient,
 ) -> Result<Vec<Transaction>> {
-    let owner = Pubkey::from_str(wallet)
-        .map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
+    let owner = Pubkey::from_str(wallet).map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
 
     let mut transactions = Vec::new();
     const MAX_REVOKES_PER_TX: usize = 10;
@@ -690,15 +878,12 @@ async fn build_batch_revoke_transactions(
         let mut instructions = Vec::new();
 
         for token_account_str in chunk {
-            let token_account_pubkey = Pubkey::from_str(token_account_str)
-                .map_err(|e| anyhow!("Invalid token account address {}: {}", token_account_str, e))?;
+            let token_account_pubkey = Pubkey::from_str(token_account_str).map_err(|e| {
+                anyhow!("Invalid token account address {}: {}", token_account_str, e)
+            })?;
 
-            let revoke_ix = token_instruction::revoke(
-                &spl_token::id(),
-                &token_account_pubkey,
-                &owner,
-                &[],
-            )?;
+            let revoke_ix =
+                token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
 
             instructions.push(revoke_ix);
         }
@@ -740,7 +925,11 @@ async fn sign_and_submit_transactions(
         // Submit transaction
         match rpc_client.send_and_confirm_transaction(&signed_tx) {
             Ok(signature) => {
-                println!("{} {}", "✅".bright_green(), signature.to_string().bright_black());
+                println!(
+                    "{} {}",
+                    "✅".bright_green(),
+                    signature.to_string().bright_black()
+                );
             }
             Err(e) => {
                 println!("{} {}", "❌".bright_red(), format!("Failed: {}", e).red());
@@ -750,9 +939,18 @@ async fn sign_and_submit_transactions(
     }
 
     println!();
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_green());
-    println!("  {} All approvals revoked successfully!", "✅".bright_green());
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_green());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".bright_green()
+    );
+    println!(
+        "  {} All approvals revoked successfully!",
+        "✅".bright_green()
+    );
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".bright_green()
+    );
     println!();
 
     Ok(())
@@ -760,14 +958,23 @@ async fn sign_and_submit_transactions(
 
 /// Show instructions for manual signing (no keypair provided)
 fn show_manual_signing_instructions(transactions: &[Transaction]) {
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_yellow());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".bright_yellow()
+    );
     println!("  {} Manual Signing Required", "📋".bright_yellow());
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_yellow());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".bright_yellow()
+    );
     println!();
     println!("No keypair provided. To sign these transactions:");
     println!();
     println!("Option 1: Provide keypair file (recommended for automation):");
-    println!("  {} --keypair ~/.config/solana/id.json", "wallet-scanner scan <WALLET> --revoke".bright_cyan());
+    println!(
+        "  {} --keypair ~/.config/solana/id.json",
+        "wallet-scanner scan <WALLET> --revoke".bright_cyan()
+    );
     println!();
     println!("Option 2: Use Solana CLI to sign:");
     println!();
@@ -775,7 +982,7 @@ fn show_manual_signing_instructions(transactions: &[Transaction]) {
     for (i, tx) in transactions.iter().enumerate() {
         let serialized = bincode::serialize(&tx).expect("Failed to serialize transaction");
         let base64 = base64::engine::general_purpose::STANDARD.encode(&serialized);
-        
+
         println!("  Transaction {}/{}:", i + 1, transactions.len());
         println!("  {}", "solana sign-transaction <(echo '{}')".bright_cyan());
         println!("    (replace '{{}}' with: {})", base64.bright_black());
@@ -788,12 +995,15 @@ fn show_manual_signing_instructions(transactions: &[Transaction]) {
     for (i, tx) in transactions.iter().enumerate() {
         let serialized = bincode::serialize(&tx).expect("Failed to serialize transaction");
         let base64 = base64::engine::general_purpose::STANDARD.encode(&serialized);
-        
+
         println!("  Transaction {}/{}:", i + 1, transactions.len());
         println!("  {}", base64.bright_black());
         println!();
     }
 
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_yellow());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════".bright_yellow()
+    );
     println!();
 }

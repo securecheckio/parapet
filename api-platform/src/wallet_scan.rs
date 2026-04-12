@@ -2,8 +2,8 @@ use axum::{
     extract::{Json, State},
     http::{HeaderMap, StatusCode},
 };
+use parapet_scanner::{ScanConfig, ScanReport, WalletScanner};
 use serde::{Deserialize, Serialize};
-use parapet_scanner::{WalletScanner, ScanConfig, ScanReport};
 
 use crate::state::PlatformState;
 

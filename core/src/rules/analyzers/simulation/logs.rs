@@ -153,7 +153,10 @@ impl SimulationAnalyzer for SimulationLogAnalyzer {
             fields.insert("programs_logged".to_string(), json!(programs_logged.len()));
             fields.insert("has_error_logs".to_string(), json!(has_errors));
             fields.insert("instruction_names".to_string(), json!(instruction_names));
-            fields.insert("program_invocations".to_string(), json!(program_invocations));
+            fields.insert(
+                "program_invocations".to_string(),
+                json!(program_invocations),
+            );
         } else {
             // No logs available
             fields.insert("log_count".to_string(), json!(0));
@@ -163,7 +166,10 @@ impl SimulationAnalyzer for SimulationLogAnalyzer {
             fields.insert("programs_logged".to_string(), json!(0));
             fields.insert("has_error_logs".to_string(), json!(false));
             fields.insert("instruction_names".to_string(), json!(Vec::<String>::new()));
-            fields.insert("program_invocations".to_string(), json!(Vec::<String>::new()));
+            fields.insert(
+                "program_invocations".to_string(),
+                json!(Vec::<String>::new()),
+            );
         }
 
         Ok(fields)

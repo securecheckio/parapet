@@ -76,12 +76,12 @@ impl ConsentPolicyConfig {
         let config: ConsentPolicyConfig = toml::from_str(&content)?;
         Ok(config)
     }
-    
+
     /// Get policy for a wallet
     pub fn get_wallet_policy(&self, wallet: &str) -> Option<&WalletConsentPolicy> {
         self.consent_policy.iter().find(|p| p.wallet == wallet)
     }
-    
+
     /// Get default thresholds
     pub fn get_default_thresholds(&self) -> (u32, u32) {
         (
@@ -89,12 +89,14 @@ impl ConsentPolicyConfig {
             self.consent.default_hard_block_above,
         )
     }
-    
+
     /// Check if a wallet is an authorized rule manager
     pub fn is_authorized_rule_manager(&self, wallet: &str) -> bool {
-        self.rule_management.authorized_rule_managers.contains(&wallet.to_string())
+        self.rule_management
+            .authorized_rule_managers
+            .contains(&wallet.to_string())
     }
-    
+
     /// Get rule manager permissions
     pub fn get_rule_manager_permissions(&self, wallet: &str) -> Option<&RuleManagerPermissions> {
         self.rule_manager.iter().find(|rm| rm.wallet == wallet)
@@ -118,9 +120,7 @@ impl Default for ConsentPolicyConfig {
                     enabled: true,
                     path: "/ws/escalations".to_string(),
                 },
-                notifications: NotificationsConfig {
-                    enabled: false,
-                },
+                notifications: NotificationsConfig { enabled: false },
             },
             rule_manager: vec![],
             consent_policy: vec![],
@@ -132,7 +132,7 @@ impl Default for ConsentPolicyConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_default_config() {
         let config = ConsentPolicyConfig::default();

@@ -8,19 +8,19 @@ use axum::{
 };
 use axum_extra::extract::cookie::{Cookie, CookieJar};
 use clap::Parser;
+use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
 use tower_http::cors::CorsLayer;
-use redis::AsyncCommands;
 
-mod config;
-mod state;
 mod auth;
+mod config;
+mod learning;
 mod payments;
 mod push;
 mod session;
-mod websocket;
-mod learning;
+mod state;
 mod wallet_scan;
+mod websocket;
 
 use state::PlatformState;
 
@@ -31,7 +31,7 @@ struct Cli {
     /// Path to base API config file (default: ./config.toml)
     #[arg(short, long, default_value = "config.toml")]
     config: String,
-    
+
     /// Path to platform config file (default: ./platform-config.toml)
     #[arg(short, long, default_value = "platform-config.toml")]
     platform_config: String,
@@ -44,87 +44,102 @@ fn main() -> Result<()> {
     log::info!("🚀 Starting Parapet Platform");
 
     let cli = Cli::parse();
-    
+
     // Load base API config
     let api_config = parapet_api_core::config::load_config_from_file(&cli.config)?;
     log::info!("✅ Loaded API config from {}", cli.config);
-    
+
     // Load platform-specific config
     let platform_config = config::load_platform_config_from_file(&cli.platform_config)?;
     log::info!("✅ Loaded platform config from {}", cli.platform_config);
-    
+
     let server_addr = format!("{}:{}", api_config.server_host, api_config.server_port);
     let frontend_url = platform_config.frontend_url.clone();
-    
+
     // Build Tokio runtime with configured worker threads
     let mut builder = tokio::runtime::Builder::new_multi_thread();
     builder.enable_all();
-    
+
     if let Some(threads) = api_config.worker_threads {
         log::info!("🧵 Configuring {} worker threads", threads);
         builder.worker_threads(threads);
     }
-    
+
     let runtime = builder.build()?;
-    
+
     runtime.block_on(async move {
         // Initialize extended state
         let state = PlatformState::new(api_config, platform_config).await?;
-        
+
         // Build router: core API routes + platform routes
         let core_router = parapet_api_core::create_router(state.clone());
         let platform_router = Router::new()
-        .route("/health", get(health_check))
-        .route("/vapid-public-key", get(get_vapid_public_key))
-        // Session-based auth endpoints (for dashboard)
-        .route("/auth/login", post(login))
-        .route("/auth/me", get(get_current_user))
-        .route("/auth/logout", post(logout))
-        .route("/auth/api-key", get(get_my_api_key))
-        .route("/auth/api-key/regenerate", post(regenerate_my_api_key))
-        // Session-protected dashboard endpoints
-        .route("/dashboard/stats", get(get_my_stats))
-        .route("/dashboard/events", get(get_my_events))
-        .route("/dashboard/usage", get(get_my_usage))
-        .route("/dashboard/rules", get(get_active_rules))
-        .route("/dashboard/threshold", put(update_blocking_threshold))
-        .route("/dashboard/notifications", put(toggle_notifications))
-        .route("/dashboard/push/subscribe", post(push::subscribe_push))
-        .route("/dashboard/ws", get(websocket::websocket_handler))
-        .route("/system/network", get(get_network_info))
-        // Learning system endpoints (public and session-protected)
-        .route("/learn/courses", get(learning::list_courses))
-        .route("/learn/courses/:course_id", get(learning::get_course_by_id))
-        .route("/learn/courses/slug/:slug", get(learning::get_course_by_slug))
-        .route("/learn/badges", get(learning::list_badges))
-        .route("/learn/badges/course/:course_id", get(learning::get_course_badges))
-        // Session-protected learning endpoints
-        .route("/learn/progress/me", get(learning::get_my_progress))
-        .route("/learn/progress/course/:course_id", get(learning::get_my_course_progress))
-        .route("/learn/progress/course/:course_id", put(learning::update_my_course_progress))
-        .route("/learn/badges/me", get(learning::get_my_badges))
-        // Legacy API key endpoints (for programmatic access)
-        .route("/signup", post(signup))
-        .route("/usage", get(get_usage))
-        .route("/api-keys", get(list_api_keys))
-        .route("/api-keys", post(create_api_key))
-        .route("/payment/create", post(create_payment))
-        .route("/payment/verify", post(verify_payment_handler))
-        .route("/payment/pricing", get(get_pricing))
-        .route("/stats/user/:api_key", get(get_user_stats))
-        .route("/stats/global", get(get_global_stats))
-        .route("/stats/events/:api_key", get(get_security_events))
-        .route("/events/update-signature", post(update_event_signature))
-        .route("/internal/push/send", post(push::internal_send_push))
-        // Wallet security scanner endpoint
-        .route("/wallet/scan", post(wallet_scan::scan_wallet))
+            .route("/health", get(health_check))
+            .route("/vapid-public-key", get(get_vapid_public_key))
+            // Session-based auth endpoints (for dashboard)
+            .route("/auth/login", post(login))
+            .route("/auth/me", get(get_current_user))
+            .route("/auth/logout", post(logout))
+            .route("/auth/api-key", get(get_my_api_key))
+            .route("/auth/api-key/regenerate", post(regenerate_my_api_key))
+            // Session-protected dashboard endpoints
+            .route("/dashboard/stats", get(get_my_stats))
+            .route("/dashboard/events", get(get_my_events))
+            .route("/dashboard/usage", get(get_my_usage))
+            .route("/dashboard/rules", get(get_active_rules))
+            .route("/dashboard/threshold", put(update_blocking_threshold))
+            .route("/dashboard/notifications", put(toggle_notifications))
+            .route("/dashboard/push/subscribe", post(push::subscribe_push))
+            .route("/dashboard/ws", get(websocket::websocket_handler))
+            .route("/system/network", get(get_network_info))
+            // Learning system endpoints (public and session-protected)
+            .route("/learn/courses", get(learning::list_courses))
+            .route("/learn/courses/:course_id", get(learning::get_course_by_id))
+            .route(
+                "/learn/courses/slug/:slug",
+                get(learning::get_course_by_slug),
+            )
+            .route("/learn/badges", get(learning::list_badges))
+            .route(
+                "/learn/badges/course/:course_id",
+                get(learning::get_course_badges),
+            )
+            // Session-protected learning endpoints
+            .route("/learn/progress/me", get(learning::get_my_progress))
+            .route(
+                "/learn/progress/course/:course_id",
+                get(learning::get_my_course_progress),
+            )
+            .route(
+                "/learn/progress/course/:course_id",
+                put(learning::update_my_course_progress),
+            )
+            .route("/learn/badges/me", get(learning::get_my_badges))
+            // Legacy API key endpoints (for programmatic access)
+            .route("/signup", post(signup))
+            .route("/usage", get(get_usage))
+            .route("/api-keys", get(list_api_keys))
+            .route("/api-keys", post(create_api_key))
+            .route("/payment/create", post(create_payment))
+            .route("/payment/verify", post(verify_payment_handler))
+            .route("/payment/pricing", get(get_pricing))
+            .route("/stats/user/:api_key", get(get_user_stats))
+            .route("/stats/global", get(get_global_stats))
+            .route("/stats/events/:api_key", get(get_security_events))
+            .route("/events/update-signature", post(update_event_signature))
+            .route("/internal/push/send", post(push::internal_send_push))
+            // Wallet security scanner endpoint
+            .route("/wallet/scan", post(wallet_scan::scan_wallet))
             .with_state(state.clone());
-        
+
         // Merge core + platform routes
-        let app = core_router
-            .merge(platform_router)
-            .layer(CorsLayer::new()
-                .allow_origin(frontend_url.parse::<axum::http::HeaderValue>().expect("Invalid FRONTEND_URL"))
+        let app = core_router.merge(platform_router).layer(
+            CorsLayer::new()
+                .allow_origin(
+                    frontend_url
+                        .parse::<axum::http::HeaderValue>()
+                        .expect("Invalid FRONTEND_URL"),
+                )
                 .allow_methods([
                     axum::http::Method::GET,
                     axum::http::Method::POST,
@@ -136,8 +151,9 @@ fn main() -> Result<()> {
                     axum::http::header::CONTENT_TYPE,
                     axum::http::header::AUTHORIZATION,
                 ])
-                .allow_credentials(true));
-        
+                .allow_credentials(true),
+        );
+
         log::info!("🔐 CORS configured for frontend: {}", frontend_url);
         log::info!("📡 Platform listening on http://{}", server_addr);
         log::info!("✅ Core API routes: /api/v1/*, /mcp/*, /ws/escalations");
@@ -171,10 +187,10 @@ struct NetworkInfo {
     network: String,
 }
 
-async fn get_network_info(
-    State(state): State<PlatformState>,
-) -> impl IntoResponse {
-    Json(NetworkInfo { network: state.config.solana_network.clone() })
+async fn get_network_info(State(state): State<PlatformState>) -> impl IntoResponse {
+    Json(NetworkInfo {
+        network: state.config.solana_network.clone(),
+    })
 }
 
 #[derive(Deserialize)]
@@ -326,14 +342,12 @@ async fn create_api_key(
     let new_api_key_hash = auth::hash_api_key(&new_api_key);
 
     // Insert new key
-    sqlx::query(
-        "INSERT INTO api_keys (user_id, key_hash, name) VALUES ($1, $2, $3)",
-    )
-    .bind(&user_id)
-    .bind(&new_api_key_hash)
-    .bind(&req.name)
-    .execute(&state.db)
-    .await?;
+    sqlx::query("INSERT INTO api_keys (user_id, key_hash, name) VALUES ($1, $2, $3)")
+        .bind(&user_id)
+        .bind(&new_api_key_hash)
+        .bind(&req.name)
+        .execute(&state.db)
+        .await?;
 
     log::info!("✅ New API key created for user {}", user_id);
 
@@ -399,7 +413,9 @@ async fn create_payment(
 ) -> Result<Json<CreatePaymentResponse>, AppError> {
     // Check if payments are enabled
     if !state.platform_config.payments.enabled {
-        return Err(AppError::BadRequest("Payments are not enabled on this instance".to_string()));
+        return Err(AppError::BadRequest(
+            "Payments are not enabled on this instance".to_string(),
+        ));
     }
 
     // Get user from API key
@@ -413,17 +429,22 @@ async fn create_payment(
     .ok_or(AppError::Unauthorized)?;
 
     // Create payment request
-    let payment_req = payments::create_payment_request(&state.db, user_id, &req.package, &req.token_type)
-        .await
-        .map_err(|e| {
-            log::error!("Failed to create payment: {}", e);
-            AppError::BadRequest(e.to_string())
-        })?;
+    let payment_req =
+        payments::create_payment_request(&state.db, user_id, &req.package, &req.token_type)
+            .await
+            .map_err(|e| {
+                log::error!("Failed to create payment: {}", e);
+                AppError::BadRequest(e.to_string())
+            })?;
 
     let payment_url = payment_req.to_url();
     let amount_formatted = payments::format_xlabs_amount(payment_req.amount);
 
-    log::info!("Payment request created: {} for package {}", payment_req.payment_id, req.package);
+    log::info!(
+        "Payment request created: {} for package {}",
+        payment_req.payment_id,
+        req.package
+    );
 
     Ok(Json(CreatePaymentResponse {
         payment_id: payment_req.payment_id.clone(),
@@ -452,7 +473,9 @@ async fn verify_payment_handler(
 ) -> Result<Json<VerifyPaymentResponse>, AppError> {
     // Check if payments are enabled
     if !state.platform_config.payments.enabled {
-        return Err(AppError::BadRequest("Payments are not enabled on this instance".to_string()));
+        return Err(AppError::BadRequest(
+            "Payments are not enabled on this instance".to_string(),
+        ));
     }
 
     let payment_id = uuid::Uuid::parse_str(&req.payment_id)
@@ -468,22 +491,25 @@ async fn verify_payment_handler(
         })?;
 
     let credits_added = if verified {
-        sqlx::query_scalar::<_, Option<i64>>(
-            "SELECT credits_purchased FROM payments WHERE id = $1"
-        )
-        .bind(&payment_id)
-        .fetch_optional(&state.db)
-        .await?
-        .flatten()
+        sqlx::query_scalar::<_, Option<i64>>("SELECT credits_purchased FROM payments WHERE id = $1")
+            .bind(&payment_id)
+            .fetch_optional(&state.db)
+            .await?
+            .flatten()
     } else {
         None
     };
 
-    log::info!("Payment verification: {} -> {} (credits: {:?})", req.payment_id, verified, credits_added);
+    log::info!(
+        "Payment verification: {} -> {} (credits: {:?})",
+        req.payment_id,
+        verified,
+        credits_added
+    );
 
-    Ok(Json(VerifyPaymentResponse { 
-        verified, 
-        tier: credits_added.map(|c| format!("{} credits", c))
+    Ok(Json(VerifyPaymentResponse {
+        verified,
+        tier: credits_added.map(|c| format!("{} credits", c)),
     }))
 }
 
@@ -512,9 +538,7 @@ struct TokenInfo {
     decimals: u8,
 }
 
-async fn get_pricing(
-    State(state): State<PlatformState>,
-) -> Json<PricingResponse> {
+async fn get_pricing(State(state): State<PlatformState>) -> Json<PricingResponse> {
     if !state.platform_config.payments.enabled {
         return Json(PricingResponse {
             enabled: false,
@@ -615,12 +639,16 @@ async fn get_user_stats(
             COUNT(*) FILTER (WHERE event_type = 'blocked') as blocked,
             COUNT(*) FILTER (WHERE event_type = 'warned') as warnings
          FROM security_events 
-         WHERE user_id = $1"
+         WHERE user_id = $1",
     )
     .bind(&user.id)
     .fetch_one(&state.db)
     .await
-    .unwrap_or(EventCounts { total_requests: 0, blocked: 0, warnings: 0 });
+    .unwrap_or(EventCounts {
+        total_requests: 0,
+        blocked: 0,
+        warnings: 0,
+    });
 
     Ok(Json(UserStatsResponse {
         api_key,
@@ -670,7 +698,7 @@ async fn get_global_stats(
     }
 
     let stats = sqlx::query_as::<_, GlobalStatsRow>(
-        "SELECT total_requests, total_blocked, total_warnings FROM global_stats WHERE id = 1"
+        "SELECT total_requests, total_blocked, total_warnings FROM global_stats WHERE id = 1",
     )
     .fetch_one(&state.db)
     .await
@@ -738,22 +766,22 @@ async fn get_security_events(
     let api_key_hash = auth::hash_api_key(&api_key);
 
     // Get user ID from API key
-    let user_id: uuid::Uuid = sqlx::query_scalar(
-        "SELECT id FROM users WHERE api_key_hash = $1"
-    )
-    .bind(api_key_hash)
-    .fetch_optional(&state.db)
-    .await
-    .map_err(|_| AppError::Internal)?
-    .ok_or(AppError::Unauthorized)?;
+    let user_id: uuid::Uuid = sqlx::query_scalar("SELECT id FROM users WHERE api_key_hash = $1")
+        .bind(api_key_hash)
+        .fetch_optional(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?
+        .ok_or(AppError::Unauthorized)?;
 
     // Parse pagination parameters
-    let limit: i64 = params.get("limit")
+    let limit: i64 = params
+        .get("limit")
         .and_then(|l| l.parse().ok())
         .unwrap_or(100)
         .min(1000); // Cap at 1k events max for performance and payload size
-    
-    let offset: i64 = params.get("offset")
+
+    let offset: i64 = params
+        .get("offset")
         .and_then(|o| o.parse().ok())
         .unwrap_or(0)
         .max(0); // Ensure non-negative
@@ -776,7 +804,7 @@ async fn get_security_events(
         rule_matches_count: Option<i32>,
         matched_rules: Option<sqlx::types::JsonValue>,
     }
-    
+
     let events: Vec<EventRow> = sqlx::query_as(
         "SELECT id, event_type, severity, threat_category, description, created_at,
                 transaction_data->>'signature' as signature,
@@ -834,7 +862,9 @@ async fn get_security_events(
                 m.as_array().map(|arr| {
                     arr.iter()
                         .filter_map(|v| {
-                            v.get("rule_id").and_then(|id| id.as_str()).map(|s| s.to_string())
+                            v.get("rule_id")
+                                .and_then(|id| id.as_str())
+                                .map(|s| s.to_string())
                         })
                         .collect()
                 })
@@ -874,7 +904,7 @@ async fn login(
 
     // Get or create user
     let api_key_hash = auth::hash_api_key(&format!("temp_{}", req.wallet_address));
-    
+
     let user_id = sqlx::query_scalar::<_, uuid::Uuid>(
         "INSERT INTO users (wallet_address, api_key_hash, tier) 
          VALUES ($1, $2, 'free') 
@@ -889,7 +919,9 @@ async fn login(
     .map_err(|_| AppError::Internal)?;
 
     // Create session
-    let session_id = state.sessions.create_session(user_id, &req.wallet_address)
+    let session_id = state
+        .sessions
+        .create_session(user_id, &req.wallet_address)
         .await
         .map_err(|_| AppError::Internal)?;
 
@@ -926,11 +958,14 @@ async fn get_current_user(
     State(state): State<PlatformState>,
     jar: CookieJar,
 ) -> Result<Json<CurrentUserResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -946,13 +981,12 @@ async fn get_current_user(
         tier: String,
     }
 
-    let user: UserInfo = sqlx::query_as(
-        "SELECT wallet_address, credits_balance, tier FROM users WHERE id = $1"
-    )
-    .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|_| AppError::Unauthorized)?;
+    let user: UserInfo =
+        sqlx::query_as("SELECT wallet_address, credits_balance, tier FROM users WHERE id = $1")
+            .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|_| AppError::Unauthorized)?;
 
     Ok(Json(CurrentUserResponse {
         user_id: session.user_id,
@@ -994,11 +1028,14 @@ async fn get_my_api_key(
     State(state): State<PlatformState>,
     jar: CookieJar,
 ) -> Result<Json<ApiKeyResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1010,13 +1047,12 @@ async fn get_my_api_key(
         created_at: chrono::DateTime<chrono::Utc>,
     }
 
-    let key_info: ApiKeyInfo = sqlx::query_as(
-        "SELECT api_key_hash, created_at FROM users WHERE id = $1"
-    )
-    .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
-    .fetch_one(&state.db)
-    .await
-    .map_err(|_| AppError::Internal)?;
+    let key_info: ApiKeyInfo =
+        sqlx::query_as("SELECT api_key_hash, created_at FROM users WHERE id = $1")
+            .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
+            .fetch_one(&state.db)
+            .await
+            .map_err(|_| AppError::Internal)?;
 
     Ok(Json(ApiKeyResponse {
         api_key: format!("{}...", &key_info.api_key_hash[..12]),
@@ -1034,11 +1070,14 @@ async fn regenerate_my_api_key(
     State(state): State<PlatformState>,
     jar: CookieJar,
 ) -> Result<Json<RegenerateApiKeyResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1047,14 +1086,12 @@ async fn regenerate_my_api_key(
     let api_key = auth::generate_api_key();
     let api_key_hash = auth::hash_api_key(&api_key);
 
-    sqlx::query(
-        "UPDATE users SET api_key_hash = $1, updated_at = NOW() WHERE id = $2"
-    )
-    .bind(&api_key_hash)
-    .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
-    .execute(&state.db)
-    .await
-    .map_err(|_| AppError::Internal)?;
+    sqlx::query("UPDATE users SET api_key_hash = $1, updated_at = NOW() WHERE id = $2")
+        .bind(&api_key_hash)
+        .bind(uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?)
+        .execute(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     log::info!("🔑 API key regenerated for user {}", session.user_id);
 
@@ -1068,11 +1105,14 @@ async fn get_my_stats(
     State(state): State<PlatformState>,
     jar: CookieJar,
 ) -> Result<Json<UserStatsResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1111,12 +1151,16 @@ async fn get_my_stats(
             COUNT(*) FILTER (WHERE event_type = 'blocked') as blocked,
             COUNT(*) FILTER (WHERE event_type = 'warned') as warnings
          FROM security_events 
-         WHERE user_id = $1"
+         WHERE user_id = $1",
     )
     .bind(&user_uuid)
     .fetch_one(&state.db)
     .await
-    .unwrap_or(EventCounts { total_requests: 0, blocked: 0, warnings: 0 });
+    .unwrap_or(EventCounts {
+        total_requests: 0,
+        blocked: 0,
+        warnings: 0,
+    });
 
     Ok(Json(UserStatsResponse {
         api_key: "***".to_string(),
@@ -1136,11 +1180,14 @@ async fn get_my_events(
     jar: CookieJar,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Vec<SecurityEvent>>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1148,12 +1195,14 @@ async fn get_my_events(
     let user_uuid = uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?;
 
     // Parse pagination parameters
-    let limit: i64 = params.get("limit")
+    let limit: i64 = params
+        .get("limit")
         .and_then(|l| l.parse().ok())
         .unwrap_or(100)
         .min(1000); // Cap at 1k events max for performance and payload size
-    
-    let offset: i64 = params.get("offset")
+
+    let offset: i64 = params
+        .get("offset")
         .and_then(|o| o.parse().ok())
         .unwrap_or(0)
         .max(0); // Ensure non-negative
@@ -1176,7 +1225,7 @@ async fn get_my_events(
         rule_matches_count: Option<i32>,
         matched_rules: Option<sqlx::types::JsonValue>,
     }
-    
+
     let events: Vec<EventRow> = sqlx::query_as(
         "SELECT id, event_type, severity, threat_category, description, created_at,
                 transaction_data->>'signature' as signature,
@@ -1234,7 +1283,9 @@ async fn get_my_events(
                 m.as_array().map(|arr| {
                     arr.iter()
                         .filter_map(|v| {
-                            v.get("rule_id").and_then(|id| id.as_str()).map(|s| s.to_string())
+                            v.get("rule_id")
+                                .and_then(|id| id.as_str())
+                                .map(|s| s.to_string())
                         })
                         .collect()
                 })
@@ -1265,7 +1316,7 @@ async fn update_event_signature(
              true
          )
          WHERE transaction_data->>'event_id' = $1
-         RETURNING id"
+         RETURNING id",
     )
     .bind(&req.event_id)
     .bind(&req.signature)
@@ -1295,11 +1346,14 @@ async fn get_my_usage(
     jar: CookieJar,
     axum::extract::Query(params): axum::extract::Query<std::collections::HashMap<String, String>>,
 ) -> Result<Json<Vec<RpcUsageLog>>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1307,12 +1361,14 @@ async fn get_my_usage(
     let user_uuid = uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?;
 
     // Parse pagination parameters
-    let limit: i64 = params.get("limit")
+    let limit: i64 = params
+        .get("limit")
         .and_then(|l| l.parse().ok())
         .unwrap_or(100)
         .min(1000); // Cap at 1k usage logs
-    
-    let offset: i64 = params.get("offset")
+
+    let offset: i64 = params
+        .get("offset")
         .and_then(|o| o.parse().ok())
         .unwrap_or(0)
         .max(0);
@@ -1324,13 +1380,13 @@ async fn get_my_usage(
         success: bool,
         created_at: chrono::DateTime<chrono::Utc>,
     }
-    
+
     let logs: Vec<UsageRow> = sqlx::query_as(
         "SELECT id, method, success, created_at 
          FROM rpc_usage_logs 
          WHERE user_id = $1 
          ORDER BY created_at DESC 
-         LIMIT $2 OFFSET $3"
+         LIMIT $2 OFFSET $3",
     )
     .bind(user_uuid)
     .bind(limit)
@@ -1377,11 +1433,14 @@ async fn get_active_rules(
     jar: CookieJar,
 ) -> Result<Json<ActiveRulesResponse>, AppError> {
     // Verify session
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let _session = state.sessions.get_session(&session_id)
+    let _session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1401,18 +1460,15 @@ async fn get_active_rules(
     let rules_path = &state.platform_config.rules_display_path;
 
     // Read and parse rules file
-    let rules_content = tokio::fs::read_to_string(&rules_path)
-        .await
-        .map_err(|e| {
-            log::error!("Failed to read rules file at {}: {}", rules_path, e);
-            AppError::Internal
-        })?;
+    let rules_content = tokio::fs::read_to_string(&rules_path).await.map_err(|e| {
+        log::error!("Failed to read rules file at {}: {}", rules_path, e);
+        AppError::Internal
+    })?;
 
-    let rules_json: Vec<serde_json::Value> = serde_json::from_str(&rules_content)
-        .map_err(|e| {
-            log::error!("Failed to parse rules JSON: {}", e);
-            AppError::Internal
-        })?;
+    let rules_json: Vec<serde_json::Value> = serde_json::from_str(&rules_content).map_err(|e| {
+        log::error!("Failed to parse rules JSON: {}", e);
+        AppError::Internal
+    })?;
 
     // Get hit counts from database for all rules
     #[derive(sqlx::FromRow)]
@@ -1425,7 +1481,7 @@ async fn get_active_rules(
         "SELECT rule_id, COUNT(*) as hit_count 
          FROM security_events 
          WHERE rule_id IS NOT NULL 
-         GROUP BY rule_id"
+         GROUP BY rule_id",
     )
     .fetch_all(&state.db)
     .await
@@ -1443,7 +1499,8 @@ async fn get_active_rules(
     let mut total_hits = 0i64;
 
     for rule in rules_json {
-        let enabled = rule.get("enabled")
+        let enabled = rule
+            .get("enabled")
             .and_then(|v| v.as_bool())
             .unwrap_or(false);
 
@@ -1451,7 +1508,8 @@ async fn get_active_rules(
             active_rules_count += 1;
         }
 
-        let rule_id = rule.get("id")
+        let rule_id = rule
+            .get("id")
             .and_then(|v| v.as_str())
             .unwrap_or("unknown")
             .to_string();
@@ -1461,20 +1519,24 @@ async fn get_active_rules(
 
         let rule_obj = ActiveRule {
             id: rule_id,
-            name: rule.get("name")
+            name: rule
+                .get("name")
                 .and_then(|v| v.as_str())
                 .unwrap_or("Unnamed Rule")
                 .to_string(),
-            description: rule.get("description")
+            description: rule
+                .get("description")
                 .and_then(|v| v.as_str())
                 .unwrap_or("")
                 .to_string(),
-            action: rule.get("rule")
+            action: rule
+                .get("rule")
                 .and_then(|r| r.get("action"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("unknown")
                 .to_string(),
-            severity: rule.get("metadata")
+            severity: rule
+                .get("metadata")
                 .and_then(|m| m.get("severity"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("medium")
@@ -1526,11 +1588,14 @@ async fn update_blocking_threshold(
     jar: CookieJar,
     Json(req): Json<UpdateThresholdRequest>,
 ) -> Result<Json<UpdateThresholdResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -1539,30 +1604,37 @@ async fn update_blocking_threshold(
 
     // Validate threshold is reasonable (0-100)
     if req.threshold < 0 || req.threshold > 100 {
-        return Err(AppError::BadRequest(format!("Threshold must be between 0 and 100, got {}", req.threshold)));
+        return Err(AppError::BadRequest(format!(
+            "Threshold must be between 0 and 100, got {}",
+            req.threshold
+        )));
     }
 
     // Update user's threshold
-    sqlx::query(
-        "UPDATE users SET blocking_threshold = $1 WHERE id = $2"
-    )
-    .bind(req.threshold)
-    .bind(&user_uuid)
-    .execute(&state.db)
-    .await
-    .map_err(|_| AppError::Internal)?;
+    sqlx::query("UPDATE users SET blocking_threshold = $1 WHERE id = $2")
+        .bind(req.threshold)
+        .bind(&user_uuid)
+        .execute(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
     // Invalidate user cache (keyed by user_id, so this is instant)
     use redis::AsyncCommands;
-    let mut conn = state.redis.get_multiplexed_async_connection()
+    let mut conn = state
+        .redis
+        .get_multiplexed_async_connection()
         .await
         .map_err(|_| AppError::Internal)?;
-    
+
     let cache_key = format!("auth:user:{}", user_uuid);
     let deleted: u32 = conn.del(&cache_key).await.map_err(|_| AppError::Internal)?;
 
-    log::info!("✅ Updated blocking threshold for user {} to {} (cache invalidated: {})", 
-        user_uuid, req.threshold, deleted > 0);
+    log::info!(
+        "✅ Updated blocking threshold for user {} to {} (cache invalidated: {})",
+        user_uuid,
+        req.threshold,
+        deleted > 0
+    );
 
     Ok(Json(UpdateThresholdResponse {
         blocking_threshold: req.threshold,
@@ -1584,27 +1656,32 @@ async fn toggle_notifications(
     jar: CookieJar,
     Json(req): Json<ToggleNotificationsRequest>,
 ) -> Result<Json<ToggleNotificationsResponse>, AppError> {
-    let session_id = jar.get("session_id")
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
 
     let user_uuid = uuid::Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)?;
 
-    sqlx::query(
-        "UPDATE users SET notifications_enabled = $1 WHERE id = $2"
-    )
-    .bind(req.enabled)
-    .bind(&user_uuid)
-    .execute(&state.db)
-    .await
-    .map_err(|_| AppError::Internal)?;
+    sqlx::query("UPDATE users SET notifications_enabled = $1 WHERE id = $2")
+        .bind(req.enabled)
+        .bind(&user_uuid)
+        .execute(&state.db)
+        .await
+        .map_err(|_| AppError::Internal)?;
 
-    log::info!("✅ Updated notifications for user {} to {}", user_uuid, req.enabled);
+    log::info!(
+        "✅ Updated notifications for user {} to {}",
+        user_uuid,
+        req.enabled
+    );
 
     Ok(Json(ToggleNotificationsResponse {
         notifications_enabled: req.enabled,

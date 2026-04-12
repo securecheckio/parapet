@@ -68,16 +68,22 @@ impl EventBuilder {
         self.event.summary = match decision.action {
             parapet_core::rules::types::RuleAction::Block => {
                 if decision.matched_rules.len() > 1 {
-                    format!("Blocked: {} risk factors detected ({}/100 risk weight)", 
-                        decision.matched_rules.len(), decision.total_risk)
+                    format!(
+                        "Blocked: {} risk factors detected ({}/100 risk weight)",
+                        decision.matched_rules.len(),
+                        decision.total_risk
+                    )
                 } else {
                     format!("Blocked: {}", decision.message)
                 }
             }
             parapet_core::rules::types::RuleAction::Alert => {
                 if decision.matched_rules.len() > 1 {
-                    format!("{} suspicious patterns ({}/100 risk weight)", 
-                        decision.matched_rules.len(), decision.total_risk)
+                    format!(
+                        "{} suspicious patterns ({}/100 risk weight)",
+                        decision.matched_rules.len(),
+                        decision.total_risk
+                    )
                 } else {
                     decision.message.clone()
                 }

@@ -1,9 +1,9 @@
 use anyhow::Result;
 use serde::{de::DeserializeOwned, Serialize};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use std::collections::HashMap;
 
 #[cfg(feature = "redis")]
 use redis;
@@ -17,21 +17,22 @@ pub struct SharedCache {
 
 impl SharedCache {
     /// Create a new shared cache
-    /// 
+    ///
     /// If redis_url is provided and connection succeeds, uses Redis.
     /// Otherwise falls back to in-memory cache.
     pub fn new(redis_url: Option<String>) -> Self {
         #[cfg(feature = "redis")]
-        let redis_client = redis_url.and_then(|url| {
-            match redis::Client::open(url.as_str()) {
-                Ok(client) => {
-                    log::info!("✅ SharedCache: Connected to Redis at {}", url);
-                    Some(Arc::new(client))
-                }
-                Err(e) => {
-                    log::warn!("⚠️  SharedCache: Failed to connect to Redis: {}. Using in-memory fallback.", e);
-                    None
-                }
+        let redis_client = redis_url.and_then(|url| match redis::Client::open(url.as_str()) {
+            Ok(client) => {
+                log::info!("✅ SharedCache: Connected to Redis at {}", url);
+                Some(Arc::new(client))
+            }
+            Err(e) => {
+                log::warn!(
+                    "⚠️  SharedCache: Failed to connect to Redis: {}. Using in-memory fallback.",
+                    e
+                );
+                None
             }
         });
 
@@ -62,7 +63,11 @@ impl SharedCache {
                 Ok(Some(value)) => return Ok(Some(value)),
                 Ok(None) => return Ok(None),
                 Err(e) => {
-                    log::warn!("Redis GET failed for key '{}': {}. Checking fallback cache.", key, e);
+                    log::warn!(
+                        "Redis GET failed for key '{}': {}. Checking fallback cache.",
+                        key,
+                        e
+                    );
                 }
             }
         }
@@ -81,7 +86,11 @@ impl SharedCache {
             match self.set_in_redis(client, key, &serialized, ttl).await {
                 Ok(()) => return Ok(()),
                 Err(e) => {
-                    log::warn!("Redis SET failed for key '{}': {}. Using fallback cache.", key, e);
+                    log::warn!(
+                        "Redis SET failed for key '{}': {}. Using fallback cache.",
+                        key,
+                        e
+                    );
                 }
             }
         }
@@ -94,7 +103,7 @@ impl SharedCache {
     pub fn is_redis_enabled(&self) -> bool {
         #[cfg(feature = "redis")]
         return self.redis_client.is_some();
-        
+
         #[cfg(not(feature = "redis"))]
         return false;
     }
@@ -139,7 +148,7 @@ impl SharedCache {
 
     async fn get_from_memory<T: DeserializeOwned>(&self, key: &str) -> Result<Option<T>> {
         let cache = self.fallback_cache.lock().await;
-        
+
         if let Some((bytes, expiry)) = cache.get(key) {
             // Check if expired
             if std::time::Instant::now() < *expiry {
@@ -155,7 +164,7 @@ impl SharedCache {
         let mut cache = self.fallback_cache.lock().await;
         let expiry = std::time::Instant::now() + ttl;
         cache.insert(key.to_string(), (value, expiry));
-        
+
         // Simple cleanup: remove expired entries if cache is getting large
         if cache.len() > 1000 {
             cache.retain(|_, (_, exp)| std::time::Instant::now() < *exp);
@@ -182,7 +191,7 @@ impl SharedCache {
     /// Get cache statistics
     pub async fn stats(&self) -> CacheStats {
         let memory_entries = self.fallback_cache.lock().await.len();
-        
+
         CacheStats {
             is_redis: self.is_redis_enabled(),
             memory_entries,
@@ -217,7 +226,10 @@ mod tests {
         };
 
         // Set and get
-        cache.set(key, &data, Duration::from_secs(60)).await.unwrap();
+        cache
+            .set(key, &data, Duration::from_secs(60))
+            .await
+            .unwrap();
         let retrieved: Option<TestData> = cache.get(key).await.unwrap();
         assert_eq!(retrieved, Some(data));
 
@@ -236,8 +248,11 @@ mod tests {
         };
 
         // Set with 1 second TTL
-        cache.set(key, &data, Duration::from_millis(100)).await.unwrap();
-        
+        cache
+            .set(key, &data, Duration::from_millis(100))
+            .await
+            .unwrap();
+
         // Should exist immediately
         let retrieved: Option<TestData> = cache.get(key).await.unwrap();
         assert_eq!(retrieved, Some(data.clone()));
@@ -254,14 +269,32 @@ mod tests {
     async fn test_clear() {
         let cache = SharedCache::new(None);
 
-        cache.set("key1", &TestData { value: "val1".to_string() }, Duration::from_secs(60)).await.unwrap();
-        cache.set("key2", &TestData { value: "val2".to_string() }, Duration::from_secs(60)).await.unwrap();
+        cache
+            .set(
+                "key1",
+                &TestData {
+                    value: "val1".to_string(),
+                },
+                Duration::from_secs(60),
+            )
+            .await
+            .unwrap();
+        cache
+            .set(
+                "key2",
+                &TestData {
+                    value: "val2".to_string(),
+                },
+                Duration::from_secs(60),
+            )
+            .await
+            .unwrap();
 
         cache.clear().await.unwrap();
 
         let val1: Option<TestData> = cache.get("key1").await.unwrap();
         let val2: Option<TestData> = cache.get("key2").await.unwrap();
-        
+
         assert_eq!(val1, None);
         assert_eq!(val2, None);
     }

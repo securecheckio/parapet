@@ -7,14 +7,14 @@ use anyhow::{anyhow, Result};
 use serde_json::Value;
 use solana_sdk::transaction::{Transaction, VersionedTransaction};
 use std::collections::HashMap;
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
-use std::pin::Pin;
-use std::future::Future;
 
 #[cfg(feature = "reqwest")]
-use crate::enrichment::{EnrichmentService, EnrichmentData};
+use crate::enrichment::{EnrichmentData, EnrichmentService};
 
 pub struct RuleEngine {
     rules: Vec<RuleDefinition>,
@@ -42,20 +42,23 @@ pub struct RuleEngine {
 impl RuleEngine {
     pub fn new(registry: AnalyzerRegistry) -> Self {
         // Default to mainnet for production safety
-        let current_network = std::env::var("SOLANA_NETWORK")
-            .unwrap_or_else(|_| "mainnet-beta".to_string());
-        
+        let current_network =
+            std::env::var("SOLANA_NETWORK").unwrap_or_else(|_| "mainnet-beta".to_string());
+
         // Check if performance tracking is enabled via env var
         let perf_enabled = std::env::var("RULE_ENGINE_PERFORMANCE_TRACKING")
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false);
-        
+
         if perf_enabled {
             log::info!("📊 Performance tracking enabled for rules and analyzers");
         }
-        
-        log::info!("🌐 Network: {} (rules will be filtered by network)", current_network);
-        
+
+        log::info!(
+            "🌐 Network: {} (rules will be filtered by network)",
+            current_network
+        );
+
         let mut engine = Self {
             rules: Vec::new(),
             registry,
@@ -70,7 +73,7 @@ impl RuleEngine {
             performance_tracker: PerformanceTracker::new(perf_enabled),
             flowbit_state: None, // DISABLED by default
         };
-        
+
         // Auto-enable from environment variable
         if std::env::var("PARAPET_FLOWBITS_ENABLED")
             .map(|v| v == "1" || v.to_lowercase() == "true")
@@ -81,27 +84,25 @@ impl RuleEngine {
                 .and_then(|v| v.parse().ok());
             engine = engine.with_flowbits(max_wallets);
         }
-        
+
         engine
     }
-    
+
     /// Enable flowbits for multi-transaction attack detection
     pub fn with_flowbits(mut self, max_wallets: Option<usize>) -> Self {
         log::info!("✅ RuleEngine: Flowbits enabled - multi-transaction attack detection active");
         if let Some(limit) = max_wallets {
             log::info!("   Memory limit: {} wallets max", limit);
         }
-        self.flowbit_state = Some(Arc::new(Mutex::new(
-            FlowbitStateManager::new(max_wallets)
-        )));
+        self.flowbit_state = Some(Arc::new(Mutex::new(FlowbitStateManager::new(max_wallets))));
         self
     }
-    
+
     /// Check if flowbits are enabled
     pub fn has_flowbits(&self) -> bool {
         self.flowbit_state.is_some()
     }
-    
+
     /// Enable enrichment service for off-chain data access in rules
     #[cfg(feature = "reqwest")]
     pub fn with_enrichment(mut self, service: Arc<EnrichmentService>) -> Self {
@@ -109,7 +110,7 @@ impl RuleEngine {
         self.enrichment = Some(service);
         self
     }
-    
+
     /// Set enrichment cache for current transaction batch (called by scanner)
     #[cfg(feature = "reqwest")]
     pub async fn set_enrichment_cache(&self, cache: HashMap<String, EnrichmentData>) {
@@ -118,46 +119,46 @@ impl RuleEngine {
         *write_lock = cache;
         log::debug!("✅ Enrichment cache populated with {} entries", cache_size);
     }
-    
+
     /// Clear enrichment cache (call after batch processing)
     #[cfg(feature = "reqwest")]
     pub async fn clear_enrichment_cache(&self) {
         let mut write_lock = self.enrichment_cache.write().await;
         write_lock.clear();
     }
-    
+
     /// Enable dynamic rules with optional Redis URL for multi-instance sync
     pub fn with_dynamic_rules(mut self, redis_url: Option<String>) -> Self {
         self.dynamic_rules = Some(Arc::new(DynamicRuleStore::new(redis_url)));
         log::info!("✅ Dynamic rules enabled");
         self
     }
-    
+
     /// Get dynamic rules store (if enabled)
     pub fn dynamic_rules(&self) -> Option<Arc<DynamicRuleStore>> {
         self.dynamic_rules.clone()
     }
-    
+
     /// Get performance tracker
     pub fn performance_tracker(&self) -> &PerformanceTracker {
         &self.performance_tracker
     }
-    
+
     /// Get performance metrics snapshot
     pub async fn get_performance_metrics(&self) -> super::performance::EnginePerformanceMetrics {
         self.performance_tracker.get_metrics().await
     }
-    
+
     /// Get formatted performance report
     pub async fn get_performance_report(&self) -> String {
         self.performance_tracker.get_report().await
     }
-    
+
     /// Reset performance metrics
     pub async fn reset_performance_metrics(&self) {
         self.performance_tracker.reset().await
     }
-    
+
     /// Check if a rule should be loaded based on network filtering
     fn is_rule_applicable(&self, rule: &RuleDefinition) -> bool {
         // Check if rule has network restriction in metadata
@@ -169,13 +170,14 @@ impl RuleEngine {
             } else if let Some(network_array) = networks_value.as_array() {
                 // Array of networks
                 network_array.iter().any(|n| {
-                    n.as_str().map_or(false, |s| s == self.current_network || s == "all")
+                    n.as_str()
+                        .map_or(false, |s| s == self.current_network || s == "all")
                 })
             } else {
                 // Invalid format, skip network filtering
                 true
             };
-            
+
             if !applicable {
                 log::debug!(
                     "  ⏭️  Skipping rule '{}': network '{}' not in {:?}",
@@ -184,20 +186,21 @@ impl RuleEngine {
                     networks_value
                 );
             }
-            
+
             applicable
         } else {
             // No network restriction - defaults to mainnet-only for safety
             // Rules without network metadata are assumed to be mainnet rules
-            let is_mainnet = self.current_network == "mainnet-beta" || self.current_network == "mainnet";
-            
+            let is_mainnet =
+                self.current_network == "mainnet-beta" || self.current_network == "mainnet";
+
             if !is_mainnet {
                 log::debug!(
                     "  ⏭️  Skipping rule '{}': no network specified, defaulting to mainnet-only",
                     rule.name
                 );
             }
-            
+
             is_mainnet
         }
     }
@@ -249,7 +252,7 @@ impl RuleEngine {
             };
             priority_a.cmp(&priority_b)
         });
-        
+
         log::debug!("✅ Rules sorted by priority (block → alert → pass)");
 
         // Log action override if configured
@@ -332,9 +335,21 @@ impl RuleEngine {
         match condition {
             RuleCondition::Flowbit(_) => true,
             RuleCondition::Compound(compound) => {
-                compound.all.as_ref().map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c))).unwrap_or(false)
-                    || compound.any.as_ref().map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c))).unwrap_or(false)
-                    || compound.not.as_ref().map(|c| self.condition_uses_flowbits(c)).unwrap_or(false)
+                compound
+                    .all
+                    .as_ref()
+                    .map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c)))
+                    .unwrap_or(false)
+                    || compound
+                        .any
+                        .as_ref()
+                        .map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c)))
+                        .unwrap_or(false)
+                    || compound
+                        .not
+                        .as_ref()
+                        .map(|c| self.condition_uses_flowbits(c))
+                        .unwrap_or(false)
             }
             _ => false,
         }
@@ -612,29 +627,36 @@ impl RuleEngine {
         self.evaluate_with_threshold(tx, 70).await
     }
 
-    pub async fn evaluate_with_threshold(&self, tx: &Transaction, threshold: u8) -> Result<RuleDecision> {
+    pub async fn evaluate_with_threshold(
+        &self,
+        tx: &Transaction,
+        threshold: u8,
+    ) -> Result<RuleDecision> {
         // STEP 1: Check dynamic rules first (highest priority)
         if let Some(dynamic_store) = &self.dynamic_rules {
             // Get canonical hash for matching
             let canonical_hash = if let Some(analyzer) = self.registry.get("canonical_tx") {
                 let result = analyzer.analyze(tx).await?;
-                result.get("canonical_transaction_hash")
+                result
+                    .get("canonical_transaction_hash")
                     .and_then(|v| v.as_str())
                     .map(|s| s.to_string())
             } else {
                 None
             };
-            
-            let dynamic_rules = dynamic_store.get_matching_rules(canonical_hash.as_deref()).await;
-            
+
+            let dynamic_rules = dynamic_store
+                .get_matching_rules(canonical_hash.as_deref())
+                .await;
+
             if !dynamic_rules.is_empty() {
                 log::debug!("🔍 Checking {} dynamic rules", dynamic_rules.len());
-                
+
                 for dyn_rule in &dynamic_rules {
                     if !dyn_rule.rule.enabled {
                         continue;
                     }
-                    
+
                     // Analyze transaction for dynamic rule evaluation
                     #[cfg(feature = "reqwest")]
                     let fields = {
@@ -647,23 +669,34 @@ impl RuleEngine {
 
                     let wallet = self.extract_wallet_from_fields(&fields);
 
-                    if self.evaluate_condition(&dyn_rule.rule.rule.conditions, &fields, &wallet).await? {
+                    if self
+                        .evaluate_condition(&dyn_rule.rule.rule.conditions, &fields, &wallet)
+                        .await?
+                    {
                         let action = dyn_rule.rule.rule.action;
-                        
+
                         // Dynamic rule matched - allow transaction
                         if action == super::types::RuleAction::Pass {
-                            log::info!("✅ Dynamic rule '{}' allowed transaction", dyn_rule.rule.name);
-                            
+                            log::info!(
+                                "✅ Dynamic rule '{}' allowed transaction",
+                                dyn_rule.rule.name
+                            );
+
                             // Increment use count
-                            if let Err(e) = dynamic_store.increment_use_count(&dyn_rule.rule.id).await {
+                            if let Err(e) =
+                                dynamic_store.increment_use_count(&dyn_rule.rule.id).await
+                            {
                                 log::warn!("Failed to increment use count: {}", e);
                             }
-                            
+
                             return Ok(RuleDecision {
                                 action: super::types::RuleAction::Pass,
                                 rule_id: dyn_rule.rule.id.clone(),
                                 rule_name: dyn_rule.rule.name.clone(),
-                                message: format!("✓ Allowed by dynamic rule: {}", dyn_rule.rule.name),
+                                message: format!(
+                                    "✓ Allowed by dynamic rule: {}",
+                                    dyn_rule.rule.name
+                                ),
                                 matched: true,
                                 total_risk: 0,
                                 matched_rules: vec![super::types::MatchedRule {
@@ -682,7 +715,7 @@ impl RuleEngine {
                 }
             }
         }
-        
+
         // STEP 2: No dynamic rule matched - evaluate static security rules
         // Get list of required analyzers (lazy evaluation optimization)
         let required_analyzers = self.get_required_analyzers();
@@ -731,11 +764,20 @@ impl RuleEngine {
             }
 
             // Check for missing field behavior override in rule metadata
-            let missing_field_override = rule_def.metadata
+            let missing_field_override = rule_def
+                .metadata
                 .get("missing_field_behavior")
                 .and_then(|v| v.as_str());
 
-            if self.evaluate_condition_with_override(&rule_def.rule.conditions, &fields, missing_field_override, &wallet).await? {
+            if self
+                .evaluate_condition_with_override(
+                    &rule_def.rule.conditions,
+                    &fields,
+                    missing_field_override,
+                    &wallet,
+                )
+                .await?
+            {
                 // Apply flowbit actions if rule matched
                 if let Some(ref flowbits) = rule_def.rule.flowbits {
                     self.apply_flowbit_actions(&wallet, flowbits, &fields).await;
@@ -745,13 +787,17 @@ impl RuleEngine {
                 // SIGNATURE-BASED: action="block" → stop immediately
                 if action == super::types::RuleAction::Block {
                     log::info!("🚨 Rule '{}' triggered immediate block", rule_def.name);
-                    
+
                     // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
                     if let Some(state) = &self.flowbit_state {
                         let mut state_lock = state.lock().await;
-                        state_lock.increment(&wallet, "blocked_transaction_count", Some(Duration::from_secs(3600)));
+                        state_lock.increment(
+                            &wallet,
+                            "blocked_transaction_count",
+                            Some(Duration::from_secs(3600)),
+                        );
                     }
-                    
+
                     return Ok(RuleDecision {
                         action: super::types::RuleAction::Block,
                         rule_id: rule_def.id.clone(),
@@ -774,13 +820,14 @@ impl RuleEngine {
 
                 // HEURISTIC: action="alert" → accumulate weight
                 if action == super::types::RuleAction::Alert {
-                    let weight = rule_def.metadata
+                    let weight = rule_def
+                        .metadata
                         .get("weight")
                         .and_then(|w| w.as_u64())
                         .unwrap_or(20) as u8;
-                    
+
                     total_risk = total_risk.saturating_add(weight);
-                    
+
                     matched_alerts.push(super::types::MatchedRule {
                         rule_id: rule_def.id.clone(),
                         rule_name: rule_def.name.clone(),
@@ -789,18 +836,31 @@ impl RuleEngine {
                         message: rule_def.rule.message.clone(),
                     });
 
-                    log::debug!("⚠️  Alert: '{}' (+{}, total: {})", rule_def.name, weight, total_risk);
-                    
+                    log::debug!(
+                        "⚠️  Alert: '{}' (+{}, total: {})",
+                        rule_def.name,
+                        weight,
+                        total_risk
+                    );
+
                     // EARLY STOP: if accumulated risk hits threshold, block immediately
                     if total_risk >= threshold {
-                        log::info!("🚨 Risk threshold reached ({} >= {}), stopping evaluation", total_risk, threshold);
-                        
+                        log::info!(
+                            "🚨 Risk threshold reached ({} >= {}), stopping evaluation",
+                            total_risk,
+                            threshold
+                        );
+
                         // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
                         if let Some(state) = &self.flowbit_state {
                             let mut state_lock = state.lock().await;
-                            state_lock.increment(&wallet, "blocked_transaction_count", Some(Duration::from_secs(3600)));
+                            state_lock.increment(
+                                &wallet,
+                                "blocked_transaction_count",
+                                Some(Duration::from_secs(3600)),
+                            );
                         }
-                        
+
                         return Ok(RuleDecision {
                             action: super::types::RuleAction::Block,
                             rule_id: "composite".to_string(),
@@ -824,9 +884,13 @@ impl RuleEngine {
             // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
             if let Some(state) = &self.flowbit_state {
                 let mut state_lock = state.lock().await;
-                state_lock.increment(&wallet, "blocked_transaction_count", Some(Duration::from_secs(3600)));
+                state_lock.increment(
+                    &wallet,
+                    "blocked_transaction_count",
+                    Some(Duration::from_secs(3600)),
+                );
             }
-            
+
             (
                 super::types::RuleAction::Block,
                 format!("🚨 Transaction blocked: {} risk factors detected ({}/100 risk weight, threshold: {}/100)", 
@@ -835,17 +899,32 @@ impl RuleEngine {
         } else if total_risk > 0 {
             (
                 super::types::RuleAction::Alert,
-                format!("⚠️  {} suspicious patterns detected ({}/100 risk weight, threshold: {}/100)", 
-                    matched_alerts.len(), total_risk, threshold)
+                format!(
+                    "⚠️  {} suspicious patterns detected ({}/100 risk weight, threshold: {}/100)",
+                    matched_alerts.len(),
+                    total_risk,
+                    threshold
+                ),
             )
         } else {
-            (super::types::RuleAction::Pass, "✓ No suspicious patterns detected".to_string())
+            (
+                super::types::RuleAction::Pass,
+                "✓ No suspicious patterns detected".to_string(),
+            )
         };
 
         Ok(RuleDecision {
             action: final_action,
-            rule_id: if !matched_alerts.is_empty() { "composite".to_string() } else { String::new() },
-            rule_name: if !matched_alerts.is_empty() { "Multiple Risk Factors".to_string() } else { String::new() },
+            rule_id: if !matched_alerts.is_empty() {
+                "composite".to_string()
+            } else {
+                String::new()
+            },
+            rule_name: if !matched_alerts.is_empty() {
+                "Multiple Risk Factors".to_string()
+            } else {
+                String::new()
+            },
             message,
             matched: !matched_alerts.is_empty() || total_risk > 0,
             total_risk,
@@ -860,7 +939,11 @@ impl RuleEngine {
         self.evaluate_versioned_with_threshold(tx, 70).await
     }
 
-    pub async fn evaluate_versioned_with_threshold(&self, tx: &VersionedTransaction, threshold: u8) -> Result<RuleDecision> {
+    pub async fn evaluate_versioned_with_threshold(
+        &self,
+        tx: &VersionedTransaction,
+        threshold: u8,
+    ) -> Result<RuleDecision> {
         // Try to convert to legacy first - if possible, use regular evaluation
         if let Some(legacy_tx) = tx.clone().into_legacy_transaction() {
             return self.evaluate_with_threshold(&legacy_tx, threshold).await;
@@ -878,7 +961,8 @@ impl RuleEngine {
         tx: &Transaction,
         metadata: &super::analyzer::ConfirmedTransactionMetadata,
     ) -> Result<RuleDecision> {
-        self.evaluate_with_metadata_and_threshold(tx, metadata, 70).await
+        self.evaluate_with_metadata_and_threshold(tx, metadata, 70)
+            .await
     }
 
     pub async fn evaluate_with_metadata_and_threshold(
@@ -908,7 +992,11 @@ impl RuleEngine {
     }
 
     /// Convenience wrapper — evaluate with logs only (no inner instructions).
-    pub async fn evaluate_with_logs(&self, tx: &Transaction, logs: &[String]) -> Result<RuleDecision> {
+    pub async fn evaluate_with_logs(
+        &self,
+        tx: &Transaction,
+        logs: &[String],
+    ) -> Result<RuleDecision> {
         self.evaluate_with_logs_and_threshold(tx, logs, 70).await
     }
 
@@ -922,7 +1010,8 @@ impl RuleEngine {
             logs: logs.to_vec(),
             inner_instructions: vec![],
         };
-        self.evaluate_with_metadata_and_threshold(tx, &metadata, threshold).await
+        self.evaluate_with_metadata_and_threshold(tx, &metadata, threshold)
+            .await
     }
 
     async fn evaluate_condition(
@@ -931,7 +1020,8 @@ impl RuleEngine {
         fields: &HashMap<String, Value>,
         wallet: &solana_sdk::pubkey::Pubkey,
     ) -> Result<bool> {
-        self.evaluate_condition_with_override(condition, fields, None, wallet).await
+        self.evaluate_condition_with_override(condition, fields, None, wallet)
+            .await
     }
 
     fn evaluate_condition_with_override<'a>(
@@ -943,9 +1033,19 @@ impl RuleEngine {
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + 'a + Send>> {
         Box::pin(async move {
             match condition {
-                RuleCondition::Simple(simple) => Ok(self.evaluate_simple(simple, fields, missing_field_override)?),
+                RuleCondition::Simple(simple) => {
+                    Ok(self.evaluate_simple(simple, fields, missing_field_override)?)
+                }
                 RuleCondition::Flowbit(flowbit) => self.evaluate_flowbit(flowbit, wallet).await,
-                RuleCondition::Compound(compound) => self.evaluate_compound_with_override(compound, fields, missing_field_override, wallet).await,
+                RuleCondition::Compound(compound) => {
+                    self.evaluate_compound_with_override(
+                        compound,
+                        fields,
+                        missing_field_override,
+                        wallet,
+                    )
+                    .await
+                }
             }
         })
     }
@@ -970,7 +1070,7 @@ impl RuleEngine {
                     "less_than_or_equal" | "<=" => ComparisonOperator::LessThanOrEqual,
                     _ => return Err(anyhow!("Invalid flowbit counter operator: {}", op_str)),
                 };
-                
+
                 let count = state_lock.get_counter(wallet, &condition.flowbit);
                 self.compare(&Value::from(count), &operator, &Value::from(val))
             } else if let Some(within_secs) = condition.within_seconds {
@@ -981,7 +1081,10 @@ impl RuleEngine {
                 Ok(state_lock.is_set(wallet, &condition.flowbit))
             }
         } else {
-            log::debug!("Flowbit condition '{}' skipped (flowbits disabled)", condition.flowbit);
+            log::debug!(
+                "Flowbit condition '{}' skipped (flowbits disabled)",
+                condition.flowbit
+            );
             Ok(false)
         }
     }
@@ -993,7 +1096,7 @@ impl RuleEngine {
         missing_field_override: Option<&str>,
     ) -> Result<bool> {
         let field_value = fields.get(&condition.field);
-        
+
         if field_value.is_none() {
             // Field doesn't exist - check for per-rule override first
             let missing_field_result = if let Some(behavior) = missing_field_override {
@@ -1027,7 +1130,7 @@ impl RuleEngine {
                 // No override - use smart defaults
                 self.get_smart_default_for_missing_field(condition)?
             };
-            
+
             return Ok(missing_field_result);
         }
 
@@ -1043,26 +1146,26 @@ impl RuleEngine {
             (ComparisonOperator::Equals, Value::String(s)) if s.is_empty() => true,
             (ComparisonOperator::Equals, Value::Null) => true,
             (ComparisonOperator::Equals, Value::Bool(false)) => true,
-            
+
             // Checking if field contains something → missing can't contain (false)
             // Use case: "does identity contain 'scammer'?" (no data = not a known scammer)
             (ComparisonOperator::Contains, _) => false,
-            
+
             // Checking if field is IN array → missing is not in anything (false)
             (ComparisonOperator::In, _) => false,
-            
+
             // Checking if field NOT equals something → depends on value
             (ComparisonOperator::NotEquals, Value::Array(arr)) if arr.is_empty() => false,
             (ComparisonOperator::NotEquals, Value::Null) => false,
             (ComparisonOperator::NotEquals, _) => true,
-            
+
             // All other cases → treat as null and let compare() handle it
             _ => {
                 let null_value = Value::Null;
                 return self.compare(&null_value, &condition.operator, &condition.value);
             }
         };
-        
+
         log::debug!(
             "Field '{}' not found, operator {:?}, expected {:?} → {} (smart default)",
             condition.field,
@@ -1070,7 +1173,7 @@ impl RuleEngine {
             condition.value,
             result
         );
-        
+
         Ok(result)
     }
 
@@ -1084,7 +1187,15 @@ impl RuleEngine {
         Box::pin(async move {
             if let Some(all_conditions) = &compound.all {
                 for cond in all_conditions {
-                    if !self.evaluate_condition_with_override(cond, fields, missing_field_override, wallet).await? {
+                    if !self
+                        .evaluate_condition_with_override(
+                            cond,
+                            fields,
+                            missing_field_override,
+                            wallet,
+                        )
+                        .await?
+                    {
                         return Ok(false);
                     }
                 }
@@ -1093,7 +1204,15 @@ impl RuleEngine {
 
             if let Some(any_conditions) = &compound.any {
                 for cond in any_conditions {
-                    if self.evaluate_condition_with_override(cond, fields, missing_field_override, wallet).await? {
+                    if self
+                        .evaluate_condition_with_override(
+                            cond,
+                            fields,
+                            missing_field_override,
+                            wallet,
+                        )
+                        .await?
+                    {
                         return Ok(true);
                     }
                 }
@@ -1101,7 +1220,14 @@ impl RuleEngine {
             }
 
             if let Some(not_condition) = &compound.not {
-                return Ok(!self.evaluate_condition_with_override(not_condition, fields, missing_field_override, wallet).await?);
+                return Ok(!self
+                    .evaluate_condition_with_override(
+                        not_condition,
+                        fields,
+                        missing_field_override,
+                        wallet,
+                    )
+                    .await?);
             }
 
             Ok(false)
@@ -1263,12 +1389,15 @@ impl RuleEngine {
 
             let wallet = self.extract_wallet_from_fields(&combined_fields);
 
-            if self.evaluate_condition_with_override(
-                &rule_def.rule.conditions,
-                &combined_fields,
-                missing_field_override,
-                &wallet,
-            ).await? {
+            if self
+                .evaluate_condition_with_override(
+                    &rule_def.rule.conditions,
+                    &combined_fields,
+                    missing_field_override,
+                    &wallet,
+                )
+                .await?
+            {
                 let mut action = self.apply_action_override(rule_def, rule_def.rule.action);
 
                 // Downgrade BLOCK to ALERT for simulations (except access control)
@@ -1299,7 +1428,9 @@ impl RuleEngine {
                     .unwrap_or("structural");
 
                 match stage {
-                    "simulation" => simulation_risk_only = simulation_risk_only.saturating_add(weight),
+                    "simulation" => {
+                        simulation_risk_only = simulation_risk_only.saturating_add(weight)
+                    }
                     _ => structural_risk_only = structural_risk_only.saturating_add(weight),
                 }
 
@@ -1372,20 +1503,20 @@ impl RuleEngine {
             is_simulation: true,
         })
     }
-    
+
     /// Add enrichment data to fields for rule evaluation
     #[cfg(feature = "reqwest")]
     async fn add_enrichment_to_fields(&self, fields: &mut HashMap<String, Value>) {
         // Read from enrichment cache
         let cache = self.enrichment_cache.read().await;
-        
+
         if cache.is_empty() {
             return;
         }
-        
+
         // Extract token addresses from transaction data (if available)
         let mut token_addresses = Vec::new();
-        
+
         // Look for token addresses in various fields
         if let Some(token_mint) = fields.get("token_mint").and_then(|v| v.as_str()) {
             token_addresses.push(token_mint.to_string());
@@ -1397,17 +1528,18 @@ impl RuleEngine {
                 }
             }
         }
-        
+
         // For each token found, add its enrichment data organized by source
         for token_addr in token_addresses {
             if let Some(enrichment) = cache.get(&token_addr) {
                 // Create rugcheck namespace (includes all RugCheck API data)
                 let mut rugcheck_json = serde_json::Map::new();
-                
+
                 // Add base Rugcheck score
                 if let Some(ref rc) = enrichment.rugcheck {
                     rugcheck_json.insert("score".to_string(), Value::from(rc.score));
-                    rugcheck_json.insert("risk_level".to_string(), Value::from(rc.risk_level.clone()));
+                    rugcheck_json
+                        .insert("risk_level".to_string(), Value::from(rc.risk_level.clone()));
                     if let Some(mc) = rc.market_cap {
                         rugcheck_json.insert("market_cap".to_string(), Value::from(mc));
                     }
@@ -1415,28 +1547,53 @@ impl RuleEngine {
                         rugcheck_json.insert("liquidity".to_string(), Value::from(liq));
                     }
                 }
-                
+
                 // Add insider analysis (from Rugcheck API)
                 if let Some(ref insider) = enrichment.insider_analysis {
                     let mut insider_json = serde_json::Map::new();
                     insider_json.insert("risk_score".to_string(), Value::from(insider.risk_score));
-                    insider_json.insert("risk_level".to_string(), Value::from(insider.risk_level.clone()));
-                    insider_json.insert("trade_networks".to_string(), Value::from(insider.trade_networks));
-                    insider_json.insert("transfer_networks".to_string(), Value::from(insider.transfer_networks));
-                    insider_json.insert("total_insiders".to_string(), Value::from(insider.total_insiders));
-                    insider_json.insert("insider_concentration".to_string(), Value::from(insider.insider_concentration));
-                    rugcheck_json.insert("insider_analysis".to_string(), Value::Object(insider_json));
+                    insider_json.insert(
+                        "risk_level".to_string(),
+                        Value::from(insider.risk_level.clone()),
+                    );
+                    insider_json.insert(
+                        "trade_networks".to_string(),
+                        Value::from(insider.trade_networks),
+                    );
+                    insider_json.insert(
+                        "transfer_networks".to_string(),
+                        Value::from(insider.transfer_networks),
+                    );
+                    insider_json.insert(
+                        "total_insiders".to_string(),
+                        Value::from(insider.total_insiders),
+                    );
+                    insider_json.insert(
+                        "insider_concentration".to_string(),
+                        Value::from(insider.insider_concentration),
+                    );
+                    rugcheck_json
+                        .insert("insider_analysis".to_string(), Value::Object(insider_json));
                 }
-                
+
                 // Add vault analysis (from Rugcheck API)
                 if let Some(ref vault) = enrichment.vault_analysis {
                     let mut vault_json = serde_json::Map::new();
-                    vault_json.insert("has_locked_liquidity".to_string(), Value::from(vault.has_locked_liquidity));
-                    vault_json.insert("locked_percentage".to_string(), Value::from(vault.locked_percentage));
-                    vault_json.insert("rugpull_risk".to_string(), Value::from(vault.rugpull_risk.clone()));
+                    vault_json.insert(
+                        "has_locked_liquidity".to_string(),
+                        Value::from(vault.has_locked_liquidity),
+                    );
+                    vault_json.insert(
+                        "locked_percentage".to_string(),
+                        Value::from(vault.locked_percentage),
+                    );
+                    vault_json.insert(
+                        "rugpull_risk".to_string(),
+                        Value::from(vault.rugpull_risk.clone()),
+                    );
                     rugcheck_json.insert("vault_analysis".to_string(), Value::Object(vault_json));
                 }
-                
+
                 // Add domain registration (from Rugcheck API)
                 if let Some(ref domain) = enrichment.domain_registration {
                     let mut domain_json = serde_json::Map::new();
@@ -1444,16 +1601,16 @@ impl RuleEngine {
                     domain_json.insert("verified".to_string(), Value::from(domain.verified));
                     rugcheck_json.insert("domain".to_string(), Value::Object(domain_json));
                 }
-                
+
                 // Add rugcheck namespace to fields
                 if !rugcheck_json.is_empty() {
                     fields.insert("rugcheck".to_string(), Value::Object(rugcheck_json.clone()));
                     fields.insert(
                         format!("rugcheck_{}", token_addr),
-                        Value::Object(rugcheck_json)
+                        Value::Object(rugcheck_json),
                     );
                 }
-                
+
                 // Add Jupiter data if available
                 if let Some(ref jupiter) = enrichment.jupiter {
                     let mut jupiter_json = serde_json::Map::new();
@@ -1466,70 +1623,83 @@ impl RuleEngine {
                     if let Some(score) = jupiter.organic_score {
                         jupiter_json.insert("organic_score".to_string(), Value::from(score));
                     }
-                    jupiter_json.insert("has_rugpull_indicators".to_string(), Value::from(jupiter.has_rugpull_indicators));
-                    
+                    jupiter_json.insert(
+                        "has_rugpull_indicators".to_string(),
+                        Value::from(jupiter.has_rugpull_indicators),
+                    );
+
                     if !jupiter_json.is_empty() {
                         fields.insert("jupiter".to_string(), Value::Object(jupiter_json));
                     }
                 }
-                
-                log::debug!("✅ Added rugcheck data for token {} to rule context", token_addr);
+
+                log::debug!(
+                    "✅ Added rugcheck data for token {} to rule context",
+                    token_addr
+                );
             }
         }
     }
 
     /// Extract wallet address from fields (fee payer)
-    fn extract_wallet_from_fields(&self, fields: &HashMap<String, Value>) -> solana_sdk::pubkey::Pubkey {
+    fn extract_wallet_from_fields(
+        &self,
+        fields: &HashMap<String, Value>,
+    ) -> solana_sdk::pubkey::Pubkey {
         // Try to get fee payer from basic:fee_payer field
         if let Some(Value::String(fee_payer)) = fields.get("basic:fee_payer") {
             if let Ok(pubkey) = fee_payer.parse() {
                 return pubkey;
             }
         }
-        
+
         // Fallback to default (should not happen in practice)
         solana_sdk::pubkey::Pubkey::default()
     }
 
     /// Interpolate variables in flowbit names
     /// Example: "transfers_to:{system:sol_recipients[0]}" + fields["system:sol_recipients"][0] -> "transfers_to:7xK...9mP"
-    /// 
+    ///
     /// Format: {analyzer:field_name} or {analyzer:field_name[index]}
     /// - {system:sol_recipients[0]} -> first SOL recipient
     /// - {token_instructions:mints[0]} -> first token mint
     /// - {basic:fee_payer} -> transaction fee payer
     /// - {basic:instruction_count} -> number of instructions (numeric fields converted to string)
-    fn interpolate_flowbit_name(&self, template: &str, fields: &HashMap<String, Value>) -> Result<Option<String>> {
+    fn interpolate_flowbit_name(
+        &self,
+        template: &str,
+        fields: &HashMap<String, Value>,
+    ) -> Result<Option<String>> {
         if !template.contains('{') {
             // No variables to interpolate
             return Ok(Some(template.to_string()));
         }
 
         let mut result = template.to_string();
-        
+
         // Find all {variable} patterns
         let re = regex::Regex::new(r"\{([^}]+)\}").unwrap();
-        
+
         for cap in re.captures_iter(template) {
             let var_spec = &cap[1];
-            
+
             // Parse variable specification: "analyzer:field_name" or "analyzer:field_name[index]"
             if !var_spec.contains(':') {
                 log::warn!("Invalid variable format '{}' - use 'analyzer:field_name' or 'analyzer:field_name[index]'", var_spec);
                 return Ok(None);
             }
-            
+
             let (field_path, array_index) = if let Some(bracket_pos) = var_spec.find('[') {
                 // Array field with index: "system:sol_recipients[0]"
                 let field = &var_spec[..bracket_pos];
-                let index_str = &var_spec[bracket_pos+1..var_spec.len()-1];
+                let index_str = &var_spec[bracket_pos + 1..var_spec.len() - 1];
                 let index: usize = index_str.parse().unwrap_or(0);
                 (field.to_string(), Some(index))
             } else {
                 // Direct field: "basic:fee_payer"
                 (var_spec.to_string(), None)
             };
-            
+
             // Get the field value
             let value = if let Some(field_value) = fields.get(&field_path) {
                 match field_value {
@@ -1543,7 +1713,11 @@ impl RuleEngine {
                         if let Some(Value::String(s)) = arr.get(idx) {
                             s.clone()
                         } else {
-                            log::warn!("Array element at index {} is not a string for field {}", idx, field_path);
+                            log::warn!(
+                                "Array element at index {} is not a string for field {}",
+                                idx,
+                                field_path
+                            );
                             return Ok(None);
                         }
                     }
@@ -1551,7 +1725,10 @@ impl RuleEngine {
                     Value::Number(n) => n.to_string(),
                     Value::Bool(b) => b.to_string(),
                     _ => {
-                        log::warn!("Field {} has unsupported type for interpolation", field_path);
+                        log::warn!(
+                            "Field {} has unsupported type for interpolation",
+                            field_path
+                        );
                         return Ok(None);
                     }
                 }
@@ -1559,11 +1736,11 @@ impl RuleEngine {
                 log::warn!("Field {} not found for variable interpolation", field_path);
                 return Ok(None);
             };
-            
+
             // Replace the variable
             result = result.replace(&format!("{{{}}}", var_spec), &value);
         }
-        
+
         Ok(Some(result))
     }
 

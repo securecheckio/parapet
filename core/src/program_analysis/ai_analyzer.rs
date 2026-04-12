@@ -10,15 +10,15 @@ use serde_json::{json, Value};
 use std::env;
 use std::time::Instant;
 
-use super::types::ProgramData;
 use super::disassembler::DisassemblyResult;
 use super::semantic::SemanticAnalysisResult;
+use super::types::ProgramData;
 
 /// AI analysis result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AiAnalysisResult {
     pub program_id: String,
-    pub risk_score: f64,           // 0.0 to 100.0
+    pub risk_score: f64, // 0.0 to 100.0
     pub risk_level: String,
     pub behavioral_analysis: String,
     pub vulnerabilities: Vec<AiVulnerability>,
@@ -51,7 +51,7 @@ impl Default for AiProviderConfig {
     fn default() -> Self {
         // Check for provider-specific env vars, fallback to OpenAI
         let provider = env::var("AI_PROVIDER").unwrap_or_else(|_| "openai".to_string());
-        
+
         match provider.as_str() {
             "nano-gpt" => Self {
                 api_key: env::var("NANO_GPT_API_KEY").unwrap_or_default(),
@@ -113,7 +113,10 @@ impl AiAnalyzer {
         semantic_analysis: Option<&SemanticAnalysisResult>,
     ) -> Result<AiAnalysisResult> {
         let start_time = Instant::now();
-        info!("🤖 Starting AI analysis for program: {}", program_data.address);
+        info!(
+            "🤖 Starting AI analysis for program: {}",
+            program_data.address
+        );
 
         // Build analysis prompt
         let prompt = self.build_analysis_prompt(program_data, disassembly, semantic_analysis);
@@ -157,7 +160,10 @@ Disassembly Analysis:
             program_data.address,
             program_data.is_executable,
             program_data.is_upgradeable,
-            program_data.authority.map(|a| a.to_string()).unwrap_or_else(|| "None".to_string()),
+            program_data
+                .authority
+                .map(|a| a.to_string())
+                .unwrap_or_else(|| "None".to_string()),
             program_data.executable_data.len(),
             disassembly.total_instructions,
             disassembly.suspicious_patterns.join(", "),
@@ -239,11 +245,20 @@ Provide a security analysis in JSON format:
 
         if !response.status().is_success() {
             let status = response.status();
-            let error_text = response.text().await.unwrap_or_else(|_| "Unknown error".to_string());
-            return Err(anyhow!("AI provider returned error {}: {}", status, error_text));
+            let error_text = response
+                .text()
+                .await
+                .unwrap_or_else(|_| "Unknown error".to_string());
+            return Err(anyhow!(
+                "AI provider returned error {}: {}",
+                status,
+                error_text
+            ));
         }
 
-        let response_json: Value = response.json().await
+        let response_json: Value = response
+            .json()
+            .await
             .map_err(|e| anyhow!("Failed to parse AI response: {}", e))?;
 
         // Extract content from OpenAI-compatible response
@@ -255,7 +270,11 @@ Provide a security analysis in JSON format:
         Ok(content)
     }
 
-    fn parse_ai_response(&self, response: &str, program_data: &ProgramData) -> Result<AiAnalysisResult> {
+    fn parse_ai_response(
+        &self,
+        response: &str,
+        program_data: &ProgramData,
+    ) -> Result<AiAnalysisResult> {
         // Try to extract JSON from response (might be wrapped in markdown)
         let json_str = if response.contains("```json") {
             response
@@ -279,8 +298,14 @@ Provide a security analysis in JSON format:
             .map_err(|e| anyhow!("Failed to parse AI JSON response: {}", e))?;
 
         let risk_score = parsed["risk_score"].as_f64().unwrap_or(50.0);
-        let risk_level = parsed["risk_level"].as_str().unwrap_or("Medium").to_string();
-        let behavioral_analysis = parsed["behavioral_analysis"].as_str().unwrap_or("No analysis provided").to_string();
+        let risk_level = parsed["risk_level"]
+            .as_str()
+            .unwrap_or("Medium")
+            .to_string();
+        let behavioral_analysis = parsed["behavioral_analysis"]
+            .as_str()
+            .unwrap_or("No analysis provided")
+            .to_string();
         let confidence_score = parsed["confidence_score"].as_f64().unwrap_or(0.5);
 
         let mut vulnerabilities = Vec::new();

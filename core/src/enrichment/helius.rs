@@ -29,15 +29,14 @@ pub struct HeliusData {
 
 impl HeliusClient {
     pub fn new() -> Self {
-        let api_key = std::env::var("HELIUS_API_KEY")
-            .expect("HELIUS_API_KEY not set");
+        let api_key = std::env::var("HELIUS_API_KEY").expect("HELIUS_API_KEY not set");
 
         log::info!("✅ HeliusClient: initialized with API key");
 
         // Helius free tier: ~10k/day, be conservative
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "HELIUS_RATE_LIMIT",
-            20,  // Conservative: 20 requests per minute
+            20, // Conservative: 20 requests per minute
             60,
         );
 

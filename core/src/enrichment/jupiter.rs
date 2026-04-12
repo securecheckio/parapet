@@ -39,11 +39,7 @@ impl JupiterClient {
         }
 
         // Jupiter free tier: 60 req/min
-        let rate_limiter = ApiRateLimiter::from_env_or_default(
-            "JUPITER_RATE_LIMIT",
-            60,
-            60,
-        );
+        let rate_limiter = ApiRateLimiter::from_env_or_default("JUPITER_RATE_LIMIT", 60, 60);
 
         Self {
             api_key,
@@ -62,7 +58,10 @@ impl JupiterClient {
         let _permit = self.rate_limiter.acquire().await;
 
         let url = if let Some(key) = &self.api_key {
-            format!("https://api.jup.ag/v1/tokens/{}?api-key={}", token_address, key)
+            format!(
+                "https://api.jup.ag/v1/tokens/{}?api-key={}",
+                token_address, key
+            )
         } else {
             format!("https://api.jup.ag/v1/tokens/{}", token_address)
         };

@@ -74,9 +74,7 @@ mod tests {
         // Should be at least 60 characters (sc_ + 48 bytes base58 encoded)
         assert!(key.len() >= 60, "Key length {} is too short", key.len());
         // Verify uniqueness - generate 10 keys and ensure all different
-        let keys: std::collections::HashSet<String> = (0..10)
-            .map(|_| generate_api_key())
-            .collect();
+        let keys: std::collections::HashSet<String> = (0..10).map(|_| generate_api_key()).collect();
         assert_eq!(keys.len(), 10, "Generated keys should be unique");
     }
 

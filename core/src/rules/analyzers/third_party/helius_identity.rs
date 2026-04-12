@@ -50,8 +50,8 @@ impl HeliusIdentityAnalyzer {
         // Helius free tier: ~10k/day, but be very conservative to avoid 429s
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "HELIUS_RATE_LIMIT",
-            20,  // Very conservative: 20 requests per minute (~1 per 3 seconds)
-            60,  // 60 second window
+            20, // Very conservative: 20 requests per minute (~1 per 3 seconds)
+            60, // 60 second window
         );
 
         let cache = Arc::new(SharedCache::new(redis_url));
@@ -123,7 +123,10 @@ impl HeliusIdentityAnalyzer {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 attempt += 1;
                 if attempt >= max_retries {
-                    return Err(anyhow!("Helius API rate limited after {} retries", max_retries));
+                    return Err(anyhow!(
+                        "Helius API rate limited after {} retries",
+                        max_retries
+                    ));
                 }
                 ApiRateLimiter::backoff_on_429(attempt).await;
                 continue;
@@ -141,7 +144,11 @@ impl HeliusIdentityAnalyzer {
         for identity in &fresh_identities {
             let cache_key = format!("helius:identity:{}", identity.address);
             // Cache for 7 days (identity data rarely changes)
-            if let Err(e) = self.cache.set(&cache_key, identity, Duration::from_secs(7 * 24 * 3600)).await {
+            if let Err(e) = self
+                .cache
+                .set(&cache_key, identity, Duration::from_secs(7 * 24 * 3600))
+                .await
+            {
                 log::warn!("Failed to cache identity for {}: {}", identity.address, e);
             }
         }

@@ -1,4 +1,3 @@
-use serde_json::json;
 use parapet_core::rules::{
     analyzers::simulation::{
         SimulationAnalyzerRegistry, SimulationBalanceAnalyzer, SimulationLogAnalyzer,
@@ -6,11 +5,12 @@ use parapet_core::rules::{
     },
     RuleEngine,
 };
+use serde_json::json;
 
 #[tokio::test]
 async fn test_simulation_enrichment_structure() {
     // This test validates the structure of the solShield response field
-    
+
     let simulation_response = json!({
         "preBalances": [5000000000u64, 2000000000u64],
         "postBalances": [4000000000u64, 2000000000u64],
@@ -43,7 +43,7 @@ async fn test_simulation_enrichment_structure() {
 #[tokio::test]
 async fn test_simulation_high_risk_detection() {
     // Test detecting high-risk patterns in simulation
-    
+
     let simulation_response = json!({
         "preBalances": [5000000000u64],
         "postBalances": [500000000u64],  // 90% loss
@@ -70,7 +70,11 @@ async fn test_simulation_high_risk_detection() {
     assert!(balance_change < -4.0);
 
     // Should detect suspicious keywords
-    let suspicious = fields.get("suspicious_keywords").unwrap().as_bool().unwrap();
+    let suspicious = fields
+        .get("suspicious_keywords")
+        .unwrap()
+        .as_bool()
+        .unwrap();
     assert_eq!(suspicious, true);
 
     // Should detect no token inflows (pure drain)
@@ -81,7 +85,7 @@ async fn test_simulation_high_risk_detection() {
 #[tokio::test]
 async fn test_simulation_legitimate_swap() {
     // Test that legitimate DeFi operations don't trigger false positives
-    
+
     let simulation_response = json!({
         "preBalances": [5000000000u64],
         "postBalances": [4999995000u64],  // Small fee
@@ -134,7 +138,7 @@ async fn test_simulation_legitimate_swap() {
 
     // Small SOL loss (fees)
     let balance_change = fields.get("sol_balance_change").unwrap().as_f64().unwrap();
-    assert!(balance_change > -0.01);  // Less than 0.01 SOL lost
+    assert!(balance_change > -0.01); // Less than 0.01 SOL lost
 
     // Balanced token flow (1 out, 1 in)
     let tokens_out = fields.get("token_transfers_out").unwrap().as_u64().unwrap();
@@ -143,7 +147,11 @@ async fn test_simulation_legitimate_swap() {
     assert_eq!(tokens_in, 1);
 
     // No suspicious keywords
-    let suspicious = fields.get("suspicious_keywords").unwrap().as_bool().unwrap();
+    let suspicious = fields
+        .get("suspicious_keywords")
+        .unwrap()
+        .as_bool()
+        .unwrap();
     assert_eq!(suspicious, false);
 }
 

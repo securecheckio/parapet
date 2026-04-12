@@ -102,14 +102,14 @@ impl FlowbitStateManager {
                 if self.is_expired(value) {
                     return false;
                 }
-                
+
                 // Check if set_at is within the time window
                 let set_at = match value {
                     FlowbitValue::Boolean { set_at, .. } => set_at,
                     FlowbitValue::Counter { set_at, .. } => set_at,
                     FlowbitValue::Timestamp { set_at, .. } => set_at,
                 };
-                
+
                 let now = SystemTime::now();
                 if let Ok(elapsed) = now.duration_since(*set_at) {
                     return elapsed.as_secs() <= within_seconds;
@@ -129,7 +129,7 @@ impl FlowbitStateManager {
         }
 
         let now = SystemTime::now();
-        
+
         // Check if counter exists and is not expired first
         let new_value = if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(existing) = state.get(name) {
@@ -147,7 +147,7 @@ impl FlowbitStateManager {
         // Now mutate
         let effective_ttl = self.resolve_ttl(ttl);
         let expires_at = Some(now + effective_ttl);
-        
+
         let state = self.wallet_states.entry(*wallet).or_default();
         state.insert(
             name.to_string(),
@@ -207,13 +207,13 @@ impl FlowbitStateManager {
             if self.is_expired(value) {
                 return false;
             }
-            
+
             let set_at = match value {
                 FlowbitValue::Boolean { set_at, .. } => set_at,
                 FlowbitValue::Counter { set_at, .. } => set_at,
                 FlowbitValue::Timestamp { set_at, .. } => set_at,
             };
-            
+
             let now = SystemTime::now();
             if let Ok(elapsed) = now.duration_since(*set_at) {
                 return elapsed.as_secs() <= within_seconds;
@@ -224,7 +224,7 @@ impl FlowbitStateManager {
 
     pub fn increment_global(&mut self, name: &str, ttl: Option<Duration>) {
         let now = SystemTime::now();
-        
+
         // Check if counter exists and is not expired first
         let new_value = if let Some(existing) = self.global_state.get(name) {
             match existing {
@@ -238,7 +238,7 @@ impl FlowbitStateManager {
         // Now mutate
         let effective_ttl = self.resolve_ttl(ttl);
         let expires_at = Some(now + effective_ttl);
-        
+
         self.global_state.insert(
             name.to_string(),
             FlowbitValue::Counter {
@@ -296,13 +296,13 @@ impl FlowbitStateManager {
         } else {
             return;
         };
-        
+
         // Then remove them
         if let Some(state) = self.wallet_states.get_mut(wallet) {
             for key in expired_keys {
                 state.remove(&key);
             }
-            
+
             if state.is_empty() {
                 self.wallet_states.remove(wallet);
             }
@@ -314,17 +314,13 @@ impl FlowbitStateManager {
         let now = SystemTime::now();
 
         // Only run full cleanup every 60 seconds
-        if now
-            .duration_since(self.last_cleanup)
-            .unwrap_or_default()
-            < self.cleanup_interval
-        {
+        if now.duration_since(self.last_cleanup).unwrap_or_default() < self.cleanup_interval {
             return;
         }
 
         // Clean all wallets - collect expired entries first to avoid borrow issues
         let wallets_to_clean: Vec<Pubkey> = self.wallet_states.keys().copied().collect();
-        
+
         for wallet in wallets_to_clean {
             // First collect expired keys
             let expired_keys: Vec<String> = if let Some(state) = self.wallet_states.get(&wallet) {
@@ -341,13 +337,13 @@ impl FlowbitStateManager {
             } else {
                 continue;
             };
-            
+
             // Then remove them
             if let Some(state) = self.wallet_states.get_mut(&wallet) {
                 for key in expired_keys {
                     state.remove(&key);
                 }
-                
+
                 if state.is_empty() {
                     self.wallet_states.remove(&wallet);
                 }
@@ -355,7 +351,8 @@ impl FlowbitStateManager {
         }
 
         // Clean global state
-        let expired_global_keys: Vec<String> = self.global_state
+        let expired_global_keys: Vec<String> = self
+            .global_state
             .iter()
             .filter_map(|(k, v)| {
                 if self.is_expired(v) {
@@ -365,7 +362,7 @@ impl FlowbitStateManager {
                 }
             })
             .collect();
-        
+
         for key in expired_global_keys {
             self.global_state.remove(&key);
         }
@@ -679,16 +676,34 @@ mod tests {
         let mut manager = FlowbitStateManager::new(None);
 
         let recipient = "7xK...9mP";
-        
+
         // Simulate 3 different wallets sending to same recipient
-        manager.increment_global(&format!("suspicious_recipient:{}", recipient), Some(Duration::from_secs(3600)));
-        assert_eq!(manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)), 1);
+        manager.increment_global(
+            &format!("suspicious_recipient:{}", recipient),
+            Some(Duration::from_secs(3600)),
+        );
+        assert_eq!(
+            manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)),
+            1
+        );
 
-        manager.increment_global(&format!("suspicious_recipient:{}", recipient), Some(Duration::from_secs(3600)));
-        assert_eq!(manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)), 2);
+        manager.increment_global(
+            &format!("suspicious_recipient:{}", recipient),
+            Some(Duration::from_secs(3600)),
+        );
+        assert_eq!(
+            manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)),
+            2
+        );
 
-        manager.increment_global(&format!("suspicious_recipient:{}", recipient), Some(Duration::from_secs(3600)));
-        assert_eq!(manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)), 3);
+        manager.increment_global(
+            &format!("suspicious_recipient:{}", recipient),
+            Some(Duration::from_secs(3600)),
+        );
+        assert_eq!(
+            manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)),
+            3
+        );
 
         // Should trigger lateral movement detection (> 2)
         assert!(manager.get_counter_global(&format!("suspicious_recipient:{}", recipient)) > 2);

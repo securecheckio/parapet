@@ -60,17 +60,18 @@ impl SimulationAnalyzer for SimulationComputeAnalyzer {
         let near_limit = units_consumed > (Self::MAX_COMPUTE_LIMIT * 9 / 10);
 
         // Try to get instruction count from logs (count "invoke" entries)
-        let instruction_count = if let Some(logs) = simulation_result.get("logs").and_then(|v| v.as_array()) {
-            logs.iter()
-                .filter(|log| {
-                    log.as_str()
-                        .map(|s| s.contains(" invoke [1]"))
-                        .unwrap_or(false)
-                })
-                .count() as u64
-        } else {
-            1 // Default to 1 if we can't determine
-        };
+        let instruction_count =
+            if let Some(logs) = simulation_result.get("logs").and_then(|v| v.as_array()) {
+                logs.iter()
+                    .filter(|log| {
+                        log.as_str()
+                            .map(|s| s.contains(" invoke [1]"))
+                            .unwrap_or(false)
+                    })
+                    .count() as u64
+            } else {
+                1 // Default to 1 if we can't determine
+            };
 
         let excessive = Self::is_excessive_compute(units_consumed, instruction_count);
 

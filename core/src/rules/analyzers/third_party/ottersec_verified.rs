@@ -59,8 +59,8 @@ impl OtterSecVerifiedAnalyzer {
         // OtterSec public API: be very conservative to avoid 429s
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "OTTERSEC_RATE_LIMIT",
-            30,  // Very conservative: 30 requests per minute (~1 per 2 seconds)
-            60,  // 60 second window
+            30, // Very conservative: 30 requests per minute (~1 per 2 seconds)
+            60, // 60 second window
         );
 
         Self {

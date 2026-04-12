@@ -33,19 +33,21 @@ pub async fn subscribe_push(
 ) -> Result<StatusCode, StatusCode> {
     // Get session from cookie
     let session_id = jar.get("session_id").ok_or(StatusCode::UNAUTHORIZED)?;
-    let session = state.sessions.get_session(session_id.value()).await
+    let session = state
+        .sessions
+        .get_session(session_id.value())
+        .await
         .map_err(|_| StatusCode::UNAUTHORIZED)?
         .ok_or(StatusCode::UNAUTHORIZED)?;
-    
-    let user_id = uuid::Uuid::parse_str(&session.user_id)
-        .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let user_id = uuid::Uuid::parse_str(&session.user_id).map_err(|_| StatusCode::BAD_REQUEST)?;
 
     // Store subscription in database
     match sqlx::query(
         "INSERT INTO push_subscriptions (user_id, endpoint, p256dh_key, auth_key) 
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (user_id, endpoint) DO UPDATE 
-         SET p256dh_key = $3, auth_key = $4, created_at = NOW()"
+         SET p256dh_key = $3, auth_key = $4, created_at = NOW()",
     )
     .bind(&user_id)
     .bind(&subscription.endpoint)
@@ -69,14 +71,20 @@ pub async fn internal_send_push(
     State(state): State<PlatformState>,
     Json(req): Json<InternalPushRequest>,
 ) -> Result<StatusCode, StatusCode> {
-    log::info!("📨 Received push request for user {}: {}", req.user_id, req.title);
+    log::info!(
+        "📨 Received push request for user {}: {}",
+        req.user_id,
+        req.title
+    );
     match send_push_notification(
         &state.db,
         &req.user_id,
         &req.title,
         &req.body,
         req.require_interaction,
-    ).await {
+    )
+    .await
+    {
         Ok(_) => {
             log::info!("✅ Push notification sent successfully");
             Ok(StatusCode::OK)
@@ -96,13 +104,12 @@ pub async fn send_push_notification(
     require_interaction: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     log::info!("🔔 Sending push notification to user {}", user_id);
-    
+
     // Get VAPID PEM key from environment
-    let vapid_private_key_pem = std::env::var("VAPID_PRIVATE_KEY_PEM")
-        .map_err(|e| {
-            log::error!("❌ VAPID_PRIVATE_KEY_PEM not set: {}", e);
-            "VAPID_PRIVATE_KEY_PEM not set"
-        })?;
+    let vapid_private_key_pem = std::env::var("VAPID_PRIVATE_KEY_PEM").map_err(|e| {
+        log::error!("❌ VAPID_PRIVATE_KEY_PEM not set: {}", e);
+        "VAPID_PRIVATE_KEY_PEM not set"
+    })?;
     log::info!("✅ VAPID PEM key loaded");
 
     // Get user's push subscriptions
@@ -110,10 +117,10 @@ pub async fn send_push_notification(
         log::error!("❌ Invalid user_id format: {}", e);
         e
     })?;
-    
+
     log::info!("🔍 Querying push subscriptions for user {}", user_uuid);
     let subscriptions = sqlx::query_as::<_, (String, String, String)>(
-        "SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = $1"
+        "SELECT endpoint, p256dh_key, auth_key FROM push_subscriptions WHERE user_id = $1",
     )
     .bind(user_uuid)
     .fetch_all(db)
@@ -124,7 +131,7 @@ pub async fn send_push_notification(
     })?;
 
     log::info!("📊 Found {} push subscription(s)", subscriptions.len());
-    
+
     if subscriptions.is_empty() {
         log::warn!("⚠️ No push subscriptions found for user {}", user_id);
         return Ok(());
@@ -150,22 +157,23 @@ pub async fn send_push_notification(
         log::error!("❌ Failed to create WebPush client: {:?}", e);
         e
     })?;
-    
+
     log::info!("📤 Sending to {} subscription(s)...", subscriptions.len());
     for (i, (endpoint, p256dh, auth)) in subscriptions.iter().enumerate() {
         log::info!("📨 [{}] Sending to endpoint: {}...", i + 1, &endpoint[..50]);
-        
+
         // Build subscription info
         let subscription_info = SubscriptionInfo::new(endpoint, p256dh, auth);
         log::info!("✅ [{}] Subscription info created", i + 1);
 
         // Build VAPID signature for this specific subscription
         log::info!("🔐 [{}] Building VAPID signature...", i + 1);
-        
+
         let sig_builder = VapidSignatureBuilder::from_pem(
             std::io::Cursor::new(vapid_private_key_pem.as_bytes()),
             &subscription_info,
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             log::error!("❌ [{}] Failed to build VAPID signature: {:?}", i + 1, e);
             e
         })?;
@@ -176,7 +184,7 @@ pub async fn send_push_notification(
             log::error!("❌ [{}] Failed to create message builder: {:?}", i + 1, e);
             e
         })?;
-        
+
         builder.set_payload(ContentEncoding::Aes128Gcm, &payload_bytes);
         builder.set_vapid_signature(sig_builder.build().map_err(|e| {
             log::error!("❌ [{}] Failed to build VAPID signature: {:?}", i + 1, e);
@@ -187,21 +195,30 @@ pub async fn send_push_notification(
             log::error!("❌ [{}] Failed to build message: {:?}", i + 1, e);
             e
         })?;
-        
+
         log::info!("🚀 [{}] Sending message...", i + 1);
         match client.send(message).await {
             Ok(response) => {
-                log::info!("✅ [{}] Push notification sent successfully! Response: {:?}", i + 1, response);
+                log::info!(
+                    "✅ [{}] Push notification sent successfully! Response: {:?}",
+                    i + 1,
+                    response
+                );
                 // Update last_used_at
-                let _ = sqlx::query("UPDATE push_subscriptions SET last_used_at = NOW() WHERE endpoint = $1")
-                    .bind(endpoint)
-                    .execute(db)
-                    .await;
+                let _ = sqlx::query(
+                    "UPDATE push_subscriptions SET last_used_at = NOW() WHERE endpoint = $1",
+                )
+                .bind(endpoint)
+                .execute(db)
+                .await;
             }
             Err(e) => {
                 log::error!("❌ [{}] Failed to send push notification: {:?}", i + 1, e);
                 // If subscription is invalid, remove it
-                if matches!(e, WebPushError::EndpointNotValid | WebPushError::EndpointNotFound) {
+                if matches!(
+                    e,
+                    WebPushError::EndpointNotValid | WebPushError::EndpointNotFound
+                ) {
                     log::warn!("🗑️ [{}] Removing invalid subscription", i + 1);
                     let _ = sqlx::query("DELETE FROM push_subscriptions WHERE endpoint = $1")
                         .bind(endpoint)
@@ -211,9 +228,8 @@ pub async fn send_push_notification(
             }
         }
     }
-    
-    log::info!("🎉 Push notification process complete");
 
+    log::info!("🎉 Push notification process complete");
 
     Ok(())
 }

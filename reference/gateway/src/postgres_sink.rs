@@ -1,7 +1,7 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use redis::AsyncCommands;
 use parapet_proxy::output::sink::{OutputSink, SinkMetadata};
+use redis::AsyncCommands;
 use sqlx::PgPool;
 
 /// PostgreSQL sink for security events
@@ -30,14 +30,14 @@ impl OutputSink for PostgresSecuritySink {
 
         // Parse as generic JSON to handle case-insensitive fields
         let json_value: serde_json::Value = serde_json::from_slice(data)?;
-        
+
         // Extract fields manually to handle case issues
         let event_id = json_value["event_id"].as_str().unwrap_or("unknown");
         let proxy_event_type = json_value["event_type"].as_str().unwrap_or("unknown");
         let risk_level_str = json_value["risk_level"].as_str().unwrap_or("low");
         let risk_score = json_value["risk_score"].as_i64().unwrap_or(0);
         let user_id = json_value["user_id"].as_str();
-        
+
         log::debug!(
             "Processing event {} (proxy_event_type: {}, risk_level: {}, risk_score: {})",
             event_id,
@@ -82,10 +82,16 @@ impl OutputSink for PostgresSecuritySink {
                     .collect::<Vec<_>>()
                     .join("; ")
             } else {
-                json_value["summary"].as_str().unwrap_or("No description").to_string()
+                json_value["summary"]
+                    .as_str()
+                    .unwrap_or("No description")
+                    .to_string()
             }
         } else {
-            json_value["summary"].as_str().unwrap_or("No description").to_string()
+            json_value["summary"]
+                .as_str()
+                .unwrap_or("No description")
+                .to_string()
         };
 
         // Extract rule info
@@ -102,7 +108,7 @@ impl OutputSink for PostgresSecuritySink {
             "INSERT INTO security_events (
                 user_id, event_type, severity, threat_category, 
                 description, transaction_data, rule_id, created_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())",
         )
         .bind(user_uuid)
         .bind(event_type)
@@ -137,9 +143,16 @@ impl OutputSink for PostgresSecuritySink {
                             "rule_id": rule_id.as_deref(),
                         }
                     });
-                    match conn.publish::<_, _, i32>(&channel, serde_json::to_string(&update).unwrap()).await {
+                    match conn
+                        .publish::<_, _, i32>(&channel, serde_json::to_string(&update).unwrap())
+                        .await
+                    {
                         Ok(num_subscribers) => {
-                            log::info!("📤 Published event notification to {} ({} subscriber(s))", channel, num_subscribers);
+                            log::info!(
+                                "📤 Published event notification to {} ({} subscriber(s))",
+                                channel,
+                                num_subscribers
+                            );
                         }
                         Err(e) => {
                             log::error!("❌ Failed to publish event notification: {}", e);
@@ -147,10 +160,13 @@ impl OutputSink for PostgresSecuritySink {
                     }
                 }
                 Err(e) => {
-                    log::error!("❌ Failed to get Redis connection for event notification: {}", e);
+                    log::error!(
+                        "❌ Failed to get Redis connection for event notification: {}",
+                        e
+                    );
                 }
             }
-            
+
             // Send push notification for blocked or critical events
             if event_type == "blocked" || severity == "critical" {
                 let user_id = user_id_str.to_string();
@@ -161,19 +177,19 @@ impl OutputSink for PostgresSecuritySink {
                 };
                 let body = description.clone();
                 let require_interaction = event_type == "blocked";
-                
+
                 tokio::spawn(async move {
                     // Call auth-api to send push notification
                     let auth_api_url = std::env::var("AUTH_API_URL")
                         .unwrap_or_else(|_| "http://localhost:3001".to_string());
-                    
+
                     let payload = serde_json::json!({
                         "user_id": user_id,
                         "title": title,
                         "body": body,
                         "require_interaction": require_interaction,
                     });
-                    
+
                     match reqwest::Client::new()
                         .post(format!("{}/internal/push/send", auth_api_url))
                         .json(&payload)

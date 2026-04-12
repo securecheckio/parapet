@@ -71,10 +71,7 @@ mod tests {
 
         let result = auth.authenticate(&headers, "getHealth").await;
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Missing API key"));
+        assert!(result.unwrap_err().to_string().contains("Missing API key"));
     }
 
     #[tokio::test]

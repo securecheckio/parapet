@@ -35,8 +35,11 @@ impl ProgramDisassembler {
     }
 
     pub fn disassemble(&self, program_data: &[u8]) -> Result<DisassemblyResult> {
-        info!("Starting program disassembly, data size: {} bytes", program_data.len());
-        
+        info!(
+            "Starting program disassembly, data size: {} bytes",
+            program_data.len()
+        );
+
         let instructions = self.analyze_bytecode(program_data)?;
         let entropy_score = self.calculate_entropy(program_data);
         let complexity_score = self.calculate_complexity(program_data);
@@ -54,20 +57,20 @@ impl ProgramDisassembler {
 
     fn analyze_bytecode(&self, data: &[u8]) -> Result<Vec<Instruction>> {
         let mut instructions = Vec::new();
-        
+
         // Simplified bytecode analysis - look for common BPF instruction patterns
         let mut offset = 0;
         while offset + 8 <= data.len() {
             let instruction_bytes = &data[offset..offset + 8];
-            
+
             // Basic BPF instruction analysis
             if let Some(instr) = self.parse_bpf_instruction(offset as u64, instruction_bytes) {
                 instructions.push(instr);
             }
-            
+
             offset += 8; // BPF instructions are 8 bytes
         }
-        
+
         info!("Analyzed {} potential instructions", instructions.len());
         Ok(instructions)
     }
@@ -89,7 +92,8 @@ impl ProgramDisassembler {
             0x06 => "unknown",
             0x07 => "alu64",
             _ => "invalid",
-        }.to_string();
+        }
+        .to_string();
 
         Some(Instruction {
             address,
@@ -147,7 +151,7 @@ impl ProgramDisassembler {
         let suspicious_sequences: &[(&str, &[u8])] = &[
             ("transfer", b"transfer"),
             ("create", b"create_account"),
-            ("close", b"close_account"), 
+            ("close", b"close_account"),
             ("invoke", b"sol_invoke"),
             ("syscall", b"sol_log"),
         ];
@@ -199,9 +203,15 @@ impl ProgramDisassembler {
             Ok(elf) => {
                 analysis.insert("format".to_string(), "ELF".to_string());
                 analysis.insert("machine".to_string(), format!("{}", elf.header.e_machine));
-                analysis.insert("entry_point".to_string(), format!("0x{:x}", elf.header.e_entry));
-                analysis.insert("sections".to_string(), elf.section_headers.len().to_string());
-                
+                analysis.insert(
+                    "entry_point".to_string(),
+                    format!("0x{:x}", elf.header.e_entry),
+                );
+                analysis.insert(
+                    "sections".to_string(),
+                    elf.section_headers.len().to_string(),
+                );
+
                 // Analyze sections
                 let mut suspicious_sections = Vec::new();
                 for section in &elf.section_headers {
@@ -211,9 +221,12 @@ impl ProgramDisassembler {
                         }
                     }
                 }
-                
+
                 if !suspicious_sections.is_empty() {
-                    analysis.insert("suspicious_sections".to_string(), suspicious_sections.join(", "));
+                    analysis.insert(
+                        "suspicious_sections".to_string(),
+                        suspicious_sections.join(", "),
+                    );
                 }
             }
             Err(_) => {

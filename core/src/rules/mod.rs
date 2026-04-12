@@ -23,8 +23,13 @@ pub use analyzer::{AnalyzerRegistry, TransactionAnalyzer};
 pub use analyzer_config::{AnalyzerConfig, AnalyzersConfig};
 pub use dynamic::{DynamicRule, DynamicRuleStore, RuleSource};
 pub use engine::RuleEngine;
-pub use feed_updater::{FeedConfig, FeedSource, RuleFeed, MergedRuleFeed, FeedUpdater, FetchResult};
+pub use feed_updater::{
+    FeedConfig, FeedSource, FeedUpdater, FetchResult, MergedRuleFeed, RuleFeed,
+};
 pub use flowbits::{FlowbitStateManager, FlowbitValue};
-pub use performance::{PerformanceTracker, EnginePerformanceMetrics, RulePerformanceMetrics, AnalyzerPerformanceMetrics};
-pub use types::{Rule, RuleAction, RuleCondition, RuleDefinition, RuleDecision, MatchedRule};
+pub use performance::{
+    AnalyzerPerformanceMetrics, EnginePerformanceMetrics, PerformanceTracker,
+    RulePerformanceMetrics,
+};
+pub use types::{MatchedRule, Rule, RuleAction, RuleCondition, RuleDecision, RuleDefinition};
 pub use wasm_analyzer::load_wasm_analyzers_from_dir;

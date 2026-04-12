@@ -95,10 +95,15 @@ impl InstructionDataAnalyzer {
             .collect();
 
         let index = Self::build_index(&fingerprints);
-        Self { fingerprints, index }
+        Self {
+            fingerprints,
+            index,
+        }
     }
 
-    fn build_index(fingerprints: &[ResolvedFingerprint]) -> HashMap<usize, HashMap<Vec<u8>, String>> {
+    fn build_index(
+        fingerprints: &[ResolvedFingerprint],
+    ) -> HashMap<usize, HashMap<Vec<u8>, String>> {
         let mut index: HashMap<usize, HashMap<Vec<u8>, String>> = HashMap::new();
         for fp in fingerprints {
             index
@@ -113,16 +118,14 @@ impl InstructionDataAnalyzer {
     pub fn from_config_file(path: &str) -> Result<Self> {
         let content = std::fs::read_to_string(path)
             .map_err(|e| anyhow::anyhow!("Failed to read fingerprint config '{}': {}", path, e))?;
-        Self::from_json_str(&content).map_err(|e| {
-            anyhow::anyhow!("Failed to parse fingerprint config '{}': {}", path, e)
-        })
+        Self::from_json_str(&content)
+            .map_err(|e| anyhow::anyhow!("Failed to parse fingerprint config '{}': {}", path, e))
     }
 
     /// Same schema as [`Self::from_config_file`], but from a string (tests, embeds).
     pub fn from_json_str(s: &str) -> Result<Self> {
-        let config: FingerprintConfig = serde_json::from_str(s).map_err(|e| {
-            anyhow::anyhow!("Failed to parse fingerprint config JSON: {}", e)
-        })?;
+        let config: FingerprintConfig = serde_json::from_str(s)
+            .map_err(|e| anyhow::anyhow!("Failed to parse fingerprint config JSON: {}", e))?;
         Ok(Self::new(config.fingerprints))
     }
 
@@ -202,7 +205,10 @@ impl InstructionDataAnalyzer {
             .collect();
 
         let index = Self::build_index(&fingerprints);
-        Self { fingerprints, index }
+        Self {
+            fingerprints,
+            index,
+        }
     }
 
     fn match_data(&self, data: &[u8], matched: &mut Vec<String>) {
@@ -267,7 +273,10 @@ impl InstructionDataAnalyzer {
         for name in &matched {
             if let Some(fp) = self.fingerprints.iter().find(|fp| fp.name == *name) {
                 if let Some(cat) = &fp.category {
-                    by_category.entry(cat.clone()).or_default().push(name.clone());
+                    by_category
+                        .entry(cat.clone())
+                        .or_default()
+                        .push(name.clone());
                 }
             }
         }
@@ -276,7 +285,10 @@ impl InstructionDataAnalyzer {
 
         let mut fields = HashMap::new();
         fields.insert("matched_names".to_string(), json!(matched));
-        fields.insert("has_authority_change".to_string(), json!(has_authority_change));
+        fields.insert(
+            "has_authority_change".to_string(),
+            json!(has_authority_change),
+        );
 
         // Per-category arrays e.g. "authority_change_names"
         for (cat, names) in by_category {
@@ -375,13 +387,21 @@ mod tests {
             instructions: vec![ix],
         };
 
-        let tx = Transaction { signatures: vec![], message };
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
 
         // Must not match — AdvanceNonceAccount should not be flagged as authority change
         let matched = analyzer.scan(&tx);
-        assert!(!matched.contains(&"set_authority_spl".to_string()), 
-            "AdvanceNonceAccount [4,0,0,0] must not match set_authority_spl");
-        assert!(matched.is_empty(), "No fingerprints should match AdvanceNonceAccount");
+        assert!(
+            !matched.contains(&"set_authority_spl".to_string()),
+            "AdvanceNonceAccount [4,0,0,0] must not match set_authority_spl"
+        );
+        assert!(
+            matched.is_empty(),
+            "No fingerprints should match AdvanceNonceAccount"
+        );
     }
 
     #[tokio::test]
@@ -447,7 +467,10 @@ mod tests {
             instructions: vec![ix],
         };
 
-        let tx = Transaction { signatures: vec![], message };
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
         assert_eq!(fields["has_authority_change"], json!(false));
     }

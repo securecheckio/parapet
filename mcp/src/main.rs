@@ -23,9 +23,9 @@
 //!   }
 
 use anyhow::Result;
+use parapet_scanner::{ScanConfig, WalletScanner};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use parapet_scanner::{WalletScanner, ScanConfig};
 use solana_sdk::commitment_config::CommitmentConfig;
 use std::io::{self, BufRead, Write};
 
@@ -89,7 +89,7 @@ async fn main() -> Result<()> {
 
         let response = handle_request(request).await;
         let response_json = serde_json::to_string(&response)?;
-        
+
         writeln!(stdout, "{}", response_json)?;
         stdout.flush()?;
     }
@@ -150,14 +150,15 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
             ]
         })),
         "resources/read" => {
-            let uri = request.params
+            let uri = request
+                .params
                 .as_ref()
                 .and_then(|p| p.get("uri"))
                 .and_then(|u| u.as_str())
                 .unwrap_or("");
-            
+
             handle_resource_read(uri)
-        },
+        }
         "tools/list" => Ok(json!({
             "tools": [
                 {
@@ -324,7 +325,7 @@ async fn handle_scan_wallet(params: Value) -> Result<Value> {
 
     let default_rpc = std::env::var("SOLANA_RPC_URL")
         .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
-    
+
     let rpc_url = params
         .get("rpc_url")
         .and_then(|v| v.as_str())
@@ -396,7 +397,7 @@ async fn handle_analyze_program(params: Value) -> Result<Value> {
 
     let default_rpc = std::env::var("SOLANA_RPC_URL")
         .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
-    
+
     let rpc_url = params
         .get("rpc_url")
         .and_then(|v| v.as_str())
@@ -425,7 +426,7 @@ async fn handle_check_token_security(params: Value) -> Result<Value> {
         .get("mint_address")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing mint_address"))?;
-    
+
     log::info!("Checking token security for: {}", mint_address);
     rugcheck_tools::check_token_security(mint_address).await
 }
@@ -435,7 +436,7 @@ async fn handle_check_insider_risk(params: Value) -> Result<Value> {
         .get("mint_address")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing mint_address"))?;
-    
+
     log::info!("Checking insider risk for: {}", mint_address);
     rugcheck_tools::check_insider_risk(mint_address).await
 }
@@ -445,7 +446,7 @@ async fn handle_check_liquidity_lock(params: Value) -> Result<Value> {
         .get("mint_address")
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing mint_address"))?;
-    
+
     log::info!("Checking liquidity lock for: {}", mint_address);
     rugcheck_tools::check_liquidity_lock(mint_address).await
 }

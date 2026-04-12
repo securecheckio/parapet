@@ -7,10 +7,10 @@ use std::str::FromStr;
 
 // Default credits per package (can be overridden via env)
 pub const DEFAULT_CREDITS: &[(&str, i64)] = &[
-    ("small", 100_000),      // 100k requests
-    ("medium", 500_000),     // 500k requests  
-    ("large", 1_000_000),    // 1M requests
-    ("xlarge", 5_000_000),   // 5M requests
+    ("small", 100_000),    // 100k requests
+    ("medium", 500_000),   // 500k requests
+    ("large", 1_000_000),  // 1M requests
+    ("xlarge", 5_000_000), // 5M requests
 ];
 
 fn get_token_amount_from_env(package: &str) -> Option<u64> {
@@ -77,25 +77,30 @@ pub async fn create_payment_request(
         "xlabs" | "payment" => (
             std::env::var("PAYMENT_TOKEN_MINT")
                 .unwrap_or_else(|_| "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz".to_string()),
-            std::env::var("PAYMENT_TOKEN_NAME")
-                .unwrap_or_else(|_| "xLABS".to_string()),
+            std::env::var("PAYMENT_TOKEN_NAME").unwrap_or_else(|_| "xLABS".to_string()),
         ),
         "usdc" => {
             // USDC support coming soon for advanced features
-            return Err(anyhow::anyhow!("USDC payments coming soon for advanced features"));
+            return Err(anyhow::anyhow!(
+                "USDC payments coming soon for advanced features"
+            ));
         }
         _ => return Err(anyhow::anyhow!("Unsupported token type")),
     };
 
-    let treasury = std::env::var("TREASURY_WALLET")
-        .expect("TREASURY_WALLET must be set");
+    let treasury = std::env::var("TREASURY_WALLET").expect("TREASURY_WALLET must be set");
 
     // Get pricing for package (env overrides defaults)
     let amount = get_token_amount_from_env(package)
         .ok_or_else(|| anyhow::anyhow!("Invalid package or missing price config: {}", package))?;
-    
+
     let credits = get_credits_from_env(package)
-        .or_else(|| DEFAULT_CREDITS.iter().find(|(p, _)| *p == package).map(|(_, c)| *c))
+        .or_else(|| {
+            DEFAULT_CREDITS
+                .iter()
+                .find(|(p, _)| *p == package)
+                .map(|(_, c)| *c)
+        })
         .ok_or_else(|| anyhow::anyhow!("Invalid package"))?;
 
     // Create payment record
@@ -131,22 +136,21 @@ pub async fn verify_payment(
     rpc_url: &str,
 ) -> Result<bool> {
     // Parse signature
-    let sig = Signature::from_str(signature)
-        .map_err(|e| anyhow::anyhow!("Invalid signature: {}", e))?;
+    let sig =
+        Signature::from_str(signature).map_err(|e| anyhow::anyhow!("Invalid signature: {}", e))?;
 
     // Verify transaction on-chain
     let verified = verify_transaction_on_chain(rpc_url, &sig, payment_id).await?;
 
     if verified {
         // Get payment details
-        let payment: Payment = sqlx::query_as(
-            "SELECT * FROM payments WHERE id = $1"
-        )
-        .bind(&payment_id)
-        .fetch_one(db)
-        .await?;
+        let payment: Payment = sqlx::query_as("SELECT * FROM payments WHERE id = $1")
+            .bind(&payment_id)
+            .fetch_one(db)
+            .await?;
 
-        let credits = payment.credits_purchased
+        let credits = payment
+            .credits_purchased
             .ok_or_else(|| anyhow::anyhow!("Payment missing credits_purchased"))?;
 
         // Update payment status and add credits to user (transaction)
@@ -166,7 +170,7 @@ pub async fn verify_payment(
         sqlx::query(
             "UPDATE users 
              SET credits_balance = credits_balance + $1, updated_at = NOW() 
-             WHERE id = $2"
+             WHERE id = $2",
         )
         .bind(credits)
         .bind(&payment.user_id)
@@ -184,12 +188,10 @@ pub async fn verify_payment(
         Ok(true)
     } else {
         // Mark as failed
-        sqlx::query(
-            "UPDATE payments SET status = 'failed' WHERE id = $1"
-        )
-        .bind(&payment_id)
-        .execute(db)
-        .await?;
+        sqlx::query("UPDATE payments SET status = 'failed' WHERE id = $1")
+            .bind(&payment_id)
+            .execute(db)
+            .await?;
 
         Ok(false)
     }
@@ -236,8 +238,12 @@ async fn verify_transaction_on_chain(
 
 pub fn get_package_info(package: &str) -> Option<(u64, i64)> {
     let amount = get_token_amount_from_env(package)?;
-    let credits = get_credits_from_env(package)
-        .or_else(|| DEFAULT_CREDITS.iter().find(|(p, _)| *p == package).map(|(_, c)| *c))?;
+    let credits = get_credits_from_env(package).or_else(|| {
+        DEFAULT_CREDITS
+            .iter()
+            .find(|(p, _)| *p == package)
+            .map(|(_, c)| *c)
+    })?;
     Some((amount, credits))
 }
 
@@ -247,11 +253,11 @@ pub fn format_token_amount(amount: u64) -> String {
         .ok()
         .and_then(|d| d.parse::<u32>().ok())
         .unwrap_or(6);
-    
+
     let divisor = 10_u64.pow(decimals);
     let major = amount / divisor;
     let minor = amount % divisor;
-    
+
     format!("{}.{:0width$}", major, minor, width = decimals as usize)
 }
 

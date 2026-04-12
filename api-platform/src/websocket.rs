@@ -36,12 +36,15 @@ pub async fn websocket_handler(
     jar: CookieJar,
 ) -> impl IntoResponse {
     log::debug!("🔌 WebSocket upgrade request received");
-    
+
     // Get session ID from HTTP-only cookie
     let session_id = jar.get("session_id").map(|c| c.value());
 
     if let Some(sid) = session_id {
-        log::debug!("🔑 Found session cookie: {}...", &sid[..std::cmp::min(8, sid.len())]);
+        log::debug!(
+            "🔑 Found session cookie: {}...",
+            &sid[..std::cmp::min(8, sid.len())]
+        );
         if let Ok(Some(session)) = state.sessions.get_session(sid).await {
             let user_id = session.user_id.clone();
             log::info!("✅ WebSocket authenticated for user {}", user_id);
@@ -65,7 +68,8 @@ async fn handle_socket(socket: WebSocket, _state: PlatformState, user_id: String
     log::info!("✅ WebSocket connected for user {}", user_id);
 
     // Create Redis pub/sub connection
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+    let redis_url =
+        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
     let redis_client = match redis::Client::open(redis_url.as_str()) {
         Ok(client) => client,
         Err(e) => {
@@ -96,9 +100,13 @@ async fn handle_socket(socket: WebSocket, _state: PlatformState, user_id: String
     let mut pubsub_stream = pubsub_conn.on_message();
 
     // Send initial ping
-    if sender.send(Message::Text(
-        serde_json::to_string(&DashboardUpdate::Ping).unwrap()
-    )).await.is_err() {
+    if sender
+        .send(Message::Text(
+            serde_json::to_string(&DashboardUpdate::Ping).unwrap(),
+        ))
+        .await
+        .is_err()
+    {
         return;
     }
 

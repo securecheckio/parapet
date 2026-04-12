@@ -7,22 +7,24 @@
 // are called directly and return structured data without policy evaluation.
 
 #[cfg(feature = "reqwest")]
-mod rugcheck;
-#[cfg(feature = "reqwest")]
 mod helius;
 #[cfg(feature = "reqwest")]
 mod jupiter;
 #[cfg(feature = "reqwest")]
 mod ottersec;
-
 #[cfg(feature = "reqwest")]
-pub use rugcheck::{RugcheckClient, RugcheckData, InsiderAnalysis, VaultAnalysis, DomainRegistration};
+mod rugcheck;
+
 #[cfg(feature = "reqwest")]
 pub use helius::{HeliusClient, HeliusData};
 #[cfg(feature = "reqwest")]
 pub use jupiter::{JupiterClient, JupiterData};
 #[cfg(feature = "reqwest")]
 pub use ottersec::{OtterSecClient, OtterSecData};
+#[cfg(feature = "reqwest")]
+pub use rugcheck::{
+    DomainRegistration, InsiderAnalysis, RugcheckClient, RugcheckData, VaultAnalysis,
+};
 
 #[cfg(feature = "reqwest")]
 use anyhow::Result;
@@ -145,18 +147,24 @@ impl EnrichmentService {
             ottersec: None, // OtterSec is for programs, not tokens
         })
     }
-    
+
     /// Enrich multiple tokens in bulk (much faster than individual calls)
-    pub async fn enrich_tokens_bulk(&self, token_addresses: &[String]) -> Result<std::collections::HashMap<String, EnrichmentData>> {
+    pub async fn enrich_tokens_bulk(
+        &self,
+        token_addresses: &[String],
+    ) -> Result<std::collections::HashMap<String, EnrichmentData>> {
         use std::collections::HashMap;
-        
+
         log::debug!("🔍 Bulk enriching {} tokens", token_addresses.len());
 
         let mut results = HashMap::new();
 
         // Use bulk Rugcheck API
         let rugcheck_data = if let Some(client) = &self.rugcheck {
-            client.get_bulk_summaries(token_addresses).await.unwrap_or_default()
+            client
+                .get_bulk_summaries(token_addresses)
+                .await
+                .unwrap_or_default()
         } else {
             HashMap::new()
         };
@@ -165,16 +173,19 @@ impl EnrichmentService {
         // TODO: Add bulk support for other enrichment sources
         for token in token_addresses {
             let rugcheck_result = rugcheck_data.get(token).cloned();
-            
-            results.insert(token.clone(), EnrichmentData {
-                rugcheck: rugcheck_result,
-                insider_analysis: None,
-                vault_analysis: None,
-                domain_registration: None,
-                helius: None,
-                jupiter: None,
-                ottersec: None,
-            });
+
+            results.insert(
+                token.clone(),
+                EnrichmentData {
+                    rugcheck: rugcheck_result,
+                    insider_analysis: None,
+                    vault_analysis: None,
+                    domain_registration: None,
+                    helius: None,
+                    jupiter: None,
+                    ottersec: None,
+                },
+            );
         }
 
         Ok(results)

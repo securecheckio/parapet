@@ -43,7 +43,7 @@ pub struct SuggestedRule {
 pub enum EscalationEvent {
     #[serde(rename = "escalation_created")]
     Created { escalation: Escalation },
-    
+
     #[serde(rename = "escalation_approved")]
     Approved {
         escalation_id: String,
@@ -51,7 +51,7 @@ pub enum EscalationEvent {
         approved_at: u64,
         rule: serde_json::Value,
     },
-    
+
     #[serde(rename = "escalation_denied")]
     Denied {
         escalation_id: String,
@@ -59,13 +59,13 @@ pub enum EscalationEvent {
         denied_at: u64,
         reason: Option<String>,
     },
-    
+
     #[serde(rename = "escalation_expired")]
     Expired {
         escalation_id: String,
         expired_at: u64,
     },
-    
+
     #[serde(rename = "escalation_forwarded")]
     Forwarded {
         escalation_id: String,

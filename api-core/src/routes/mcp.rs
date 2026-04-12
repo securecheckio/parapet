@@ -5,9 +5,9 @@ use axum::{
     Json,
 };
 use futures::stream::{self, Stream};
+use parapet_scanner::{ScanConfig, WalletScanner};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use parapet_scanner::{WalletScanner, ScanConfig};
 use solana_sdk::commitment_config::CommitmentConfig;
 use std::{convert::Infallible, time::Duration};
 
@@ -166,10 +166,12 @@ fn handle_resource_read(params: Value) -> Result<Value, McpError> {
         "parapet://guide" => include_str!("../../../mcp/resources/guide.md"),
         "parapet://risk-scoring" => include_str!("../../../mcp/resources/risk-scoring.md"),
         "parapet://examples" => include_str!("../../../mcp/resources/examples.md"),
-        _ => return Err(McpError {
-            code: -32602,
-            message: format!("Unknown resource URI: {}", uri),
-        }),
+        _ => {
+            return Err(McpError {
+                code: -32602,
+                message: format!("Unknown resource URI: {}", uri),
+            })
+        }
     };
 
     Ok(json!({
@@ -345,7 +347,9 @@ where
         "verify_program" => verify_program_tool(arguments).await,
         "generate_revoke_transaction" => generate_revoke_transaction_tool(arguments, state).await,
         "generate_batch_revoke" => generate_batch_revoke_tool(arguments, state).await,
-        "build_emergency_lockdown" => build_emergency_lockdown_tool(arguments, state, api_key).await,
+        "build_emergency_lockdown" => {
+            build_emergency_lockdown_tool(arguments, state, api_key).await
+        }
         _ => Err(McpError {
             code: -32602,
             message: format!("Unknown tool: {}", tool_name),
@@ -363,7 +367,10 @@ where
         .check_quota(api_key)
         .await
         .map_err(|e| match e {
-            crate::middleware::RateLimitError::QuotaExceeded { limit, reset_in_seconds } => McpError {
+            crate::middleware::RateLimitError::QuotaExceeded {
+                limit,
+                reset_in_seconds,
+            } => McpError {
                 code: 429,
                 message: format!(
                     "Quota exceeded: {} scans per hour. Resets in {} minutes.",
@@ -371,13 +378,15 @@ where
                     reset_in_seconds / 60
                 ),
             },
-            crate::middleware::RateLimitError::TooManyConcurrentScans { max_concurrent } => McpError {
-                code: 503,
-                message: format!(
-                    "Too many concurrent scans (max: {}). Please try again in a moment.",
-                    max_concurrent
-                ),
-            },
+            crate::middleware::RateLimitError::TooManyConcurrentScans { max_concurrent } => {
+                McpError {
+                    code: 503,
+                    message: format!(
+                        "Too many concurrent scans (max: {}). Please try again in a moment.",
+                        max_concurrent
+                    ),
+                }
+            }
         })?;
 
     let wallet = args
@@ -405,7 +414,12 @@ where
         .and_then(|v| v.as_str())
         .unwrap_or("summary");
 
-    log::info!("Scanning wallet {} (tx: {}, days: {})", wallet, max_tx, days);
+    log::info!(
+        "Scanning wallet {} (tx: {}, days: {})",
+        wallet,
+        max_tx,
+        days
+    );
 
     // Initialize scanner with analyzers
     let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None)
@@ -430,13 +444,10 @@ where
         commitment: CommitmentConfig::confirmed(),
     };
 
-    let report = scanner
-        .scan(wallet, config)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Scan failed: {}", e),
-        })?;
+    let report = scanner.scan(wallet, config).await.map_err(|e| McpError {
+        code: -32603,
+        message: format!("Scan failed: {}", e),
+    })?;
 
     let output = match format {
         "json" => serde_json::to_string_pretty(&report).map_err(|e| McpError {
@@ -570,21 +581,28 @@ where
 
     let token_symbol = args.get("token_symbol").and_then(|v| v.as_str());
 
-    log::info!("Generating revoke transaction for {} on {}", wallet, token_account);
+    log::info!(
+        "Generating revoke transaction for {} on {}",
+        wallet,
+        token_account
+    );
 
     // Create RPC client
-    let rpc_client = solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
+    let rpc_client =
+        solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
 
     // Build revoke transaction
-    let unsigned_tx = crate::tx_builder::build_revoke_approval_tx(wallet, token_account, &rpc_client)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Failed to build revoke transaction: {}", e),
-        })?;
+    let unsigned_tx =
+        crate::tx_builder::build_revoke_approval_tx(wallet, token_account, &rpc_client)
+            .await
+            .map_err(|e| McpError {
+                code: -32603,
+                message: format!("Failed to build revoke transaction: {}", e),
+            })?;
 
     // Generate description
-    let description = crate::tx_builder::describe_revoke_transaction(wallet, token_account, token_symbol);
+    let description =
+        crate::tx_builder::describe_revoke_transaction(wallet, token_account, token_symbol);
 
     let output = format!(
         "# Revoke Transaction Generated\n\n\
@@ -640,21 +658,28 @@ where
         });
     }
 
-    log::info!("Generating batch revoke for {} on {} accounts", wallet, token_accounts.len());
+    log::info!(
+        "Generating batch revoke for {} on {} accounts",
+        wallet,
+        token_accounts.len()
+    );
 
     // Create RPC client
-    let rpc_client = solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
+    let rpc_client =
+        solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
 
     // Build batch revoke transactions
-    let unsigned_txs = crate::tx_builder::build_batch_revoke_tx(wallet, &token_accounts, &rpc_client)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Failed to build batch revoke transactions: {}", e),
-        })?;
+    let unsigned_txs =
+        crate::tx_builder::build_batch_revoke_tx(wallet, &token_accounts, &rpc_client)
+            .await
+            .map_err(|e| McpError {
+                code: -32603,
+                message: format!("Failed to build batch revoke transactions: {}", e),
+            })?;
 
     // Generate description
-    let description = crate::tx_builder::describe_batch_revoke(wallet, &token_accounts, unsigned_txs.len());
+    let description =
+        crate::tx_builder::describe_batch_revoke(wallet, &token_accounts, unsigned_txs.len());
 
     let mut output = format!(
         "# Batch Revoke Transactions Generated\n\n\
@@ -692,11 +717,15 @@ where
     }))
 }
 
-async fn build_emergency_lockdown_tool<S>(args: Value, state: &S, _api_key: &str) -> Result<Value, McpError>
+async fn build_emergency_lockdown_tool<S>(
+    args: Value,
+    state: &S,
+    _api_key: &str,
+) -> Result<Value, McpError>
 where
     S: ApiStateAccess,
 {
-    use parapet_scanner::{ThreatType, Severity};
+    use parapet_scanner::{Severity, ThreatType};
 
     let wallet = args
         .get("wallet_address")
@@ -711,7 +740,11 @@ where
         .and_then(|v| v.as_str())
         .unwrap_or("high");
 
-    log::info!("Building emergency lockdown for {} (threshold: {})", wallet, severity_threshold);
+    log::info!(
+        "Building emergency lockdown for {} (threshold: {})",
+        wallet,
+        severity_threshold
+    );
 
     // Parse severity threshold
     let min_severity = match severity_threshold {
@@ -729,11 +762,12 @@ where
             message: format!("Failed to initialize analyzers: {}", e),
         })?;
 
-    let scanner = WalletScanner::with_analyzers(state.config().solana_rpc_url.clone(), registry, engine)
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Failed to create scanner: {}", e),
-        })?;
+    let scanner =
+        WalletScanner::with_analyzers(state.config().solana_rpc_url.clone(), registry, engine)
+            .map_err(|e| McpError {
+                code: -32603,
+                message: format!("Failed to create scanner: {}", e),
+            })?;
 
     let config = ScanConfig {
         max_transactions: Some(100),
@@ -744,13 +778,10 @@ where
         commitment: CommitmentConfig::confirmed(),
     };
 
-    let report = scanner
-        .scan(wallet, config)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Scan failed: {}", e),
-        })?;
+    let report = scanner.scan(wallet, config).await.map_err(|e| McpError {
+        code: -32603,
+        message: format!("Scan failed: {}", e),
+    })?;
 
     // Filter for dangerous approvals that meet severity threshold
     let mut dangerous_approvals = Vec::new();
@@ -768,10 +799,20 @@ where
         }
 
         match &threat.threat_type {
-            ThreatType::ActiveUnlimitedDelegation { token_account, delegate, amount, .. } => {
+            ThreatType::ActiveUnlimitedDelegation {
+                token_account,
+                delegate,
+                amount,
+                ..
+            } => {
                 dangerous_approvals.push((token_account.clone(), delegate.clone(), *amount));
             }
-            ThreatType::PossibleExploitedDelegation { token_account, delegate, amount, .. } => {
+            ThreatType::PossibleExploitedDelegation {
+                token_account,
+                delegate,
+                amount,
+                ..
+            } => {
                 dangerous_approvals.push((token_account.clone(), delegate.clone(), *amount));
             }
             _ => {}
@@ -794,20 +835,23 @@ where
     }
 
     // Extract just the token accounts
-    let token_accounts: Vec<String> = dangerous_approvals.iter()
+    let token_accounts: Vec<String> = dangerous_approvals
+        .iter()
         .map(|(account, _, _)| account.clone())
         .collect();
 
     // Create RPC client
-    let rpc_client = solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
+    let rpc_client =
+        solana_client::rpc_client::RpcClient::new(state.config().solana_rpc_url.clone());
 
     // Build batch revoke transactions
-    let unsigned_txs = crate::tx_builder::build_batch_revoke_tx(wallet, &token_accounts, &rpc_client)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Failed to build revoke transactions: {}", e),
-        })?;
+    let unsigned_txs =
+        crate::tx_builder::build_batch_revoke_tx(wallet, &token_accounts, &rpc_client)
+            .await
+            .map_err(|e| McpError {
+                code: -32603,
+                message: format!("Failed to build revoke transactions: {}", e),
+            })?;
 
     // Generate detailed output
     let mut output = format!(
@@ -827,7 +871,7 @@ where
         } else {
             amount.to_string()
         };
-        
+
         output.push_str(&format!(
             "{}. **Token Account:** `{}`\n\
              - Delegate: `{}`\n\
@@ -866,7 +910,7 @@ where
          - All dangerous approvals will be revoked\n\
          - Delegates will NO LONGER be able to transfer your tokens\n\
          - Your wallet will be secured\n\n\
-         **Time is critical!** Sign these transactions as soon as possible to protect your assets."
+         **Time is critical!** Sign these transactions as soon as possible to protect your assets.",
     );
 
     Ok(json!({

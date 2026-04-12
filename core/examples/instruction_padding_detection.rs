@@ -7,7 +7,6 @@
 /// ```bash
 /// cargo run --example instruction_padding_detection
 /// ```
-
 use parapet_core::rules::analyzer::TransactionAnalyzer;
 use parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer;
 use solana_sdk::instruction::CompiledInstruction;
@@ -84,7 +83,7 @@ fn create_token2022_with_extensions() -> Transaction {
     // Token-2022 Transfer with TransferFee extension (~108 bytes)
     let mut data = vec![3]; // Transfer discriminator
     data.extend_from_slice(&1000u64.to_le_bytes()); // amount
-    
+
     // Simulate TransferFee extension data
     data.extend_from_slice(&vec![1u8; 108]); // TransferFee extension
 

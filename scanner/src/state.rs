@@ -5,12 +5,12 @@ use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig};
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
 use solana_sdk::commitment_config::CommitmentConfig;
-use solana_sdk::pubkey::Pubkey;
-use spl_token::state::Account as TokenAccount;
 use solana_sdk::program_pack::Pack;
+use solana_sdk::pubkey::Pubkey;
 use spl_token::solana_program::program_option::COption;
-use std::str::FromStr;
+use spl_token::state::Account as TokenAccount;
 use std::io::Write;
+use std::str::FromStr;
 
 use crate::detector::{Severity, ThreatAssessment, ThreatType};
 
@@ -24,15 +24,15 @@ impl StateScanner {
         wallet: &str,
         commitment: CommitmentConfig,
     ) -> Result<Vec<ThreatAssessment>> {
-        let wallet_pubkey = Pubkey::from_str(wallet)
-            .map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
+        let wallet_pubkey =
+            Pubkey::from_str(wallet).map_err(|e| anyhow!("Invalid wallet address: {}", e))?;
 
         eprint!("🔍 Checking active delegations... ");
         std::io::stderr().flush().ok();
 
         // Fetch all token accounts owned by this wallet
         let token_accounts = Self::fetch_token_accounts(rpc, &wallet_pubkey, commitment)?;
-        
+
         eprintln!("found {} token accounts", token_accounts.len());
         info!("Found {} token accounts", token_accounts.len());
 
@@ -75,17 +75,15 @@ impl StateScanner {
         };
 
         let accounts = rpc.get_program_accounts_with_config(&token_program, config)?;
-        
+
         let mut token_accounts = Vec::new();
         for (pubkey, account) in accounts {
             // Unpack token account data using SPL Token's Pack trait
             match TokenAccount::unpack(&account.data) {
                 Ok(token_account) => {
-                    debug!("Token account {}: mint={}, amount={}, delegate={:?}", 
-                        pubkey, 
-                        token_account.mint,
-                        token_account.amount,
-                        token_account.delegate
+                    debug!(
+                        "Token account {}: mint={}, amount={}, delegate={:?}",
+                        pubkey, token_account.mint, token_account.amount, token_account.delegate
                     );
                     token_accounts.push((pubkey, token_account));
                 }
@@ -106,11 +104,11 @@ impl StateScanner {
         // Check if there's an active delegate (COption is SPL token's Option type)
         if let COption::Some(delegate) = token_account.delegate {
             let delegated_amount = token_account.delegated_amount;
-            
+
             if delegated_amount > 0 {
                 // Check if it's an unlimited delegation (max u64)
                 let is_unlimited = delegated_amount == u64::MAX;
-                
+
                 let severity = if is_unlimited {
                     Severity::Critical
                 } else if delegated_amount > token_account.amount / 2 {

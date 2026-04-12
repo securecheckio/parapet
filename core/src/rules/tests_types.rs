@@ -14,7 +14,7 @@ fn test_rule_action_from_str() {
     assert_eq!("block".parse::<RuleAction>().unwrap(), RuleAction::Block);
     assert_eq!("alert".parse::<RuleAction>().unwrap(), RuleAction::Alert);
     assert_eq!("pass".parse::<RuleAction>().unwrap(), RuleAction::Pass);
-    
+
     // Case insensitive
     assert_eq!("BLOCK".parse::<RuleAction>().unwrap(), RuleAction::Block);
     assert_eq!("Alert".parse::<RuleAction>().unwrap(), RuleAction::Alert);
@@ -26,10 +26,10 @@ fn test_rule_action_from_str_invalid() {
     let result = "invalid".parse::<RuleAction>();
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid action"));
-    
+
     let result = "".parse::<RuleAction>();
     assert!(result.is_err());
-    
+
     let result = "warn".parse::<RuleAction>();
     assert!(result.is_err());
 }
@@ -39,11 +39,11 @@ fn test_rule_action_serialization() {
     let action = RuleAction::Block;
     let json = serde_json::to_string(&action).unwrap();
     assert_eq!(json, "\"block\"");
-    
+
     let action = RuleAction::Alert;
     let json = serde_json::to_string(&action).unwrap();
     assert_eq!(json, "\"alert\"");
-    
+
     let action = RuleAction::Pass;
     let json = serde_json::to_string(&action).unwrap();
     assert_eq!(json, "\"pass\"");
@@ -53,10 +53,10 @@ fn test_rule_action_serialization() {
 fn test_rule_action_deserialization() {
     let action: RuleAction = serde_json::from_str("\"block\"").unwrap();
     assert_eq!(action, RuleAction::Block);
-    
+
     let action: RuleAction = serde_json::from_str("\"alert\"").unwrap();
     assert_eq!(action, RuleAction::Alert);
-    
+
     let action: RuleAction = serde_json::from_str("\"pass\"").unwrap();
     assert_eq!(action, RuleAction::Pass);
 }
@@ -64,7 +64,7 @@ fn test_rule_action_deserialization() {
 #[test]
 fn test_action_override_all() {
     let override_action = ActionOverride::All(RuleAction::Alert);
-    
+
     assert_eq!(override_action.apply(RuleAction::Block), RuleAction::Alert);
     assert_eq!(override_action.apply(RuleAction::Pass), RuleAction::Alert);
     assert_eq!(override_action.apply(RuleAction::Alert), RuleAction::Alert);
@@ -75,9 +75,9 @@ fn test_action_override_specific() {
     let mut map = HashMap::new();
     map.insert(RuleAction::Block, RuleAction::Alert);
     map.insert(RuleAction::Pass, RuleAction::Alert);
-    
+
     let override_action = ActionOverride::Specific(map);
-    
+
     assert_eq!(override_action.apply(RuleAction::Block), RuleAction::Alert);
     assert_eq!(override_action.apply(RuleAction::Pass), RuleAction::Alert);
     assert_eq!(override_action.apply(RuleAction::Alert), RuleAction::Alert); // No mapping, returns original
@@ -87,10 +87,10 @@ fn test_action_override_specific() {
 fn test_action_override_from_env_str_all() {
     let override_action = ActionOverride::from_env_str("alert").unwrap();
     assert_eq!(override_action.apply(RuleAction::Block), RuleAction::Alert);
-    
+
     let override_action = ActionOverride::from_env_str("block").unwrap();
     assert_eq!(override_action.apply(RuleAction::Pass), RuleAction::Block);
-    
+
     let override_action = ActionOverride::from_env_str("pass").unwrap();
     assert_eq!(override_action.apply(RuleAction::Block), RuleAction::Pass);
 }
@@ -122,7 +122,7 @@ fn test_action_override_from_env_str_empty() {
     let result = ActionOverride::from_env_str("");
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("cannot be empty"));
-    
+
     let result = ActionOverride::from_env_str("   ");
     assert!(result.is_err());
 }
@@ -132,10 +132,10 @@ fn test_action_override_from_env_str_invalid_format() {
     let result = ActionOverride::from_env_str("block:alert:pass");
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid override pair"));
-    
+
     let result = ActionOverride::from_env_str("block:");
     assert!(result.is_err());
-    
+
     let result = ActionOverride::from_env_str(":alert");
     assert!(result.is_err());
 }
@@ -145,11 +145,11 @@ fn test_action_override_from_env_str_invalid_action() {
     let result = ActionOverride::from_env_str("invalid");
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid action"));
-    
+
     let result = ActionOverride::from_env_str("block:invalid");
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid replacement action"));
-    
+
     let result = ActionOverride::from_env_str("invalid:alert");
     assert!(result.is_err());
     assert!(result.unwrap_err().contains("Invalid original action"));
@@ -158,7 +158,7 @@ fn test_action_override_from_env_str_invalid_action() {
 #[test]
 fn test_rule_decision_no_match() {
     let decision = RuleDecision::no_match();
-    
+
     assert_eq!(decision.action, RuleAction::Pass);
     assert_eq!(decision.rule_id, "");
     assert_eq!(decision.rule_name, "");
@@ -178,7 +178,7 @@ fn test_simple_condition_serialization() {
         operator: ComparisonOperator::Equals,
         value: json!(true),
     };
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert_eq!(json["field"], "has_sol_transfer");
     assert_eq!(json["operator"], "equals");
@@ -192,7 +192,7 @@ fn test_simple_condition_deserialization() {
         "operator": "greater_than",
         "value": 50
     });
-    
+
     let condition: SimpleCondition = serde_json::from_value(json).unwrap();
     assert_eq!(condition.field, "risk_score");
     assert_eq!(condition.value, 50);
@@ -256,7 +256,7 @@ fn test_compound_condition_all_serialization() {
         any: None,
         not: None,
     };
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert!(json["all"].is_array());
     assert_eq!(json["all"].as_array().unwrap().len(), 2);
@@ -266,16 +266,14 @@ fn test_compound_condition_all_serialization() {
 fn test_compound_condition_any_serialization() {
     let condition = CompoundCondition {
         all: None,
-        any: Some(vec![
-            RuleCondition::Simple(SimpleCondition {
-                field: "field1".to_string(),
-                operator: ComparisonOperator::Equals,
-                value: json!(true),
-            }),
-        ]),
+        any: Some(vec![RuleCondition::Simple(SimpleCondition {
+            field: "field1".to_string(),
+            operator: ComparisonOperator::Equals,
+            value: json!(true),
+        })]),
         not: None,
     };
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert!(json["any"].is_array());
     assert_eq!(json.get("all"), None);
@@ -292,7 +290,7 @@ fn test_compound_condition_not_serialization() {
             value: json!(false),
         }))),
     };
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert!(json["not"].is_object());
 }
@@ -304,7 +302,7 @@ fn test_rule_condition_simple_variant() {
         operator: ComparisonOperator::Equals,
         value: json!(true),
     });
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert_eq!(json["field"], "test");
 }
@@ -316,7 +314,7 @@ fn test_rule_condition_compound_variant() {
         any: None,
         not: None,
     });
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert!(json["all"].is_array());
 }
@@ -333,7 +331,7 @@ fn test_rule_serialization() {
         message: "Test message".to_string(),
         flowbits: None,
     };
-    
+
     let json = serde_json::to_value(&rule).unwrap();
     assert_eq!(json["action"], "block");
     assert_eq!(json["message"], "Test message");
@@ -351,7 +349,7 @@ fn test_rule_deserialization() {
         },
         "message": "High risk detected"
     });
-    
+
     let rule: Rule = serde_json::from_value(json).unwrap();
     assert_eq!(rule.action, RuleAction::Alert);
     assert_eq!(rule.message, "High risk detected");
@@ -362,7 +360,7 @@ fn test_rule_definition_full() {
     let mut metadata = HashMap::new();
     metadata.insert("category".to_string(), json!("security"));
     metadata.insert("severity".to_string(), json!("high"));
-    
+
     let rule_def = RuleDefinition {
         version: "1.0".to_string(),
         id: "test-rule-1".to_string(),
@@ -383,7 +381,7 @@ fn test_rule_definition_full() {
         },
         metadata,
     };
-    
+
     let json = serde_json::to_value(&rule_def).unwrap();
     assert_eq!(json["version"], "1.0");
     assert_eq!(json["id"], "test-rule-1");
@@ -414,7 +412,7 @@ fn test_rule_definition_minimal() {
         },
         metadata: HashMap::new(),
     };
-    
+
     let json = serde_json::to_value(&rule_def).unwrap();
     assert_eq!(json["enabled"], false);
     assert!(json["tags"].as_array().unwrap().is_empty());
@@ -438,7 +436,7 @@ fn test_rule_definition_deserialization() {
             "message": "Test"
         }
     });
-    
+
     let rule_def: RuleDefinition = serde_json::from_value(json).unwrap();
     assert_eq!(rule_def.id, "test-1");
     assert_eq!(rule_def.enabled, true);
@@ -455,7 +453,7 @@ fn test_matched_rule_serialization() {
         weight: 75,
         message: "Matched".to_string(),
     };
-    
+
     let json = serde_json::to_value(&matched).unwrap();
     assert_eq!(json["rule_id"], "rule-1");
     assert_eq!(json["action"], "alert");
@@ -471,7 +469,7 @@ fn test_matched_rule_deserialization() {
         "weight": 90,
         "message": "High risk"
     });
-    
+
     let matched: MatchedRule = serde_json::from_value(json).unwrap();
     assert_eq!(matched.rule_id, "rule-2");
     assert_eq!(matched.action, RuleAction::Block);
@@ -492,7 +490,7 @@ fn test_rule_decision_with_risks() {
         simulation_risk: Some(15),
         is_simulation: true,
     };
-    
+
     assert_eq!(decision.total_risk, 95);
     assert_eq!(decision.structural_risk, Some(80));
     assert_eq!(decision.simulation_risk, Some(15));
@@ -528,7 +526,7 @@ fn test_nested_compound_conditions() {
         any: None,
         not: None,
     });
-    
+
     let json = serde_json::to_value(&condition).unwrap();
     assert!(json["all"].is_array());
     assert_eq!(json["all"].as_array().unwrap().len(), 2);
@@ -544,12 +542,12 @@ fn test_rule_action_equality() {
 #[test]
 fn test_rule_action_hash() {
     use std::collections::HashSet;
-    
+
     let mut set = HashSet::new();
     set.insert(RuleAction::Block);
     set.insert(RuleAction::Alert);
     set.insert(RuleAction::Block); // Duplicate
-    
+
     assert_eq!(set.len(), 2);
     assert!(set.contains(&RuleAction::Block));
     assert!(set.contains(&RuleAction::Alert));

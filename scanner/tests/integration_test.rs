@@ -1,4 +1,4 @@
-use parapet_scanner::{WalletScanner, ScanConfig};
+use parapet_scanner::{ScanConfig, WalletScanner};
 
 #[tokio::test]
 #[ignore] // Ignore by default as it requires RPC connection

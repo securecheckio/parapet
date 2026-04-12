@@ -12,39 +12,39 @@ const SYSTEM_PROGRAM: &str = "11111111111111111111111111111111";
 // These are base sizes - Token-2022 extensions can add more data legitimately
 const EXPECTED_SIZES: &[(u8, usize, &str)] = &[
     // SPL Token instructions (discriminator, expected_size, name)
-    (0, 67, "InitializeMint"),      // 1 + 1 + 32 + 32 + 1 = 67
-    (1, 1, "InitializeAccount"),    // Just discriminator
-    (2, 2, "InitializeMultisig"),   // 1 + 1 (m value)
-    (3, 9, "Transfer"),              // 1 + 8 (amount)
-    (4, 9, "Approve"),               // 1 + 8 (amount)
-    (5, 1, "Revoke"),                // Just discriminator
-    (6, 35, "SetAuthority"),         // 1 + 1 (type) + 1 (option) + 32 (pubkey)
-    (7, 9, "MintTo"),                // 1 + 8 (amount)
-    (8, 9, "Burn"),                  // 1 + 8 (amount)
-    (9, 1, "CloseAccount"),          // Just discriminator
-    (10, 1, "FreezeAccount"),        // Just discriminator
-    (11, 1, "ThawAccount"),          // Just discriminator
-    (12, 10, "TransferChecked"),     // 1 + 8 (amount) + 1 (decimals)
-    (13, 10, "ApproveChecked"),      // 1 + 8 (amount) + 1 (decimals)
-    (14, 10, "MintToChecked"),       // 1 + 8 (amount) + 1 (decimals)
-    (15, 10, "BurnChecked"),         // 1 + 8 (amount) + 1 (decimals)
+    (0, 67, "InitializeMint"),    // 1 + 1 + 32 + 32 + 1 = 67
+    (1, 1, "InitializeAccount"),  // Just discriminator
+    (2, 2, "InitializeMultisig"), // 1 + 1 (m value)
+    (3, 9, "Transfer"),           // 1 + 8 (amount)
+    (4, 9, "Approve"),            // 1 + 8 (amount)
+    (5, 1, "Revoke"),             // Just discriminator
+    (6, 35, "SetAuthority"),      // 1 + 1 (type) + 1 (option) + 32 (pubkey)
+    (7, 9, "MintTo"),             // 1 + 8 (amount)
+    (8, 9, "Burn"),               // 1 + 8 (amount)
+    (9, 1, "CloseAccount"),       // Just discriminator
+    (10, 1, "FreezeAccount"),     // Just discriminator
+    (11, 1, "ThawAccount"),       // Just discriminator
+    (12, 10, "TransferChecked"),  // 1 + 8 (amount) + 1 (decimals)
+    (13, 10, "ApproveChecked"),   // 1 + 8 (amount) + 1 (decimals)
+    (14, 10, "MintToChecked"),    // 1 + 8 (amount) + 1 (decimals)
+    (15, 10, "BurnChecked"),      // 1 + 8 (amount) + 1 (decimals)
 ];
 
 // System Program instruction sizes
 const SYSTEM_EXPECTED_SIZES: &[(u32, usize, &str)] = &[
     // System Program uses u32 discriminator (little-endian)
-    (0, 52, "CreateAccount"),        // 4 + 8 (lamports) + 8 (space) + 32 (owner)
-    (1, 52, "Assign"),               // 4 + 32 (owner)
-    (2, 12, "Transfer"),             // 4 + 8 (lamports)
+    (0, 52, "CreateAccount"), // 4 + 8 (lamports) + 8 (space) + 32 (owner)
+    (1, 52, "Assign"),        // 4 + 32 (owner)
+    (2, 12, "Transfer"),      // 4 + 8 (lamports)
     (3, 60, "CreateAccountWithSeed"), // Complex, allow more padding
-    (4, 4, "AdvanceNonceAccount"),   // Just discriminator
-    (5, 4, "WithdrawNonceAccount"),  // 4 + 8 (lamports) but varies
+    (4, 4, "AdvanceNonceAccount"), // Just discriminator
+    (5, 4, "WithdrawNonceAccount"), // 4 + 8 (lamports) but varies
     (6, 4, "InitializeNonceAccount"), // 4 + 32 (authority)
     (7, 4, "AuthorizeNonceAccount"), // 4 + 32 (authority)
-    (8, 60, "Allocate"),             // 4 + 8 (space)
-    (9, 60, "AllocateWithSeed"),     // Complex
-    (10, 60, "AssignWithSeed"),      // Complex
-    (11, 60, "TransferWithSeed"),    // Complex
+    (8, 60, "Allocate"),      // 4 + 8 (space)
+    (9, 60, "AllocateWithSeed"), // Complex
+    (10, 60, "AssignWithSeed"), // Complex
+    (11, 60, "TransferWithSeed"), // Complex
 ];
 
 /// Maximum reasonable padding for Token-2022 extensions
@@ -120,7 +120,7 @@ impl InstructionPaddingAnalyzer {
         // Check for runs of repeated bytes (0x00, 0xFF, etc.)
         let mut consecutive_same = 1;
         let mut prev_byte = trailing[0];
-        
+
         for &byte in &trailing[1..] {
             if byte == prev_byte {
                 consecutive_same += 1;
@@ -137,16 +137,13 @@ impl InstructionPaddingAnalyzer {
     }
 
     /// Analyze a single instruction for suspicious padding
-    fn analyze_instruction(
-        program_id: &str,
-        data: &[u8],
-    ) -> Option<SuspiciousPadding> {
+    fn analyze_instruction(program_id: &str, data: &[u8]) -> Option<SuspiciousPadding> {
         if data.is_empty() {
             return None;
         }
 
         let data_len = data.len();
-        
+
         // Check SPL Token instructions
         if Self::is_token_program(program_id) {
             if let Some(&discriminator) = data.first() {
@@ -156,10 +153,10 @@ impl InstructionPaddingAnalyzer {
                 {
                     let expected = *expected_size;
                     let trailing = data_len.saturating_sub(expected);
-                    
+
                     // Token-2022 can have extensions, allow reasonable buffer
                     let max_allowed = expected + MAX_TOKEN_2022_EXTENSION_SIZE;
-                    
+
                     // Only flag if exceeds max_allowed (which already accounts for Token-2022 extensions)
                     if data_len > max_allowed {
                         let ratio = trailing as f64 / expected as f64;
@@ -176,33 +173,33 @@ impl InstructionPaddingAnalyzer {
                             ),
                         });
                     }
-                    
+
                     // If within max_allowed, don't flag - Token-2022 extensions are legitimate
                 }
             }
         }
-        
+
         // Check System Program instructions
         if Self::is_system_program(program_id) && data.len() >= 4 {
             let discriminator = u32::from_le_bytes([data[0], data[1], data[2], data[3]]);
-            
+
             if let Some((_, expected_size, name)) = SYSTEM_EXPECTED_SIZES
                 .iter()
                 .find(|(disc, _, _)| *disc == discriminator)
             {
                 let expected = *expected_size;
                 let trailing = data_len.saturating_sub(expected);
-                
+
                 // System instructions shouldn't have much padding
                 let max_allowed = expected + 64;
-                
+
                 if data_len > max_allowed {
                     let ratio = if expected > 0 {
                         trailing as f64 / expected as f64
                     } else {
                         trailing as f64
                     };
-                    
+
                     return Some(SuspiciousPadding {
                         instruction_type: format!("System Program {}", name),
                         expected_size: expected,
@@ -218,12 +215,12 @@ impl InstructionPaddingAnalyzer {
                 }
             }
         }
-        
+
         // Check Anchor-like instructions (8-byte discriminator)
         if Self::is_likely_anchor(data) {
             let discriminator_size = 8;
             let trailing = data_len.saturating_sub(discriminator_size);
-            
+
             // Only flag if exceeds max reasonable size
             // Anchor instructions can have variable args, so be generous
             if data_len > MAX_ANCHOR_INSTRUCTION_SIZE {
@@ -241,7 +238,7 @@ impl InstructionPaddingAnalyzer {
                     ),
                 });
             }
-            
+
             // If within max size, don't flag - Anchor args can legitimately vary
         }
 
@@ -262,8 +259,10 @@ impl InstructionPaddingAnalyzer {
                 .get(instruction.program_id_index as usize)
             {
                 let program_id_str = program_id.to_string();
-                
-                if let Some(suspicious) = Self::analyze_instruction(&program_id_str, &instruction.data) {
+
+                if let Some(suspicious) =
+                    Self::analyze_instruction(&program_id_str, &instruction.data)
+                {
                     max_padding_bytes = max_padding_bytes.max(suspicious.padding_bytes);
                     max_padding_ratio = max_padding_ratio.max(suspicious.padding_ratio);
                     has_repeated_padding = has_repeated_padding || suspicious.has_repeated_pattern;
@@ -292,10 +291,13 @@ impl InstructionPaddingAnalyzer {
         // Also check inner instructions
         for inner_ix in &metadata.inner_instructions {
             // inner_ix.program_id is already a String (base58)
-            if let Some(suspicious) = Self::analyze_instruction(&inner_ix.program_id, &inner_ix.data) {
+            if let Some(suspicious) =
+                Self::analyze_instruction(&inner_ix.program_id, &inner_ix.data)
+            {
                 result.max_padding_bytes = result.max_padding_bytes.max(suspicious.padding_bytes);
                 result.max_padding_ratio = result.max_padding_ratio.max(suspicious.padding_ratio);
-                result.has_repeated_padding = result.has_repeated_padding || suspicious.has_repeated_pattern;
+                result.has_repeated_padding =
+                    result.has_repeated_padding || suspicious.has_repeated_pattern;
                 result.suspicious_instructions.push(suspicious);
             }
         }
@@ -309,28 +311,49 @@ impl InstructionPaddingAnalyzer {
     /// Convert analysis result to fields map
     fn result_to_fields(result: PaddingAnalysisResult) -> HashMap<String, Value> {
         let mut fields = HashMap::new();
-        
-        fields.insert("has_suspicious_padding".to_string(), json!(result.has_suspicious_padding));
-        fields.insert("suspicious_instruction_count".to_string(), json!(result.suspicious_instruction_count));
-        fields.insert("max_padding_bytes".to_string(), json!(result.max_padding_bytes));
-        fields.insert("max_padding_ratio".to_string(), json!(result.max_padding_ratio));
-        fields.insert("has_repeated_padding".to_string(), json!(result.has_repeated_padding));
-        
-        let suspicious_details: Vec<Value> = result.suspicious_instructions
+
+        fields.insert(
+            "has_suspicious_padding".to_string(),
+            json!(result.has_suspicious_padding),
+        );
+        fields.insert(
+            "suspicious_instruction_count".to_string(),
+            json!(result.suspicious_instruction_count),
+        );
+        fields.insert(
+            "max_padding_bytes".to_string(),
+            json!(result.max_padding_bytes),
+        );
+        fields.insert(
+            "max_padding_ratio".to_string(),
+            json!(result.max_padding_ratio),
+        );
+        fields.insert(
+            "has_repeated_padding".to_string(),
+            json!(result.has_repeated_padding),
+        );
+
+        let suspicious_details: Vec<Value> = result
+            .suspicious_instructions
             .into_iter()
-            .map(|s| json!({
-                "instruction_type": s.instruction_type,
-                "expected_size": s.expected_size,
-                "actual_size": s.actual_size,
-                "padding_bytes": s.padding_bytes,
-                "padding_ratio": s.padding_ratio,
-                "has_repeated_pattern": s.has_repeated_pattern,
-                "reason": s.reason,
-            }))
+            .map(|s| {
+                json!({
+                    "instruction_type": s.instruction_type,
+                    "expected_size": s.expected_size,
+                    "actual_size": s.actual_size,
+                    "padding_bytes": s.padding_bytes,
+                    "padding_ratio": s.padding_ratio,
+                    "has_repeated_pattern": s.has_repeated_pattern,
+                    "reason": s.reason,
+                })
+            })
             .collect();
-        
-        fields.insert("suspicious_instructions".to_string(), json!(suspicious_details));
-        
+
+        fields.insert(
+            "suspicious_instructions".to_string(),
+            json!(suspicious_details),
+        );
+
         fields
     }
 }
@@ -408,28 +431,31 @@ mod tests {
     #[tokio::test]
     async fn test_normal_spl_transfer_no_padding() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // Normal SPL Token Transfer: discriminator (1) + amount (8) = 9 bytes
         let mut data = vec![3]; // Transfer discriminator
         data.extend_from_slice(&100u64.to_le_bytes()); // amount
-        
+
         let token_program = SPL_TOKEN_PROGRAM.parse::<Pubkey>().unwrap();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1, 2],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![token_program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(false));
         assert_eq!(fields["suspicious_instruction_count"], json!(0));
     }
@@ -437,29 +463,32 @@ mod tests {
     #[tokio::test]
     async fn test_token_2022_with_extensions_allowed() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // Token-2022 Transfer with reasonable extension data (< 512 bytes)
         let mut data = vec![3]; // Transfer discriminator
         data.extend_from_slice(&100u64.to_le_bytes()); // amount
         data.extend_from_slice(&vec![0u8; 256]); // extension data (reasonable)
-        
+
         let token_2022_program = TOKEN_2022_PROGRAM.parse::<Pubkey>().unwrap();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1, 2],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![token_2022_program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         // Should NOT flag as suspicious - Token-2022 extensions are legitimate
         assert_eq!(fields["has_suspicious_padding"], json!(false));
     }
@@ -467,29 +496,32 @@ mod tests {
     #[tokio::test]
     async fn test_excessive_padding_detected() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // SPL Token Transfer with excessive padding (> 512 bytes)
         let mut data = vec![3]; // Transfer discriminator
         data.extend_from_slice(&100u64.to_le_bytes()); // amount
         data.extend_from_slice(&vec![0u8; 1000]); // excessive padding
-        
+
         let token_program = SPL_TOKEN_PROGRAM.parse::<Pubkey>().unwrap();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1, 2],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![token_program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(true));
         assert_eq!(fields["suspicious_instruction_count"], json!(1));
         assert!(fields["max_padding_bytes"].as_u64().unwrap() > 500);
@@ -498,29 +530,32 @@ mod tests {
     #[tokio::test]
     async fn test_repeated_pattern_detected() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // SPL Token Transfer with repeated null bytes (malicious pattern)
         let mut data = vec![3]; // Transfer discriminator
         data.extend_from_slice(&100u64.to_le_bytes()); // amount
         data.extend_from_slice(&vec![0u8; 600]); // repeated nulls - suspicious
-        
+
         let token_program = SPL_TOKEN_PROGRAM.parse::<Pubkey>().unwrap();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1, 2],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![token_program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(true));
         assert_eq!(fields["has_repeated_padding"], json!(true));
     }
@@ -528,83 +563,92 @@ mod tests {
     #[tokio::test]
     async fn test_system_program_advance_nonce_normal() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // System Program AdvanceNonceAccount: just 4 bytes
         let data = vec![4, 0, 0, 0]; // discriminator only
-        
+
         let system_program = SYSTEM_PROGRAM.parse::<Pubkey>().unwrap();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![system_program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(false));
     }
 
     #[tokio::test]
     async fn test_anchor_instruction_reasonable_size() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // Anchor instruction: 8-byte discriminator + 200 bytes args (reasonable)
         let mut data = vec![0xa1, 0xb0, 0x28, 0xd5, 0x3c, 0xb8, 0xb3, 0xe4]; // discriminator
         data.extend_from_slice(&vec![1u8; 200]); // reasonable args
-        
+
         let program = Pubkey::new_unique();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(false));
     }
 
     #[tokio::test]
     async fn test_anchor_instruction_excessive_size() {
         let analyzer = InstructionPaddingAnalyzer::new();
-        
+
         // Anchor instruction: 8-byte discriminator + 1000 bytes (excessive)
         let mut data = vec![0xa1, 0xb0, 0x28, 0xd5, 0x3c, 0xb8, 0xb3, 0xe4]; // discriminator
         data.extend_from_slice(&vec![0u8; 1000]); // excessive padding
-        
+
         let program = Pubkey::new_unique();
         let ix = CompiledInstruction {
             program_id_index: 0,
             accounts: vec![0, 1],
             data,
         };
-        
+
         let message = Message {
             header: solana_sdk::message::MessageHeader::default(),
             account_keys: vec![program],
             recent_blockhash: solana_sdk::hash::Hash::default(),
             instructions: vec![ix],
         };
-        
-        let tx = Transaction { signatures: vec![], message };
+
+        let tx = Transaction {
+            signatures: vec![],
+            message,
+        };
         let fields = analyzer.analyze(&tx).await.unwrap();
-        
+
         assert_eq!(fields["has_suspicious_padding"], json!(true));
         assert!(fields["max_padding_bytes"].as_u64().unwrap() > 900);
     }
@@ -614,15 +658,15 @@ mod tests {
         // Test with 20 consecutive zeros
         let data = vec![0u8; 20];
         assert!(InstructionPaddingAnalyzer::has_repeated_pattern(&data, 0));
-        
+
         // Test with 20 consecutive 0xFF
         let data = vec![0xFFu8; 20];
         assert!(InstructionPaddingAnalyzer::has_repeated_pattern(&data, 0));
-        
+
         // Test with varied data (no pattern)
         let data: Vec<u8> = (0..20).collect();
         assert!(!InstructionPaddingAnalyzer::has_repeated_pattern(&data, 0));
-        
+
         // Test with short data (< 16 bytes)
         let data = vec![0u8; 10];
         assert!(!InstructionPaddingAnalyzer::has_repeated_pattern(&data, 0));

@@ -11,7 +11,11 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         b.iter(|| {
-            manager.set(black_box(&wallet), black_box("test_flowbit"), Some(Duration::from_secs(3600)));
+            manager.set(
+                black_box(&wallet),
+                black_box("test_flowbit"),
+                Some(Duration::from_secs(3600)),
+            );
         });
     });
 
@@ -20,7 +24,11 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
         let mut manager = FlowbitStateManager::new(None);
         let wallet = Pubkey::new_unique();
         b.iter(|| {
-            manager.increment(black_box(&wallet), black_box("test_counter"), Some(Duration::from_secs(3600)));
+            manager.increment(
+                black_box(&wallet),
+                black_box("test_counter"),
+                Some(Duration::from_secs(3600)),
+            );
         });
     });
 
@@ -92,37 +100,50 @@ fn bench_scaling(c: &mut Criterion) {
 
     // Benchmark with increasing number of wallets
     for num_wallets in [10, 100, 1000].iter() {
-        group.bench_with_input(BenchmarkId::new("wallets", num_wallets), num_wallets, |b, &num_wallets| {
-            let mut manager = FlowbitStateManager::new(None);
-            let wallets: Vec<Pubkey> = (0..num_wallets).map(|_| Pubkey::new_unique()).collect();
+        group.bench_with_input(
+            BenchmarkId::new("wallets", num_wallets),
+            num_wallets,
+            |b, &num_wallets| {
+                let mut manager = FlowbitStateManager::new(None);
+                let wallets: Vec<Pubkey> = (0..num_wallets).map(|_| Pubkey::new_unique()).collect();
 
-            // Pre-populate with flowbits
-            for wallet in &wallets {
-                manager.increment(wallet, "transaction_count", Some(Duration::from_secs(3600)));
-            }
+                // Pre-populate with flowbits
+                for wallet in &wallets {
+                    manager.increment(wallet, "transaction_count", Some(Duration::from_secs(3600)));
+                }
 
-            b.iter(|| {
-                let wallet = &wallets[num_wallets / 2];
-                black_box(manager.get_counter(black_box(wallet), black_box("transaction_count")));
-            });
-        });
+                b.iter(|| {
+                    let wallet = &wallets[num_wallets / 2];
+                    black_box(
+                        manager.get_counter(black_box(wallet), black_box("transaction_count")),
+                    );
+                });
+            },
+        );
     }
 
     // Benchmark with increasing number of global keys
     for num_keys in [100, 1000, 10000].iter() {
-        group.bench_with_input(BenchmarkId::new("global_keys", num_keys), num_keys, |b, &num_keys| {
-            let mut manager = FlowbitStateManager::new(None);
+        group.bench_with_input(
+            BenchmarkId::new("global_keys", num_keys),
+            num_keys,
+            |b, &num_keys| {
+                let mut manager = FlowbitStateManager::new(None);
 
-            // Pre-populate with global flowbits
-            for i in 0..num_keys {
-                manager.increment_global(&format!("recipient_{}", i), Some(Duration::from_secs(3600)));
-            }
+                // Pre-populate with global flowbits
+                for i in 0..num_keys {
+                    manager.increment_global(
+                        &format!("recipient_{}", i),
+                        Some(Duration::from_secs(3600)),
+                    );
+                }
 
-            b.iter(|| {
-                let key = format!("recipient_{}", num_keys / 2);
-                black_box(manager.get_counter_global(black_box(&key)));
-            });
-        });
+                b.iter(|| {
+                    let key = format!("recipient_{}", num_keys / 2);
+                    black_box(manager.get_counter_global(black_box(&key)));
+                });
+            },
+        );
     }
 
     group.finish();
@@ -189,7 +210,10 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
 
         b.iter(|| {
             // Increment global counter
-            manager.increment_global(&format!("suspicious_recipient:{}", recipient), Some(Duration::from_secs(3600)));
+            manager.increment_global(
+                &format!("suspicious_recipient:{}", recipient),
+                Some(Duration::from_secs(3600)),
+            );
             // Check threshold
             let count = manager.get_counter_global(&format!("suspicious_recipient:{}", recipient));
             black_box(count > 2);
@@ -204,7 +228,11 @@ fn bench_realistic_scenarios(c: &mut Criterion) {
 
         b.iter(|| {
             // Increment per-recipient counter
-            manager.increment(&wallet, &format!("transfers_to:{}", recipient), Some(Duration::from_secs(86400)));
+            manager.increment(
+                &wallet,
+                &format!("transfers_to:{}", recipient),
+                Some(Duration::from_secs(86400)),
+            );
             // Check threshold
             let count = manager.get_counter(&wallet, &format!("transfers_to:{}", recipient));
             black_box(count > 3);

@@ -64,7 +64,10 @@ impl TransactionLogAnalyzer {
         let raw: Vec<Value> = logs.iter().map(|l| json!(l)).collect();
 
         fields.insert("instruction_names".to_string(), json!(instruction_names));
-        fields.insert("program_invocations".to_string(), json!(program_invocations));
+        fields.insert(
+            "program_invocations".to_string(),
+            json!(program_invocations),
+        );
         fields.insert("raw".to_string(), json!(raw));
         fields
     }
@@ -94,7 +97,10 @@ impl TransactionAnalyzer for TransactionLogAnalyzer {
     async fn analyze(&self, _tx: &Transaction) -> Result<HashMap<String, Value>> {
         let mut fields = HashMap::new();
         fields.insert("instruction_names".to_string(), json!(Vec::<String>::new()));
-        fields.insert("program_invocations".to_string(), json!(Vec::<String>::new()));
+        fields.insert(
+            "program_invocations".to_string(),
+            json!(Vec::<String>::new()),
+        );
         fields.insert("raw".to_string(), json!(Vec::<String>::new()));
         Ok(fields)
     }

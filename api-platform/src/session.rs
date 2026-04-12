@@ -42,7 +42,8 @@ impl SessionStore {
         let key = format!("{}{}", SESSION_PREFIX, session_id);
 
         let mut conn = self.get_connection().await?;
-        conn.set_ex::<_, _, ()>(&key, session_json, SESSION_EXPIRY_SECONDS).await?;
+        conn.set_ex::<_, _, ()>(&key, session_json, SESSION_EXPIRY_SECONDS)
+            .await?;
 
         log::info!("✅ Session created: {} for user {}", session_id, user_id);
         Ok(session_id)
@@ -51,9 +52,9 @@ impl SessionStore {
     pub async fn get_session(&self, session_id: &str) -> Result<Option<Session>> {
         let key = format!("{}{}", SESSION_PREFIX, session_id);
         let mut conn = self.get_connection().await?;
-        
+
         let session_json: Option<String> = conn.get(&key).await?;
-        
+
         match session_json {
             Some(json) => {
                 let session: Session = serde_json::from_str(&json)?;
@@ -74,7 +75,9 @@ impl SessionStore {
     pub async fn refresh_session(&self, session_id: &str) -> Result<bool> {
         let key = format!("{}{}", SESSION_PREFIX, session_id);
         let mut conn = self.get_connection().await?;
-        let refreshed: bool = conn.expire::<_, bool>(&key, SESSION_EXPIRY_SECONDS_I64).await?;
+        let refreshed: bool = conn
+            .expire::<_, bool>(&key, SESSION_EXPIRY_SECONDS_I64)
+            .await?;
         Ok(refreshed)
     }
 }

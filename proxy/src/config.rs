@@ -124,20 +124,48 @@ pub struct FeedSourceConfig {
 }
 
 // Defaults
-fn default_port() -> u16 { 8899 }
-fn default_bind_address() -> String { "0.0.0.0".to_string() }
-fn default_max_concurrent() -> usize { 10 }
-fn default_delay_ms() -> u64 { 100 }
-fn default_timeout_secs() -> u64 { 30 }
-fn default_max_retries() -> usize { 3 }
-fn default_retry_base_delay_ms() -> u64 { 100 }
-fn default_circuit_breaker_threshold() -> usize { 5 }
-fn default_circuit_breaker_timeout_secs() -> u64 { 60 }
-fn default_network() -> String { "mainnet-beta".to_string() }
-fn default_blocking_threshold() -> u8 { 70 }
-fn default_requests_per_month() -> u64 { 10_000 }
-fn default_poll_interval() -> u64 { 3600 }
-fn default_min_interval() -> u64 { 300 }
+fn default_port() -> u16 {
+    8899
+}
+fn default_bind_address() -> String {
+    "0.0.0.0".to_string()
+}
+fn default_max_concurrent() -> usize {
+    10
+}
+fn default_delay_ms() -> u64 {
+    100
+}
+fn default_timeout_secs() -> u64 {
+    30
+}
+fn default_max_retries() -> usize {
+    3
+}
+fn default_retry_base_delay_ms() -> u64 {
+    100
+}
+fn default_circuit_breaker_threshold() -> usize {
+    5
+}
+fn default_circuit_breaker_timeout_secs() -> u64 {
+    60
+}
+fn default_network() -> String {
+    "mainnet-beta".to_string()
+}
+fn default_blocking_threshold() -> u8 {
+    70
+}
+fn default_requests_per_month() -> u64 {
+    10_000
+}
+fn default_poll_interval() -> u64 {
+    3600
+}
+fn default_min_interval() -> u64 {
+    300
+}
 
 impl Default for ServerConfig {
     fn default() -> Self {
@@ -243,33 +271,33 @@ impl Config {
         let config: Config = toml::from_str(&content)?;
         Ok(config)
     }
-    
+
     /// Load with environment variable overrides
     pub fn from_file_with_env<P: AsRef<Path>>(path: P) -> Result<Self> {
         let mut config = Self::from_file(path)?;
-        
+
         // Override with environment variables if present
         if let Ok(port) = std::env::var("PROXY_PORT") {
             if let Ok(p) = port.parse() {
                 config.server.port = p;
             }
         }
-        
+
         if let Ok(url) = std::env::var("UPSTREAM_RPC_URL") {
             config.upstream.url = url;
         }
-        
+
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
             config.redis.url = Some(redis_url);
         }
-        
+
         if let Ok(rules_path) = std::env::var("RULES_PATH") {
             config.security.rules_path = Some(rules_path);
         }
-        
+
         Ok(config)
     }
-    
+
     /// Create from environment variables only (backwards compatible)
     pub fn from_env() -> Result<Self> {
         let config = Config {
@@ -282,8 +310,7 @@ impl Config {
                     .unwrap_or_else(|_| "0.0.0.0".to_string()),
             },
             upstream: UpstreamConfig {
-                url: std::env::var("UPSTREAM_RPC_URL")
-                    .expect("UPSTREAM_RPC_URL must be set"),
+                url: std::env::var("UPSTREAM_RPC_URL").expect("UPSTREAM_RPC_URL must be set"),
                 max_concurrent: std::env::var("UPSTREAM_MAX_CONCURRENT")
                     .ok()
                     .and_then(|v| v.parse().ok())
@@ -308,10 +335,12 @@ impl Config {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(5),
-                circuit_breaker_timeout_secs: std::env::var("UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(60),
+                circuit_breaker_timeout_secs: std::env::var(
+                    "UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS",
+                )
+                .ok()
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(60),
             },
             network: NetworkConfig {
                 network: std::env::var("SOLANA_NETWORK")
@@ -373,7 +402,7 @@ impl Config {
                 sources: Vec::new(), // Parsed separately in main.rs
             },
         };
-        
+
         Ok(config)
     }
 }

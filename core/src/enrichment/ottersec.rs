@@ -29,17 +29,12 @@ pub struct OtterSecData {
 
 impl OtterSecClient {
     pub fn new() -> Self {
-        let api_key = std::env::var("OTTERSEC_API_KEY")
-            .expect("OTTERSEC_API_KEY not set");
+        let api_key = std::env::var("OTTERSEC_API_KEY").expect("OTTERSEC_API_KEY not set");
 
         log::info!("✅ OtterSecClient: initialized with API key");
 
         // OtterSec: conservative rate limit
-        let rate_limiter = ApiRateLimiter::from_env_or_default(
-            "OTTERSEC_RATE_LIMIT",
-            30,
-            60,
-        );
+        let rate_limiter = ApiRateLimiter::from_env_or_default("OTTERSEC_RATE_LIMIT", 30, 60);
 
         Self {
             api_key,

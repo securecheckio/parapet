@@ -12,9 +12,8 @@ use solana_sdk::message::{Message, VersionedMessage};
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::{Transaction, VersionedTransaction};
 use solana_transaction_status::{
-    EncodedTransaction, EncodedTransactionWithStatusMeta, UiTransactionEncoding,
-    UiInstruction, UiCompiledInstruction,
-    option_serializer::OptionSerializer,
+    option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta,
+    UiCompiledInstruction, UiInstruction, UiTransactionEncoding,
 };
 use std::str::FromStr;
 use std::sync::Arc;
@@ -64,9 +63,24 @@ async fn main() -> Result<()> {
 
     if args.format == "pretty" {
         println!();
-        println!("{}", "═══════════════════════════════════════════════════════════".bright_blue().bold());
-        println!("{}", "              Parapet Transaction Checker".bright_blue().bold());
-        println!("{}", "═══════════════════════════════════════════════════════════".bright_blue().bold());
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════"
+                .bright_blue()
+                .bold()
+        );
+        println!(
+            "{}",
+            "              Parapet Transaction Checker"
+                .bright_blue()
+                .bold()
+        );
+        println!(
+            "{}",
+            "═══════════════════════════════════════════════════════════"
+                .bright_blue()
+                .bold()
+        );
         println!();
         println!("  Signature : {}", args.signature.bright_cyan());
         println!("  Rules     : {}", args.rules.bright_cyan());
@@ -208,7 +222,12 @@ async fn main() -> Result<()> {
         println!();
         println!(
             "  Instructions : {}",
-            transaction.message.instructions.len().to_string().bright_white()
+            transaction
+                .message
+                .instructions
+                .len()
+                .to_string()
+                .bright_white()
         );
         let programs: Vec<String> = transaction
             .message
@@ -225,8 +244,18 @@ async fn main() -> Result<()> {
             .into_iter()
             .collect();
         println!("  Programs     : {}", programs.join(", ").bright_white());
-        println!("  Log lines    : {}", log_messages.len().to_string().bright_white());
-        println!("  CPI calls    : {}", tx_metadata.inner_instructions.len().to_string().bright_white());
+        println!(
+            "  Log lines    : {}",
+            log_messages.len().to_string().bright_white()
+        );
+        println!(
+            "  CPI calls    : {}",
+            tx_metadata
+                .inner_instructions
+                .len()
+                .to_string()
+                .bright_white()
+        );
         println!();
     }
 
@@ -251,7 +280,9 @@ async fn main() -> Result<()> {
         let analyzer = match fingerprint_path.as_deref() {
             Some(path) if path.exists() => {
                 InstructionDataAnalyzer::from_config_file(path.to_str().unwrap_or(""))
-                    .unwrap_or_else(|_| InstructionDataAnalyzer::with_authority_fingerprints_embedded())
+                    .unwrap_or_else(|_| {
+                        InstructionDataAnalyzer::with_authority_fingerprints_embedded()
+                    })
             }
             _ => InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
         };
@@ -286,7 +317,9 @@ async fn main() -> Result<()> {
         debug_registry.register(Arc::new(SystemProgramAnalyzer::new()));
         debug_registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
         debug_registry.register(Arc::new(TransactionLogAnalyzer::new()));
-        debug_registry.register(Arc::new(InstructionDataAnalyzer::with_authority_fingerprints_embedded()));
+        debug_registry.register(Arc::new(
+            InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
+        ));
 
         let all_analyzers: Vec<String> = debug_registry.list_all();
         let fields = debug_registry
@@ -296,17 +329,32 @@ async fn main() -> Result<()> {
         sorted.sort_by_key(|(k, _)| k.as_str());
 
         if args.format == "json" {
-            let map: serde_json::Map<String, serde_json::Value> =
-                sorted.iter().map(|(k, v)| (k.to_string(), (*v).clone())).collect();
-            println!("{}", serde_json::to_string_pretty(&serde_json::Value::Object(map))?);
+            let map: serde_json::Map<String, serde_json::Value> = sorted
+                .iter()
+                .map(|(k, v)| (k.to_string(), (*v).clone()))
+                .collect();
+            println!(
+                "{}",
+                serde_json::to_string_pretty(&serde_json::Value::Object(map))?
+            );
             return Ok(());
         }
 
-        println!("{}", "─────────────────────────────────────────────────────────────".bright_blue());
+        println!(
+            "{}",
+            "─────────────────────────────────────────────────────────────".bright_blue()
+        );
         println!("{}", "  ANALYZER FIELDS".bold());
-        println!("{}", "─────────────────────────────────────────────────────────────".bright_blue());
+        println!(
+            "{}",
+            "─────────────────────────────────────────────────────────────".bright_blue()
+        );
         for (k, v) in &sorted {
-            println!("  {:<55} {}", k.bright_white(), v.to_string().bright_yellow());
+            println!(
+                "  {:<55} {}",
+                k.bright_white(),
+                v.to_string().bright_yellow()
+            );
         }
         println!();
     }
@@ -339,14 +387,23 @@ async fn main() -> Result<()> {
     }
 
     // Pretty output
-    println!("{}", "─────────────────────────────────────────────────────────────".bright_blue());
+    println!(
+        "{}",
+        "─────────────────────────────────────────────────────────────".bright_blue()
+    );
     println!("{}", "  RESULT".bold());
-    println!("{}", "─────────────────────────────────────────────────────────────".bright_blue());
+    println!(
+        "{}",
+        "─────────────────────────────────────────────────────────────".bright_blue()
+    );
     println!();
 
     if !decision.matched {
         println!("  {} — no rules matched", "PASS".bright_green().bold());
-        println!("  Risk score : {}/100", decision.total_risk.to_string().bright_green());
+        println!(
+            "  Risk score : {}/100",
+            decision.total_risk.to_string().bright_green()
+        );
     } else {
         use parapet_core::rules::types::RuleAction;
         let action_str = match decision.action {
@@ -371,13 +428,23 @@ async fn main() -> Result<()> {
                     RuleAction::Alert => "[ALERT]".bright_yellow(),
                     RuleAction::Pass => "[PASS]".bright_green(),
                 };
-                println!("    {} {} — {}", tag, rule.rule_id.bright_white(), rule.message);
+                println!(
+                    "    {} {} — {}",
+                    tag,
+                    rule.rule_id.bright_white(),
+                    rule.message
+                );
             }
         }
     }
 
     println!();
-    println!("{}", "═══════════════════════════════════════════════════════════".bright_blue().bold());
+    println!(
+        "{}",
+        "═══════════════════════════════════════════════════════════"
+            .bright_blue()
+            .bold()
+    );
     println!();
 
     // Exit with non-zero code if blocked so it can be used in scripts

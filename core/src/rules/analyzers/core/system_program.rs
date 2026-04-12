@@ -216,10 +216,7 @@ impl TransactionAnalyzer for SystemProgramAnalyzer {
             "uses_durable_nonce".to_string(),
             json!(stats.uses_durable_nonce),
         );
-        fields.insert(
-            "advances_nonce".to_string(),
-            json!(stats.advances_nonce),
-        );
+        fields.insert("advances_nonce".to_string(), json!(stats.advances_nonce));
         if let Some(nonce_account) = stats.nonce_account {
             fields.insert("nonce_account".to_string(), json!(nonce_account));
         }

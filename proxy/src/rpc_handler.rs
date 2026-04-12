@@ -6,9 +6,9 @@ use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     Json,
 };
+use parapet_core::rules::types::RuleDecision;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use parapet_core::rules::types::RuleDecision;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -251,7 +251,10 @@ async fn handle_transaction_send(
             .unwrap_or(state.default_blocking_threshold);
 
         let engine = state.rule_engine.read().await;
-        match engine.evaluate_versioned_with_threshold(transaction, threshold).await {
+        match engine
+            .evaluate_versioned_with_threshold(transaction, threshold)
+            .await
+        {
             Ok(decision) => {
                 if decision.matched {
                     log::info!(
@@ -292,7 +295,8 @@ async fn handle_transaction_send(
                                 // Decode transaction for display
                                 use crate::escalations::DecoderRegistry;
                                 let decoder = DecoderRegistry::with_defaults();
-                                let decoded_instructions = decoder.decode_versioned_transaction(transaction);
+                                let decoded_instructions =
+                                    decoder.decode_versioned_transaction(transaction);
 
                                 // Get requester wallet (fee payer)
                                 let requester_wallet = wallet_address
@@ -311,16 +315,27 @@ async fn handle_transaction_send(
                                     requester_wallet,
                                     escalation_config.approver_wallet.clone(),
                                     &escalation_config.redis_url,
-                                ).await {
+                                )
+                                .await
+                                {
                                     Ok(escalation) => {
-                                        log::info!("🚨 Escalation created: {}", escalation.escalation_id);
+                                        log::info!(
+                                            "🚨 Escalation created: {}",
+                                            escalation.escalation_id
+                                        );
 
                                         // Publish escalation event
-                                        if let Err(e) = crate::escalations::publish_escalation_event(
-                                            &escalation,
-                                            &escalation_config.redis_url,
-                                        ).await {
-                                            log::error!("Failed to publish escalation event: {}", e);
+                                        if let Err(e) =
+                                            crate::escalations::publish_escalation_event(
+                                                &escalation,
+                                                &escalation_config.redis_url,
+                                            )
+                                            .await
+                                        {
+                                            log::error!(
+                                                "Failed to publish escalation event: {}",
+                                                e
+                                            );
                                         }
 
                                         // Return EscalationRequired error
@@ -404,25 +419,27 @@ async fn handle_transaction_send(
                 .map(|s| s.to_string());
 
             // ALWAYS emit event for complete audit trail - with or without signature
-            log::info!("📝 Emitting ALLOWED event (signature: {})", 
-                signature.as_ref().map(|s| s.as_str()).unwrap_or("none"));
-            
+            log::info!(
+                "📝 Emitting ALLOWED event (signature: {})",
+                signature.as_ref().map(|s| s.as_str()).unwrap_or("none")
+            );
+
             let mut event_builder = EventBuilder::new(
                 wallet_address.unwrap_or_else(|| "unknown".to_string()),
                 req.method.clone(),
             )
             .with_auth_context(&auth_context);
-            
+
             // Add signature if we got one from upstream
             if let Some(sig) = &signature {
                 event_builder = event_builder.with_signature(sig.clone(), None);
             }
-            
+
             // Add rule decision if we evaluated security rules
             if let Some(decision) = rule_decision_for_event {
                 event_builder = event_builder.with_rule_decision(&decision);
             }
-            
+
             let event = event_builder.build();
             emit_event(&state.output_manager, event).await;
             log::info!("✅ ALLOWED event emitted (audit trail complete)");
@@ -518,7 +535,10 @@ async fn handle_simulate_transaction(
         log::info!("🔍 Running Parapet analysis on simulation");
 
         // Get simulation value (nested under result.value for simulation responses)
-        let simulation_value = result.get("value").cloned().unwrap_or_else(|| result.clone());
+        let simulation_value = result
+            .get("value")
+            .cloned()
+            .unwrap_or_else(|| result.clone());
 
         let engine = state.rule_engine.read().await;
         match engine

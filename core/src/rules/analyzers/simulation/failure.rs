@@ -19,7 +19,10 @@ impl SimulationFailureAnalyzer {
 
         if let Some(obj) = err.as_object() {
             // Try common error message fields
-            if let Some(msg) = obj.get("InstructionError").and_then(|v| v.to_string().into()) {
+            if let Some(msg) = obj
+                .get("InstructionError")
+                .and_then(|v| v.to_string().into())
+            {
                 return format!("InstructionError: {}", msg);
             }
             if let Some(msg) = obj.get("Custom").and_then(|v| v.as_u64()) {

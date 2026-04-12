@@ -16,29 +16,29 @@ struct RugcheckReport {
     token_program: Option<String>,
     #[serde(rename = "tokenType")]
     token_type: Option<String>,
-    
+
     // Risk assessment
     score: Option<u32>,
     #[serde(rename = "rugged")]
     is_rugged: Option<bool>,
     risks: Option<Vec<Risk>>,
-    
+
     // Market data
     markets: Option<Vec<Market>>,
-    
+
     // Token metadata
     #[serde(rename = "tokenMeta")]
     token_meta: Option<TokenMeta>,
-    
+
     // Holders and supply
     #[serde(rename = "topHolders")]
     top_holders: Option<Vec<Holder>>,
     #[serde(rename = "totalSupply")]
     total_supply: Option<String>,
-    
+
     // LP (Liquidity Pool) analysis
     lp: Option<LiquidityPool>,
-    
+
     // Creator info
     creator: Option<Creator>,
 }
@@ -97,7 +97,7 @@ struct CacheEntry {
 }
 
 /// Rugcheck Analyzer - scam/rugpull detection via Rugcheck.xyz API
-/// 
+///
 /// Rugcheck provides comprehensive token security analysis including:
 /// - Rugpull risk scoring (0-100)
 /// - Liquidity lock status
@@ -124,8 +124,8 @@ impl RugcheckAnalyzer {
         // We use 10/60s to be very conservative and avoid 429s
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "RUGCHECK_RATE_LIMIT",
-            10,  // Very conservative: 10 requests per minute (API limit is 15)
-            60,  // 60 second window
+            10, // Very conservative: 10 requests per minute (API limit is 15)
+            60, // 60 second window
         );
 
         Self {
@@ -155,10 +155,7 @@ impl RugcheckAnalyzer {
             }
         }
 
-        let url = format!(
-            "https://api.rugcheck.xyz/v1/tokens/{}/report",
-            mint_address
-        );
+        let url = format!("https://api.rugcheck.xyz/v1/tokens/{}/report", mint_address);
 
         log::debug!("Rugcheck: Fetching report for {}", mint_address);
 
@@ -180,7 +177,7 @@ impl RugcheckAnalyzer {
                         remaining.to_str().unwrap_or("?"),
                         limit.to_str().unwrap_or("?")
                     );
-                    
+
                     // Warn if getting close to limit
                     if let Ok(remaining_str) = remaining.to_str() {
                         if let Ok(remaining_num) = remaining_str.parse::<u32>() {
@@ -198,7 +195,10 @@ impl RugcheckAnalyzer {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 attempt += 1;
                 if attempt >= max_retries {
-                    return Err(anyhow!("Rugcheck API rate limited after {} retries", max_retries));
+                    return Err(anyhow!(
+                        "Rugcheck API rate limited after {} retries",
+                        max_retries
+                    ));
                 }
                 log::warn!(
                     "🚨 Rugcheck returned 429 (rate limit exceeded) - backing off (attempt {}/{})",
@@ -298,32 +298,26 @@ impl TransactionAnalyzer for RugcheckAnalyzer {
             "rugcheck_score".to_string(),
             "is_rugged".to_string(),
             "risk_level".to_string(), // critical, high, medium, low
-            
             // Risk counts
             "danger_count".to_string(),
             "warning_count".to_string(),
-            
             // Specific risk indicators
             "has_freeze_authority".to_string(),
             "has_mint_authority".to_string(),
             "low_liquidity".to_string(),
             "high_creator_percentage".to_string(),
             "high_top_holder_concentration".to_string(),
-            
             // Liquidity analysis
             "lp_locked_percentage".to_string(),
             "lp_burned_percentage".to_string(),
             "total_liquidity_usd".to_string(),
-            
             // Holder concentration
             "top_holders_percentage".to_string(),
             "creator_percentage".to_string(),
-            
             // Combined risk flags
             "is_likely_scam".to_string(),
             "is_high_risk".to_string(),
             "requires_caution".to_string(),
-            
             // Risk details (for debugging/logging)
             "risk_details".to_string(),
         ]
@@ -367,7 +361,7 @@ impl TransactionAnalyzer for RugcheckAnalyzer {
         // Analyze risks
         if let Some(ref risks) = report.risks {
             let (danger, warning, _info, _good) = self.count_risks_by_level(risks);
-            
+
             fields.insert("danger_count".to_string(), json!(danger));
             fields.insert("warning_count".to_string(), json!(warning));
 
@@ -385,7 +379,7 @@ impl TransactionAnalyzer for RugcheckAnalyzer {
             for risk in risks {
                 match risk.name.as_str() {
                     "Freeze Authority" | "freeze_authority" => {
-                        has_freeze = risk.value.to_lowercase().contains("enabled") 
+                        has_freeze = risk.value.to_lowercase().contains("enabled")
                             || risk.value.to_lowercase().contains("yes");
                     }
                     "Mint Authority" | "mint_authority" => {
@@ -415,12 +409,7 @@ impl TransactionAnalyzer for RugcheckAnalyzer {
         let total_liquidity: f64 = report
             .markets
             .as_ref()
-            .map(|markets| {
-                markets
-                    .iter()
-                    .filter_map(|m| m.liquidity_usd)
-                    .sum()
-            })
+            .map(|markets| markets.iter().filter_map(|m| m.liquidity_usd).sum())
             .unwrap_or(0.0);
         fields.insert("total_liquidity_usd".to_string(), json!(total_liquidity));
 
@@ -430,14 +419,20 @@ impl TransactionAnalyzer for RugcheckAnalyzer {
             .as_ref()
             .map(|holders| holders.iter().map(|h| h.pct).sum())
             .unwrap_or(0.0);
-        
+
         fields.insert("top_holders_percentage".to_string(), json!(top_holders_pct));
-        fields.insert("high_top_holder_concentration".to_string(), json!(top_holders_pct > 50.0));
+        fields.insert(
+            "high_top_holder_concentration".to_string(),
+            json!(top_holders_pct > 50.0),
+        );
 
         // Creator analysis
         let creator_pct = report.creator.as_ref().and_then(|c| c.pct).unwrap_or(0.0);
         fields.insert("creator_percentage".to_string(), json!(creator_pct));
-        fields.insert("high_creator_percentage".to_string(), json!(creator_pct > 20.0));
+        fields.insert(
+            "high_creator_percentage".to_string(),
+            json!(creator_pct > 20.0),
+        );
 
         // Combined risk flags
         let is_likely_scam = score < 30 || report.is_rugged.unwrap_or(false);
@@ -480,7 +475,7 @@ mod tests {
     fn test_analyzer_fields() {
         let analyzer = RugcheckAnalyzer::new();
         let fields = analyzer.fields();
-        
+
         assert!(fields.contains(&"rugcheck_score".to_string()));
         assert!(fields.contains(&"is_rugged".to_string()));
         assert!(fields.contains(&"is_likely_scam".to_string()));

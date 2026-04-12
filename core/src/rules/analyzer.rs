@@ -280,7 +280,8 @@ impl AnalyzerRegistry {
             logs: logs.to_vec(),
             inner_instructions: vec![],
         };
-        self.analyze_selected_with_metadata(tx, required_analyzers, &metadata).await
+        self.analyze_selected_with_metadata(tx, required_analyzers, &metadata)
+            .await
     }
 
     /// Get the recommended delay for rate limiting across all active analyzers
@@ -291,7 +292,7 @@ impl AnalyzerRegistry {
             .filter(|analyzer| analyzer.is_available())
             .filter_map(|analyzer| analyzer.recommended_delay_ms())
             .max()
-            .unwrap_or(0)  // No rate limits = no delay needed
+            .unwrap_or(0) // No rate limits = no delay needed
     }
 }
 

@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::types::chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::{AppError, state::PlatformState};
+use crate::{state::PlatformState, AppError};
 
 // ===== Course Types =====
 
@@ -108,18 +108,16 @@ pub async fn list_courses(
     State(state): State<PlatformState>,
 ) -> Result<Json<CourseListResponse>, AppError> {
     let courses = sqlx::query_as::<_, Course>(
-        "SELECT * FROM courses WHERE is_active = true ORDER BY order_num LIMIT $1 OFFSET $2"
+        "SELECT * FROM courses WHERE is_active = true ORDER BY order_num LIMIT $1 OFFSET $2",
     )
     .bind(params.limit)
     .bind(params.skip)
     .fetch_all(&state.db)
     .await?;
 
-    let total: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM courses WHERE is_active = true"
-    )
-    .fetch_one(&state.db)
-    .await?;
+    let total: (i64,) = sqlx::query_as("SELECT COUNT(*) FROM courses WHERE is_active = true")
+        .fetch_one(&state.db)
+        .await?;
 
     Ok(Json(CourseListResponse {
         courses,
@@ -131,13 +129,11 @@ pub async fn get_course_by_id(
     Path(course_id): Path<Uuid>,
     State(state): State<PlatformState>,
 ) -> Result<Json<Course>, AppError> {
-    let course = sqlx::query_as::<_, Course>(
-        "SELECT * FROM courses WHERE id = $1"
-    )
-    .bind(course_id)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::NotFound("Course not found".into()))?;
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE id = $1")
+        .bind(course_id)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::NotFound("Course not found".into()))?;
 
     Ok(Json(course))
 }
@@ -146,13 +142,11 @@ pub async fn get_course_by_slug(
     Path(slug): Path<String>,
     State(state): State<PlatformState>,
 ) -> Result<Json<Course>, AppError> {
-    let course = sqlx::query_as::<_, Course>(
-        "SELECT * FROM courses WHERE slug = $1"
-    )
-    .bind(slug)
-    .fetch_optional(&state.db)
-    .await?
-    .ok_or(AppError::NotFound("Course not found".into()))?;
+    let course = sqlx::query_as::<_, Course>("SELECT * FROM courses WHERE slug = $1")
+        .bind(slug)
+        .fetch_optional(&state.db)
+        .await?
+        .ok_or(AppError::NotFound("Course not found".into()))?;
 
     Ok(Json(course))
 }
@@ -171,7 +165,7 @@ pub async fn get_user_progress(
          FROM user_progress up
          JOIN courses c ON c.id = up.course_id
          WHERE up.user_id = $1
-         ORDER BY c.order_num"
+         ORDER BY c.order_num",
     )
     .bind(user_id)
     .fetch_all(&state.db)
@@ -186,7 +180,7 @@ pub async fn get_course_progress(
     user_id: Uuid,
 ) -> Result<Json<UserProgress>, AppError> {
     let progress = sqlx::query_as::<_, UserProgress>(
-        "SELECT * FROM user_progress WHERE user_id = $1 AND course_id = $2"
+        "SELECT * FROM user_progress WHERE user_id = $1 AND course_id = $2",
     )
     .bind(user_id)
     .bind(course_id)
@@ -200,7 +194,7 @@ pub async fn get_course_progress(
             let new_progress = sqlx::query_as::<_, UserProgress>(
                 "INSERT INTO user_progress (user_id, course_id, progress_data) 
                  VALUES ($1, $2, '{}'::jsonb) 
-                 RETURNING *"
+                 RETURNING *",
             )
             .bind(user_id)
             .bind(course_id)
@@ -244,7 +238,8 @@ pub async fn update_course_progress(
             progress_data = $3,
             completed = $4,
             updated_at = NOW()
-         RETURNING *".to_string()
+         RETURNING *"
+            .to_string()
     };
 
     let progress = sqlx::query_as::<_, UserProgress>(&query)
@@ -265,14 +260,10 @@ pub async fn update_course_progress(
 
 // ===== Badge Endpoints =====
 
-pub async fn list_badges(
-    State(state): State<PlatformState>,
-) -> Result<Json<Vec<Badge>>, AppError> {
-    let badges = sqlx::query_as::<_, Badge>(
-        "SELECT * FROM badges ORDER BY created_at"
-    )
-    .fetch_all(&state.db)
-    .await?;
+pub async fn list_badges(State(state): State<PlatformState>) -> Result<Json<Vec<Badge>>, AppError> {
+    let badges = sqlx::query_as::<_, Badge>("SELECT * FROM badges ORDER BY created_at")
+        .fetch_all(&state.db)
+        .await?;
 
     Ok(Json(badges))
 }
@@ -286,7 +277,7 @@ pub async fn get_user_badges(
          FROM badges b
          JOIN user_badges ub ON ub.badge_id = b.id
          WHERE ub.user_id = $1
-         ORDER BY ub.earned_at DESC"
+         ORDER BY ub.earned_at DESC",
     )
     .bind(user_id)
     .fetch_all(&state.db)
@@ -299,12 +290,10 @@ pub async fn get_course_badges(
     Path(course_id): Path<Uuid>,
     State(state): State<PlatformState>,
 ) -> Result<Json<Vec<Badge>>, AppError> {
-    let badges = sqlx::query_as::<_, Badge>(
-        "SELECT * FROM badges WHERE course_id = $1"
-    )
-    .bind(course_id)
-    .fetch_all(&state.db)
-    .await?;
+    let badges = sqlx::query_as::<_, Badge>("SELECT * FROM badges WHERE course_id = $1")
+        .bind(course_id)
+        .fetch_all(&state.db)
+        .await?;
 
     Ok(Json(badges))
 }
@@ -318,17 +307,15 @@ async fn check_and_award_badges(
 ) -> Result<(), AppError> {
     // Check for course completion badges
     if let Some(course_id) = completed_course_id {
-        let course_badges = sqlx::query_as::<_, Badge>(
-            "SELECT * FROM badges WHERE course_id = $1"
-        )
-        .bind(course_id)
-        .fetch_all(&state.db)
-        .await?;
+        let course_badges = sqlx::query_as::<_, Badge>("SELECT * FROM badges WHERE course_id = $1")
+            .bind(course_id)
+            .fetch_all(&state.db)
+            .await?;
 
         for badge in course_badges {
             // Award badge if criteria met and not already earned
             let already_earned = sqlx::query_scalar::<_, bool>(
-                "SELECT EXISTS(SELECT 1 FROM user_badges WHERE user_id = $1 AND badge_id = $2)"
+                "SELECT EXISTS(SELECT 1 FROM user_badges WHERE user_id = $1 AND badge_id = $2)",
             )
             .bind(user_id)
             .bind(badge.id)
@@ -349,23 +336,25 @@ async fn check_and_award_badges(
 
     // Check for global badges (e.g., complete N courses)
     let completed_count: i64 = sqlx::query_scalar(
-        "SELECT COUNT(*) FROM user_progress WHERE user_id = $1 AND completed = true"
+        "SELECT COUNT(*) FROM user_progress WHERE user_id = $1 AND completed = true",
     )
     .bind(user_id)
     .fetch_one(&state.db)
     .await?;
 
-    let global_badges = sqlx::query_as::<_, Badge>(
-        "SELECT * FROM badges WHERE course_id IS NULL"
-    )
-    .fetch_all(&state.db)
-    .await?;
+    let global_badges = sqlx::query_as::<_, Badge>("SELECT * FROM badges WHERE course_id IS NULL")
+        .fetch_all(&state.db)
+        .await?;
 
     for badge in global_badges {
-        if let Some(courses_required) = badge.criteria.get("courses_completed").and_then(|v| v.as_i64()) {
+        if let Some(courses_required) = badge
+            .criteria
+            .get("courses_completed")
+            .and_then(|v| v.as_i64())
+        {
             if completed_count >= courses_required {
                 let already_earned = sqlx::query_scalar::<_, bool>(
-                    "SELECT EXISTS(SELECT 1 FROM user_badges WHERE user_id = $1 AND badge_id = $2)"
+                    "SELECT EXISTS(SELECT 1 FROM user_badges WHERE user_id = $1 AND badge_id = $2)",
                 )
                 .bind(user_id)
                 .bind(badge.id)
@@ -390,15 +379,15 @@ async fn check_and_award_badges(
 
 // ===== Session-Protected Handlers =====
 
-async fn get_session_user_id(
-    state: &PlatformState,
-    jar: &CookieJar,
-) -> Result<Uuid, AppError> {
-    let session_id = jar.get("session_id")
+async fn get_session_user_id(state: &PlatformState, jar: &CookieJar) -> Result<Uuid, AppError> {
+    let session_id = jar
+        .get("session_id")
         .map(|c| c.value().to_string())
         .ok_or(AppError::Unauthorized)?;
 
-    let session = state.sessions.get_session(&session_id)
+    let session = state
+        .sessions
+        .get_session(&session_id)
         .await
         .map_err(|_| AppError::Internal)?
         .ok_or(AppError::Unauthorized)?;
@@ -406,8 +395,7 @@ async fn get_session_user_id(
     // Refresh session on activity
     let _ = state.sessions.refresh_session(&session_id).await;
 
-    Uuid::parse_str(&session.user_id)
-        .map_err(|_| AppError::Internal)
+    Uuid::parse_str(&session.user_id).map_err(|_| AppError::Internal)
 }
 
 pub async fn get_my_progress(

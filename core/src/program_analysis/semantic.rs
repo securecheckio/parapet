@@ -5,8 +5,8 @@ use anyhow::Result;
 use log::info;
 use serde::{Deserialize, Serialize};
 
-use super::types::ProgramData;
 use super::disassembler::DisassemblyResult;
+use super::types::ProgramData;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SemanticAnalysisResult {
@@ -30,12 +30,15 @@ impl SemanticAnalyzer {
         program_data: &ProgramData,
         disassembly: Option<&DisassemblyResult>,
     ) -> Result<SemanticAnalysisResult> {
-        info!("Starting semantic analysis for program: {}", program_data.address);
+        info!(
+            "Starting semantic analysis for program: {}",
+            program_data.address
+        );
 
         let control_flow_complexity = self.analyze_control_flow(program_data, disassembly)?;
         let data_flow_risks = self.analyze_data_flow(program_data)?;
         let syscall_patterns = self.detect_syscall_patterns(program_data)?;
-        
+
         // Calculate confidence based on analysis completeness
         let confidence = if disassembly.is_some() { 0.8 } else { 0.5 };
 
@@ -64,29 +67,29 @@ impl SemanticAnalyzer {
 
     fn analyze_data_flow(&self, program_data: &ProgramData) -> Result<Vec<String>> {
         let mut risks = Vec::new();
-        
+
         // Check for suspicious data patterns
         if program_data.is_upgradeable && program_data.authority.is_none() {
             risks.push("Upgradeable program with no authority set".to_string());
         }
-        
+
         Ok(risks)
     }
 
     fn detect_syscall_patterns(&self, program_data: &ProgramData) -> Result<Vec<String>> {
         let mut patterns = Vec::new();
-        
+
         // Detect common syscall signatures in bytecode
         let data = &program_data.executable_data;
-        
+
         if Self::contains_pattern(data, b"sol_invoke") {
             patterns.push("Cross-program invocation detected".to_string());
         }
-        
+
         if Self::contains_pattern(data, b"sol_log") {
             patterns.push("Logging syscall detected".to_string());
         }
-        
+
         Ok(patterns)
     }
 

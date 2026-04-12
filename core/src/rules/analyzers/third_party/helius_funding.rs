@@ -42,11 +42,7 @@ impl HeliusFundingAnalyzer {
             log::info!("✅ HeliusFundingAnalyzer: API key configured");
         }
 
-        let rate_limiter = ApiRateLimiter::from_env_or_default(
-            "HELIUS_RATE_LIMIT",
-            20,
-            60,
-        );
+        let rate_limiter = ApiRateLimiter::from_env_or_default("HELIUS_RATE_LIMIT", 20, 60);
 
         Self {
             api_key,
@@ -85,11 +81,7 @@ impl HeliusFundingAnalyzer {
 
         log::debug!("Fetching funding source for wallet: {}", address);
 
-        let response = self
-            .http_client
-            .get(&url)
-            .send()
-            .await?;
+        let response = self.http_client.get(&url).send().await?;
 
         if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
             return Err(anyhow!("Helius API rate limited"));
@@ -151,13 +143,13 @@ impl HeliusFundingAnalyzer {
         };
 
         // Sybil criteria: unknown funder + recent (<24h) + small amount (<0.1 SOL)
-        let unknown_funder = funding.funder_type.is_none() 
-            || funding.funder_type.as_deref() == Some("unknown");
-        
+        let unknown_funder =
+            funding.funder_type.is_none() || funding.funder_type.as_deref() == Some("unknown");
+
         let now = chrono::Utc::now().timestamp();
         let age_hours = (now - funding.timestamp) / 3600;
         let recent = age_hours < 24;
-        
+
         let small_amount = funding.amount < 100_000_000;
 
         // High risk score is also an indicator
@@ -220,7 +212,10 @@ impl TransactionAnalyzer for HeliusFundingAnalyzer {
         let age_hours = self.funding_age_hours(&funding);
 
         // Extract funding details
-        let funding_source = funding.as_ref().map(|f| f.funder.clone()).unwrap_or_default();
+        let funding_source = funding
+            .as_ref()
+            .map(|f| f.funder.clone())
+            .unwrap_or_default();
         let funding_type = funding
             .as_ref()
             .and_then(|f| f.funder_type.clone())

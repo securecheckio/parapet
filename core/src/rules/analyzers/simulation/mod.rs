@@ -1,19 +1,19 @@
 pub mod balance;
-pub mod token_balance;
-pub mod logs;
+pub mod compute;
 pub mod cpi;
 pub mod failure;
-pub mod compute;
+pub mod logs;
+pub mod token_balance;
 
 #[cfg(test)]
 mod tests;
 
 pub use balance::SimulationBalanceAnalyzer;
-pub use token_balance::SimulationTokenAnalyzer;
-pub use logs::SimulationLogAnalyzer;
+pub use compute::SimulationComputeAnalyzer;
 pub use cpi::SimulationCpiAnalyzer;
 pub use failure::SimulationFailureAnalyzer;
-pub use compute::SimulationComputeAnalyzer;
+pub use logs::SimulationLogAnalyzer;
+pub use token_balance::SimulationTokenAnalyzer;
 
 use anyhow::Result;
 use serde_json::Value;

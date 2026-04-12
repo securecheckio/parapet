@@ -1,11 +1,11 @@
 use anyhow::{ensure, Context, Result};
 use axum::{routing::post, Json, Router};
 use base64::Engine;
+use parapet_proxy::{build_app_router, AuthMode, ServerConfig};
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use serde_json::{json, Value};
-use parapet_proxy::{build_app_router, AuthMode, ServerConfig};
 use solana_sdk::hash::Hash;
 use solana_sdk::message::Message;
 use solana_sdk::pubkey;
@@ -91,9 +91,8 @@ impl TestCaseRegistry {
 
         // ── Alert: Memo program present ──────────────────────────────────────
         let ix0 = system_instruction::transfer(&payer.pubkey(), &to, 1);
-        let ix1 = solana_sdk::instruction::Instruction::new_with_bytes(
-            MEMO_PROG, b"rpc-perf", vec![],
-        );
+        let ix1 =
+            solana_sdk::instruction::Instruction::new_with_bytes(MEMO_PROG, b"rpc-perf", vec![]);
         let tx = signed_tx(&payer, &[ix0, ix1], h);
         cases.insert(
             "memo-alert",
@@ -153,9 +152,7 @@ impl TestCaseRegistry {
         // approve+revoke = net-zero delegation (no block), memo triggers alert.
         // No Compute Budget ix — that would hit the block rule first.
         let ix0 = system_instruction::transfer(&payer.pubkey(), &to, 1);
-        let ix1 = solana_sdk::instruction::Instruction::new_with_bytes(
-            MEMO_PROG, b"multi", vec![],
-        );
+        let ix1 = solana_sdk::instruction::Instruction::new_with_bytes(MEMO_PROG, b"multi", vec![]);
         let ix2 = spl_ix(SPL_APPROVE, &500u64.to_le_bytes(), 3);
         let ix3 = spl_ix(SPL_REVOKE, &[], 2);
         let tx = signed_tx(&payer, &[ix0, ix1, ix2, ix3], h);
@@ -222,8 +219,7 @@ pub struct RunConfig {
 impl RunConfig {
     fn resolve_rules_path(&self) -> Result<PathBuf> {
         let path = self.rules_path.clone().unwrap_or_else(|| {
-            PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("fixtures/realistic-rules.json")
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/realistic-rules.json")
         });
         path.canonicalize()
             .with_context(|| format!("rules_path {}", path.display()))
@@ -421,11 +417,7 @@ pub async fn run(config: RunConfig) -> Result<()> {
     Ok(())
 }
 
-fn check_outcome(
-    tc: &TestCase,
-    status: reqwest::StatusCode,
-    mismatches: &mut Vec<String>,
-) {
+fn check_outcome(tc: &TestCase, status: reqwest::StatusCode, mismatches: &mut Vec<String>) {
     let got_forbidden = status == reqwest::StatusCode::FORBIDDEN;
     let expected_forbidden = tc.expected.is_forbidden();
     if got_forbidden != expected_forbidden {
@@ -440,8 +432,7 @@ fn check_outcome(
 
 /// One `sendRawTransaction` (pass-only tx) against proxy + minimal rules; asserts HTTP success.
 pub async fn smoke_send_raw_pass() -> Result<()> {
-    let rules_path =
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/minimal-rules.json");
+    let rules_path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("fixtures/minimal-rules.json");
     let rules_path = rules_path
         .canonicalize()
         .with_context(|| format!("minimal rules {:?}", rules_path))?;
@@ -539,9 +530,7 @@ pub async fn send_one(
 
 async fn spawn_mock_upstream() -> String {
     let app = Router::new().route("/", post(mock_upstream_handler));
-    let listener = TcpListener::bind("127.0.0.1:0")
-        .await
-        .expect("mock bind");
+    let listener = TcpListener::bind("127.0.0.1:0").await.expect("mock bind");
     let addr = listener.local_addr().expect("mock addr");
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, app).await {
@@ -569,7 +558,11 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
 }
 
 /// Build and sign a transaction from a slice of instructions.
-fn signed_tx(payer: &Keypair, instructions: &[solana_sdk::instruction::Instruction], h: Hash) -> Transaction {
+fn signed_tx(
+    payer: &Keypair,
+    instructions: &[solana_sdk::instruction::Instruction],
+    h: Hash,
+) -> Transaction {
     let msg = Message::new(instructions, Some(&payer.pubkey()));
     let mut tx = Transaction::new_unsigned(msg);
     tx.sign(&[payer], h);
@@ -583,7 +576,11 @@ fn versioned_b64(tx: &Transaction) -> String {
 }
 
 /// Build a raw SPL Token instruction with `n_accounts` dummy account metas.
-fn spl_ix(discriminator: u8, extra_data: &[u8], n_accounts: usize) -> solana_sdk::instruction::Instruction {
+fn spl_ix(
+    discriminator: u8,
+    extra_data: &[u8],
+    n_accounts: usize,
+) -> solana_sdk::instruction::Instruction {
     use solana_sdk::instruction::{AccountMeta, Instruction};
     let accounts: Vec<AccountMeta> = (0..n_accounts)
         .map(|_| AccountMeta::new(solana_sdk::pubkey::Pubkey::new_unique(), false))

@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct CreateRuleRequest {
     pub wallet: String,
     pub rule: DynamicRuleDefinition,
-    pub signed_rule: String,  // Base64 encoded rule JSON
-    pub signature: String,    // Base58 signature
+    pub signed_rule: String, // Base64 encoded rule JSON
+    pub signature: String,   // Base58 signature
     pub timestamp: u64,
 }
 
@@ -189,7 +189,7 @@ pub struct ListPendingRequest {
 pub enum EscalationEvent {
     #[serde(rename = "escalation_created")]
     Created { escalation: Escalation },
-    
+
     #[serde(rename = "escalation_approved")]
     Approved {
         escalation_id: String,
@@ -197,7 +197,7 @@ pub enum EscalationEvent {
         approved_at: u64,
         rule: DynamicRuleDefinition,
     },
-    
+
     #[serde(rename = "escalation_denied")]
     Denied {
         escalation_id: String,
@@ -205,13 +205,13 @@ pub enum EscalationEvent {
         denied_at: u64,
         reason: Option<String>,
     },
-    
+
     #[serde(rename = "escalation_expired")]
     Expired {
         escalation_id: String,
         expired_at: u64,
     },
-    
+
     #[serde(rename = "escalation_forwarded")]
     Forwarded {
         escalation_id: String,

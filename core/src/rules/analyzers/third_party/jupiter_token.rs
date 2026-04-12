@@ -94,8 +94,8 @@ impl JupiterTokenAnalyzer {
         // Configure rate limiter from env or use free tier defaults (60 req/60s)
         let rate_limiter = ApiRateLimiter::from_env_or_default(
             "JUPITER_RATE_LIMIT",
-            60,  // Free tier default
-            60,  // 60 second window
+            60, // Free tier default
+            60, // 60 second window
         );
 
         Self {
@@ -130,10 +130,7 @@ impl JupiterTokenAnalyzer {
             .as_ref()
             .ok_or_else(|| anyhow!("JUPITER_API_KEY not configured"))?;
 
-        let url = format!(
-            "https://api.jup.ag/tokens/v2/search?query={}",
-            mint_address
-        );
+        let url = format!("https://api.jup.ag/tokens/v2/search?query={}", mint_address);
 
         log::debug!("Jupiter: Fetching token info for {}", mint_address);
 
@@ -155,7 +152,10 @@ impl JupiterTokenAnalyzer {
             if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
                 attempt += 1;
                 if attempt >= max_retries {
-                    return Err(anyhow!("Jupiter API rate limited after {} retries", max_retries));
+                    return Err(anyhow!(
+                        "Jupiter API rate limited after {} retries",
+                        max_retries
+                    ));
                 }
                 ApiRateLimiter::backoff_on_429(attempt).await;
                 continue;
@@ -424,7 +424,7 @@ mod tests {
     fn test_analyzer_fields() {
         let analyzer = JupiterTokenAnalyzer::new();
         let fields = analyzer.fields();
-        
+
         assert!(fields.contains(&"is_verified".to_string()));
         assert!(fields.contains(&"freeze_authority_disabled".to_string()));
         assert!(fields.contains(&"top_holders_percentage".to_string()));
@@ -435,12 +435,12 @@ mod tests {
     #[test]
     fn test_token_age_calculation() {
         let analyzer = JupiterTokenAnalyzer::new();
-        
+
         // Test with recent timestamp (should be < 24 hours if run soon)
         let now = chrono::Utc::now();
         let one_hour_ago = now - chrono::Duration::hours(1);
         let timestamp = one_hour_ago.to_rfc3339();
-        
+
         let age = analyzer.calculate_token_age_hours(Some(&timestamp));
         assert!(age.is_some());
         assert!(age.unwrap() > 0.9 && age.unwrap() < 1.1); // ~1 hour

@@ -105,7 +105,8 @@ impl EnginePerformanceMetrics {
 
     /// Get slowest analyzers sorted by average duration
     pub fn slowest_analyzers(&self, limit: usize) -> Vec<&AnalyzerPerformanceMetrics> {
-        let mut analyzers: Vec<&AnalyzerPerformanceMetrics> = self.analyzer_metrics.values().collect();
+        let mut analyzers: Vec<&AnalyzerPerformanceMetrics> =
+            self.analyzer_metrics.values().collect();
         analyzers.sort_by(|a, b| b.avg_duration.cmp(&a.avg_duration));
         analyzers.into_iter().take(limit).collect()
     }
@@ -113,13 +114,16 @@ impl EnginePerformanceMetrics {
     /// Format performance report as string
     pub fn format_report(&self) -> String {
         let mut report = String::new();
-        
+
         report.push_str("=== Rule Engine Performance Report ===\n\n");
-        
+
         report.push_str(&format!("Total Evaluations: {}\n", self.total_evaluations));
         report.push_str(&format!("Total Duration: {:?}\n", self.total_duration));
-        report.push_str(&format!("Avg Evaluation Time: {:?}\n\n", self.avg_evaluation_time));
-        
+        report.push_str(&format!(
+            "Avg Evaluation Time: {:?}\n\n",
+            self.avg_evaluation_time
+        ));
+
         report.push_str("Top 10 Slowest Rules:\n");
         report.push_str("---------------------\n");
         for (i, metrics) in self.slowest_rules(10).iter().enumerate() {
@@ -134,7 +138,7 @@ impl EnginePerformanceMetrics {
                 metrics.evaluation_count
             ));
         }
-        
+
         report.push_str("\nTop 10 Slowest Analyzers:\n");
         report.push_str("-------------------------\n");
         for (i, metrics) in self.slowest_analyzers(10).iter().enumerate() {
@@ -148,7 +152,7 @@ impl EnginePerformanceMetrics {
                 metrics.execution_count
             ));
         }
-        
+
         report
     }
 }
@@ -277,12 +281,12 @@ impl RuleTimer {
         let duration = self.start.elapsed();
         let rule_id = self.rule_id;
         let tracker = tracker.clone();
-        
+
         // Spawn async task to record metrics without blocking
         tokio::spawn(async move {
             tracker.record_rule(rule_id, rule_name, duration).await;
         });
-        
+
         duration
     }
 }
@@ -298,12 +302,12 @@ impl AnalyzerTimer {
         let duration = self.start.elapsed();
         let analyzer_name = self.analyzer_name;
         let tracker = tracker.clone();
-        
+
         // Spawn async task to record metrics without blocking
         tokio::spawn(async move {
             tracker.record_analyzer(analyzer_name, duration).await;
         });
-        
+
         duration
     }
 }
@@ -316,26 +320,48 @@ mod tests {
     #[tokio::test]
     async fn test_performance_tracker() {
         let tracker = PerformanceTracker::new(true);
-        
+
         // Record some rule evaluations
-        tracker.record_rule("rule1".to_string(), "Test Rule 1".to_string(), Duration::from_millis(10)).await;
-        tracker.record_rule("rule1".to_string(), "Test Rule 1".to_string(), Duration::from_millis(20)).await;
-        tracker.record_rule("rule2".to_string(), "Test Rule 2".to_string(), Duration::from_millis(5)).await;
-        
+        tracker
+            .record_rule(
+                "rule1".to_string(),
+                "Test Rule 1".to_string(),
+                Duration::from_millis(10),
+            )
+            .await;
+        tracker
+            .record_rule(
+                "rule1".to_string(),
+                "Test Rule 1".to_string(),
+                Duration::from_millis(20),
+            )
+            .await;
+        tracker
+            .record_rule(
+                "rule2".to_string(),
+                "Test Rule 2".to_string(),
+                Duration::from_millis(5),
+            )
+            .await;
+
         // Record some analyzer executions
-        tracker.record_analyzer("analyzer1".to_string(), Duration::from_millis(15)).await;
-        tracker.record_analyzer("analyzer1".to_string(), Duration::from_millis(25)).await;
-        
+        tracker
+            .record_analyzer("analyzer1".to_string(), Duration::from_millis(15))
+            .await;
+        tracker
+            .record_analyzer("analyzer1".to_string(), Duration::from_millis(25))
+            .await;
+
         // Record total evaluations
         tracker.record_evaluation(Duration::from_millis(50)).await;
         tracker.record_evaluation(Duration::from_millis(60)).await;
-        
+
         let metrics = tracker.get_metrics().await;
-        
+
         assert_eq!(metrics.total_evaluations, 2);
         assert_eq!(metrics.rule_metrics.len(), 2);
         assert_eq!(metrics.analyzer_metrics.len(), 1);
-        
+
         let rule1 = metrics.rule_metrics.get("rule1").unwrap();
         assert_eq!(rule1.evaluation_count, 2);
         assert_eq!(rule1.avg_duration, Duration::from_millis(15));
@@ -344,9 +370,15 @@ mod tests {
     #[tokio::test]
     async fn test_disabled_tracker() {
         let tracker = PerformanceTracker::new(false);
-        
-        tracker.record_rule("rule1".to_string(), "Test Rule".to_string(), Duration::from_millis(10)).await;
-        
+
+        tracker
+            .record_rule(
+                "rule1".to_string(),
+                "Test Rule".to_string(),
+                Duration::from_millis(10),
+            )
+            .await;
+
         let metrics = tracker.get_metrics().await;
         assert_eq!(metrics.total_evaluations, 0);
         assert_eq!(metrics.rule_metrics.len(), 0);
@@ -355,16 +387,16 @@ mod tests {
     #[test]
     fn test_slowest_rules() {
         let mut metrics = EnginePerformanceMetrics::new();
-        
+
         let mut rule1 = RulePerformanceMetrics::new("rule1".to_string(), "Fast Rule".to_string());
         rule1.record(Duration::from_millis(5));
-        
+
         let mut rule2 = RulePerformanceMetrics::new("rule2".to_string(), "Slow Rule".to_string());
         rule2.record(Duration::from_millis(50));
-        
+
         metrics.rule_metrics.insert("rule1".to_string(), rule1);
         metrics.rule_metrics.insert("rule2".to_string(), rule2);
-        
+
         let slowest = metrics.slowest_rules(1);
         assert_eq!(slowest[0].rule_id, "rule2");
     }

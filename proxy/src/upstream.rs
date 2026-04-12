@@ -1,17 +1,17 @@
 use crate::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use anyhow::Result;
 use reqwest::Client;
-use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::Arc;
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{sleep, Duration, Instant};
 
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CircuitState {
-    Closed,      // Normal operation
-    Open,        // Failing, reject requests
-    HalfOpen,    // Testing if service recovered
+    Closed,   // Normal operation
+    Open,     // Failing, reject requests
+    HalfOpen, // Testing if service recovered
 }
 
 /// Circuit breaker for upstream RPC
@@ -36,7 +36,7 @@ impl CircuitBreaker {
 
     async fn call_permitted(&self) -> bool {
         let mut state = self.state.lock().await;
-        
+
         match *state {
             CircuitState::Closed => true,
             CircuitState::Open => {
@@ -63,7 +63,7 @@ impl CircuitBreaker {
 
     async fn record_success(&self) {
         let mut state = self.state.lock().await;
-        
+
         match *state {
             CircuitState::HalfOpen => {
                 log::info!("✅ Circuit breaker: Service recovered, transitioning to CLOSED");
@@ -81,7 +81,7 @@ impl CircuitBreaker {
     async fn record_failure(&self) {
         let failures = self.failure_count.fetch_add(1, Ordering::SeqCst) + 1;
         let mut state = self.state.lock().await;
-        
+
         match *state {
             CircuitState::Closed => {
                 if failures >= self.failure_threshold {
@@ -196,7 +196,11 @@ impl UpstreamClient {
         while attempt <= self.max_retries {
             if attempt > 0 {
                 let backoff_ms = self.retry_base_delay_ms * 2u64.pow(attempt as u32 - 1);
-                log::debug!("🔄 Retry attempt {} after {}ms backoff", attempt, backoff_ms);
+                log::debug!(
+                    "🔄 Retry attempt {} after {}ms backoff",
+                    attempt,
+                    backoff_ms
+                );
                 sleep(Duration::from_millis(backoff_ms)).await;
             }
 
@@ -224,7 +228,8 @@ impl UpstreamClient {
         // All retries failed - record failure in circuit breaker
         self.circuit_breaker.record_failure().await;
 
-        Err(last_error.unwrap_or_else(|| anyhow::anyhow!("Request failed after {} attempts", attempt)))
+        Err(last_error
+            .unwrap_or_else(|| anyhow::anyhow!("Request failed after {} attempts", attempt)))
     }
 
     /// Try a single request (no retries)
@@ -255,12 +260,13 @@ impl UpstreamClient {
     /// Check if an error is retryable (network errors, timeouts, 5xx errors)
     fn is_retryable_error(error: &anyhow::Error) -> bool {
         let error_str = error.to_string().to_lowercase();
-        
+
         // Network errors
-        if error_str.contains("connection") 
+        if error_str.contains("connection")
             || error_str.contains("timeout")
             || error_str.contains("network")
-            || error_str.contains("dns") {
+            || error_str.contains("dns")
+        {
             return true;
         }
 

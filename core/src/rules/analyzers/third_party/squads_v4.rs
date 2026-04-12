@@ -39,7 +39,7 @@ impl SquadsInstruction {
         if data.is_empty() {
             return Self::Unknown;
         }
-        
+
         // Anchor uses first byte as discriminator for some instructions
         // For v4, we check the first byte
         match data[0] {
@@ -127,7 +127,7 @@ impl SquadsInstruction {
 }
 
 /// Squads V4 Multisig Analyzer
-/// 
+///
 /// Analyzes transactions interacting with Squads Protocol v4 multisig program.
 /// Provides insights into multisig operations, governance changes, and security patterns.
 pub struct SquadsV4Analyzer;
@@ -139,16 +139,13 @@ impl SquadsV4Analyzer {
 
     /// Check if transaction contains Squads v4 program
     fn has_squads_program(&self, tx: &Transaction) -> bool {
-        tx.message
-            .instructions
-            .iter()
-            .any(|inst| {
-                tx.message
-                    .account_keys
-                    .get(inst.program_id_index as usize)
-                    .map(|pk| pk.to_string() == SQUADS_V4_PROGRAM_ID)
-                    .unwrap_or(false)
-            })
+        tx.message.instructions.iter().any(|inst| {
+            tx.message
+                .account_keys
+                .get(inst.program_id_index as usize)
+                .map(|pk| pk.to_string() == SQUADS_V4_PROGRAM_ID)
+                .unwrap_or(false)
+        })
     }
 
     /// Extract Squads instructions from transaction
@@ -161,7 +158,7 @@ impl SquadsV4Analyzer {
                     .message
                     .account_keys
                     .get(inst.program_id_index as usize)?;
-                
+
                 if program_id.to_string() == SQUADS_V4_PROGRAM_ID {
                     Some(SquadsInstruction::from_discriminator(&inst.data))
                 } else {
@@ -172,7 +169,10 @@ impl SquadsV4Analyzer {
     }
 
     /// Count unique instruction types
-    fn count_instruction_types(&self, instructions: &[SquadsInstruction]) -> HashMap<String, usize> {
+    fn count_instruction_types(
+        &self,
+        instructions: &[SquadsInstruction],
+    ) -> HashMap<String, usize> {
         let mut counts = HashMap::new();
         for inst in instructions {
             *counts.entry(inst.as_str().to_string()).or_insert(0) += 1;
@@ -208,30 +208,39 @@ impl SquadsV4Analyzer {
             .iter()
             .filter(|i| i.is_governance_change())
             .collect();
-        
+
         if governance_changes.len() > 2 {
             concerns.push("multiple_governance_changes".to_string());
         }
 
         // Check for threshold changes
-        if instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigChangeThreshold)) {
+        if instructions
+            .iter()
+            .any(|i| matches!(i, SquadsInstruction::MultisigChangeThreshold))
+        {
             concerns.push("threshold_change_detected".to_string());
         }
 
         // Check for member removal
-        if instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigRemoveMember)) {
+        if instructions
+            .iter()
+            .any(|i| matches!(i, SquadsInstruction::MultisigRemoveMember))
+        {
             concerns.push("member_removal_detected".to_string());
         }
 
         // Check for spending limit removal
-        if instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigRemoveSpendingLimit)) {
+        if instructions
+            .iter()
+            .any(|i| matches!(i, SquadsInstruction::MultisigRemoveSpendingLimit))
+        {
             concerns.push("spending_limit_removal".to_string());
         }
 
         // Check for immediate execution without proposal
         let has_execution = instructions.iter().any(|i| i.is_execution());
         let has_proposal = instructions.iter().any(|i| i.is_proposal_action());
-        
+
         if has_execution && !has_proposal {
             concerns.push("execution_without_visible_proposal".to_string());
         }
@@ -251,7 +260,6 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
             // Detection
             "is_squads_transaction".to_string(),
             "squads_instruction_count".to_string(),
-            
             // Instruction Types
             "has_multisig_create".to_string(),
             "has_proposal_create".to_string(),
@@ -262,7 +270,6 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
             "has_vault_transaction_execute".to_string(),
             "has_config_transaction_create".to_string(),
             "has_config_transaction_execute".to_string(),
-            
             // Governance Operations
             "has_governance_change".to_string(),
             "has_member_add".to_string(),
@@ -271,18 +278,15 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
             "has_time_lock_set".to_string(),
             "has_spending_limit_add".to_string(),
             "has_spending_limit_remove".to_string(),
-            
             // Activity Patterns
             "governance_change_count".to_string(),
             "proposal_action_count".to_string(),
             "execution_count".to_string(),
             "transaction_creation_count".to_string(),
-            
             // Security Analysis
             "security_concerns".to_string(),
             "has_security_concerns".to_string(),
             "concern_count".to_string(),
-            
             // Metadata
             "instruction_types".to_string(),
             "estimated_multisig_accounts".to_string(),
@@ -305,7 +309,10 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
         // Extract and analyze Squads instructions
         let instructions = self.extract_squads_instructions(tx);
         let instruction_count = instructions.len();
-        fields.insert("squads_instruction_count".to_string(), json!(instruction_count));
+        fields.insert(
+            "squads_instruction_count".to_string(),
+            json!(instruction_count),
+        );
 
         // Count instruction types
         let instruction_types = self.count_instruction_types(&instructions);
@@ -322,78 +329,130 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
         // Specific instruction detection
         fields.insert(
             "has_multisig_create".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigCreate | SquadsInstruction::MultisigCreateV2))),
+            json!(instructions.iter().any(|i| matches!(
+                i,
+                SquadsInstruction::MultisigCreate | SquadsInstruction::MultisigCreateV2
+            ))),
         );
         fields.insert(
             "has_proposal_create".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ProposalCreate))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ProposalCreate))),
         );
         fields.insert(
             "has_proposal_approve".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ProposalApprove))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ProposalApprove))),
         );
         fields.insert(
             "has_proposal_reject".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ProposalReject))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ProposalReject))),
         );
         fields.insert(
             "has_proposal_cancel".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ProposalCancel))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ProposalCancel))),
         );
         fields.insert(
             "has_vault_transaction_create".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::VaultTransactionCreate))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::VaultTransactionCreate))),
         );
         fields.insert(
             "has_vault_transaction_execute".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::VaultTransactionExecute))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::VaultTransactionExecute))),
         );
         fields.insert(
             "has_config_transaction_create".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ConfigTransactionCreate))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ConfigTransactionCreate))),
         );
         fields.insert(
             "has_config_transaction_execute".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::ConfigTransactionExecute))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::ConfigTransactionExecute))),
         );
 
         // Governance operations
         fields.insert(
             "has_member_add".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigAddMember))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigAddMember))),
         );
         fields.insert(
             "has_member_remove".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigRemoveMember))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigRemoveMember))),
         );
         fields.insert(
             "has_threshold_change".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigChangeThreshold))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigChangeThreshold))),
         );
         fields.insert(
             "has_time_lock_set".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigSetTimeLock))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigSetTimeLock))),
         );
         fields.insert(
             "has_spending_limit_add".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigAddSpendingLimit))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigAddSpendingLimit))),
         );
         fields.insert(
             "has_spending_limit_remove".to_string(),
-            json!(instructions.iter().any(|i| matches!(i, SquadsInstruction::MultisigRemoveSpendingLimit))),
+            json!(instructions
+                .iter()
+                .any(|i| matches!(i, SquadsInstruction::MultisigRemoveSpendingLimit))),
         );
 
         // Activity pattern counts
-        let governance_change_count = instructions.iter().filter(|i| i.is_governance_change()).count();
-        let proposal_action_count = instructions.iter().filter(|i| i.is_proposal_action()).count();
+        let governance_change_count = instructions
+            .iter()
+            .filter(|i| i.is_governance_change())
+            .count();
+        let proposal_action_count = instructions
+            .iter()
+            .filter(|i| i.is_proposal_action())
+            .count();
         let execution_count = instructions.iter().filter(|i| i.is_execution()).count();
-        let transaction_creation_count = instructions.iter().filter(|i| i.is_transaction_creation()).count();
+        let transaction_creation_count = instructions
+            .iter()
+            .filter(|i| i.is_transaction_creation())
+            .count();
 
-        fields.insert("has_governance_change".to_string(), json!(governance_change_count > 0));
-        fields.insert("governance_change_count".to_string(), json!(governance_change_count));
-        fields.insert("proposal_action_count".to_string(), json!(proposal_action_count));
+        fields.insert(
+            "has_governance_change".to_string(),
+            json!(governance_change_count > 0),
+        );
+        fields.insert(
+            "governance_change_count".to_string(),
+            json!(governance_change_count),
+        );
+        fields.insert(
+            "proposal_action_count".to_string(),
+            json!(proposal_action_count),
+        );
         fields.insert("execution_count".to_string(), json!(execution_count));
-        fields.insert("transaction_creation_count".to_string(), json!(transaction_creation_count));
+        fields.insert(
+            "transaction_creation_count".to_string(),
+            json!(transaction_creation_count),
+        );
 
         // Security analysis
         let security_concerns = self.detect_security_concerns(&instructions);
@@ -406,7 +465,10 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
 
         // Metadata
         let estimated_accounts = self.estimate_multisig_accounts(tx);
-        fields.insert("estimated_multisig_accounts".to_string(), json!(estimated_accounts));
+        fields.insert(
+            "estimated_multisig_accounts".to_string(),
+            json!(estimated_accounts),
+        );
 
         Ok(fields)
     }
@@ -447,7 +509,7 @@ mod tests {
             ],
             data: instruction_data,
         };
-        
+
         let message = Message::new(&[instruction], Some(&payer.pubkey()));
         Transaction::new_unsigned(message)
     }
@@ -456,7 +518,7 @@ mod tests {
     fn test_analyzer_fields() {
         let analyzer = SquadsV4Analyzer::new();
         let fields = analyzer.fields();
-        
+
         assert!(fields.contains(&"is_squads_transaction".to_string()));
         assert!(fields.contains(&"has_proposal_approve".to_string()));
         assert!(fields.contains(&"has_governance_change".to_string()));
@@ -465,11 +527,26 @@ mod tests {
 
     #[test]
     fn test_instruction_discriminator_parsing() {
-        assert_eq!(SquadsInstruction::from_discriminator(&[0]), SquadsInstruction::MultisigCreate);
-        assert_eq!(SquadsInstruction::from_discriminator(&[4]), SquadsInstruction::ProposalCreate);
-        assert_eq!(SquadsInstruction::from_discriminator(&[5]), SquadsInstruction::ProposalApprove);
-        assert_eq!(SquadsInstruction::from_discriminator(&[8]), SquadsInstruction::VaultTransactionExecute);
-        assert_eq!(SquadsInstruction::from_discriminator(&[255]), SquadsInstruction::Unknown);
+        assert_eq!(
+            SquadsInstruction::from_discriminator(&[0]),
+            SquadsInstruction::MultisigCreate
+        );
+        assert_eq!(
+            SquadsInstruction::from_discriminator(&[4]),
+            SquadsInstruction::ProposalCreate
+        );
+        assert_eq!(
+            SquadsInstruction::from_discriminator(&[5]),
+            SquadsInstruction::ProposalApprove
+        );
+        assert_eq!(
+            SquadsInstruction::from_discriminator(&[8]),
+            SquadsInstruction::VaultTransactionExecute
+        );
+        assert_eq!(
+            SquadsInstruction::from_discriminator(&[255]),
+            SquadsInstruction::Unknown
+        );
     }
 
     #[test]
@@ -484,7 +561,7 @@ mod tests {
     async fn test_non_squads_transaction() {
         let analyzer = SquadsV4Analyzer::new();
         let tx = create_test_transaction(Pubkey::new_unique(), vec![1, 2, 3]);
-        
+
         let result = analyzer.analyze(&tx).await.unwrap();
         assert_eq!(result.get("is_squads_transaction").unwrap(), &json!(false));
         assert_eq!(result.get("squads_instruction_count").unwrap(), &json!(0));
@@ -495,7 +572,7 @@ mod tests {
         let analyzer = SquadsV4Analyzer::new();
         let squads_program_id: Pubkey = SQUADS_V4_PROGRAM_ID.parse().unwrap();
         let tx = create_test_transaction(squads_program_id, vec![5]); // ProposalApprove
-        
+
         let result = analyzer.analyze(&tx).await.unwrap();
         assert_eq!(result.get("is_squads_transaction").unwrap(), &json!(true));
         assert_eq!(result.get("has_proposal_approve").unwrap(), &json!(true));
@@ -505,12 +582,12 @@ mod tests {
     #[tokio::test]
     async fn test_security_concern_detection() {
         let analyzer = SquadsV4Analyzer::new();
-        
+
         // Test threshold change detection
         let instructions = vec![SquadsInstruction::MultisigChangeThreshold];
         let concerns = analyzer.detect_security_concerns(&instructions);
         assert!(concerns.contains(&"threshold_change_detected".to_string()));
-        
+
         // Test multiple governance changes
         let instructions = vec![
             SquadsInstruction::MultisigAddMember,

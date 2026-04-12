@@ -1,20 +1,20 @@
 // Program Analysis Module
 // Three-tier analysis system for Solana programs
 
-pub mod fetcher;
-pub mod types;
-pub mod disassembler;
-pub mod semantic;
 pub mod cache;
+pub mod disassembler;
+pub mod fetcher;
+pub mod semantic;
+pub mod types;
 
 #[cfg(feature = "ai-analysis")]
 pub mod ai_analyzer;
 
 // Re-exports
-pub use fetcher::ProgramFetcher;
+pub use cache::{CacheConfig, ProgramCache};
 pub use disassembler::ProgramDisassembler;
+pub use fetcher::ProgramFetcher;
 pub use semantic::SemanticAnalyzer;
-pub use cache::{ProgramCache, CacheConfig};
 
 #[cfg(feature = "ai-analysis")]
 pub use ai_analyzer::{AiAnalyzer, AiProviderConfig};
@@ -83,10 +83,10 @@ impl ProgramAnalysisService {
         tier: AnalysisTier,
         _mode: AnalysisMode, // TODO: Implement async mode with work queue
     ) -> Result<ProgramAnalysisResult> {
+        use chrono::Utc;
+        use sha2::{Digest, Sha256};
         use solana_sdk::pubkey::Pubkey;
         use std::str::FromStr;
-        use sha2::{Sha256, Digest};
-        use chrono::Utc;
 
         let start_time = std::time::Instant::now();
         let program_pubkey = Pubkey::from_str(program_id)?;
@@ -129,8 +129,13 @@ impl ProgramAnalysisService {
         }
 
         // Tier 2: Deep analysis (+ disassembly + semantic)
-        let disassembly = self.disassembler.disassemble(&program_data.executable_data)?;
-        let semantic = self.semantic_analyzer.analyze_program(&program_data, Some(&disassembly)).await?;
+        let disassembly = self
+            .disassembler
+            .disassemble(&program_data.executable_data)?;
+        let semantic = self
+            .semantic_analyzer
+            .analyze_program(&program_data, Some(&disassembly))
+            .await?;
 
         let bytecode_analysis = Some(BytecodeAnalysis {
             total_instructions: disassembly.total_instructions,
@@ -183,8 +188,10 @@ impl ProgramAnalysisService {
         #[cfg(feature = "ai-analysis")]
         {
             if let Some(ref ai_analyzer) = self.ai_analyzer {
-                let ai_result = ai_analyzer.analyze_program(&program_data, &disassembly, Some(&semantic)).await?;
-                
+                let ai_result = ai_analyzer
+                    .analyze_program(&program_data, &disassembly, Some(&semantic))
+                    .await?;
+
                 let ai_analysis = Some(AiAnalysis {
                     model_used: ai_result.model_used.clone(),
                     behavioral_analysis: ai_result.behavioral_analysis.clone(),
@@ -192,12 +199,16 @@ impl ProgramAnalysisService {
                     confidence_score: ai_result.confidence_score,
                 });
 
-                let vulnerabilities = ai_result.vulnerabilities.iter().map(|v| Vulnerability {
-                    severity: v.severity.clone(),
-                    category: v.category.clone(),
-                    description: v.description.clone(),
-                    location: None,
-                }).collect();
+                let vulnerabilities = ai_result
+                    .vulnerabilities
+                    .iter()
+                    .map(|v| Vulnerability {
+                        severity: v.severity.clone(),
+                        category: v.category.clone(),
+                        description: v.description.clone(),
+                        location: None,
+                    })
+                    .collect();
 
                 let analysis_time = start_time.elapsed().as_millis() as u64;
                 return Ok(ProgramAnalysisResult {
@@ -230,7 +241,9 @@ impl ProgramAnalysisService {
         }
 
         // Fallback if AI not available but requested
-        Err(anyhow::anyhow!("AI analysis requested but not available (compile with ai-analysis feature)"))
+        Err(anyhow::anyhow!(
+            "AI analysis requested but not available (compile with ai-analysis feature)"
+        ))
     }
 
     /// Enqueue analysis for worker processing

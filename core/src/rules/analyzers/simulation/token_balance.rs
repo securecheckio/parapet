@@ -56,7 +56,8 @@ impl SimulationAnalyzer for SimulationTokenAnalyzer {
             // Build map of account_index -> pre balance
             let mut pre_map: HashMap<u64, &Value> = HashMap::new();
             for pre_balance in pre {
-                if let Some(account_idx) = pre_balance.get("accountIndex").and_then(|v| v.as_u64()) {
+                if let Some(account_idx) = pre_balance.get("accountIndex").and_then(|v| v.as_u64())
+                {
                     pre_map.insert(account_idx, pre_balance);
                 }
             }
@@ -71,7 +72,8 @@ impl SimulationAnalyzer for SimulationTokenAnalyzer {
             }
 
             // Compare pre and post for each account
-            let mut all_accounts: std::collections::HashSet<u64> = pre_map.keys().copied().collect();
+            let mut all_accounts: std::collections::HashSet<u64> =
+                pre_map.keys().copied().collect();
             all_accounts.extend(post_map.keys());
 
             for account_idx in all_accounts {
@@ -93,7 +95,9 @@ impl SimulationAnalyzer for SimulationTokenAnalyzer {
                     .unwrap_or(0);
 
                 // Track mint addresses
-                if let Some(mint) = pre_balance.and_then(|b| b.get("mint")).and_then(|m| m.as_str())
+                if let Some(mint) = pre_balance
+                    .and_then(|b| b.get("mint"))
+                    .and_then(|m| m.as_str())
                 {
                     token_mints.insert(mint.to_string());
                 }
@@ -142,10 +146,7 @@ impl SimulationAnalyzer for SimulationTokenAnalyzer {
         fields.insert("net_token_changes".to_string(), json!(net_changes));
         fields.insert("nft_transfers".to_string(), json!(nft_transfers));
         fields.insert("nft_transfer_count".to_string(), json!(nft_transfers.len()));
-        fields.insert(
-            "token_mints_involved".to_string(),
-            json!(token_mints.len()),
-        );
+        fields.insert("token_mints_involved".to_string(), json!(token_mints.len()));
         fields.insert("tokens_fully_drained".to_string(), json!(tokens_drained));
 
         Ok(fields)
