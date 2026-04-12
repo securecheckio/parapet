@@ -9,7 +9,7 @@
 **Open-source security platform for the Solana ecosystem**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-1.85%2B-orange.svg)](https://www.rust-lang.org/)
 [![Solana](https://img.shields.io/badge/Built%20for-Solana-14F195?logo=solana)](https://solana.com/)
 
   [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
@@ -109,7 +109,7 @@ These are provided as educational examples showing how to build on top of Parape
 
 ### Prerequisites
 
-- Rust 1.70+
+- Rust 1.85+ (required by Solana SDK 4.0)
 - Redis 7+ (recommended for production)
 - Node.js 18+ (for reference dashboard)
 - PostgreSQL 15+ (for reference implementations only)
