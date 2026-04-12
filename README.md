@@ -1,3 +1,7 @@
+<div align="center">
+  <img src=".github/assets/parapet-logo.jpg" alt="Parapet Logo" width="200"/>
+</div>
+
 # Parapet
 
 ### Fast, portable Solana transaction security
