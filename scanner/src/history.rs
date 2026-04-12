@@ -42,7 +42,6 @@ pub struct TransactionWithMetadata {
 /// Inner instructions from a specific top-level instruction
 #[derive(Debug, Clone)]
 pub struct InnerInstructionSet {
-    pub index: u8,
     pub instructions: Vec<ParsedInnerInstruction>,
 }
 
@@ -420,7 +419,6 @@ impl HistoryScanner {
                     }
                     
                     result.push(InnerInstructionSet {
-                        index: ui_inner.index,
                         instructions: parsed_instructions,
                     });
                 }

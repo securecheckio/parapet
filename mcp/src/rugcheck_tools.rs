@@ -6,7 +6,7 @@ use anyhow::Result;
 use serde_json::{json, Value};
 
 #[cfg(feature = "reqwest")]
-use parapet_core::enrichment::{EnrichmentService, RugcheckClient};
+use parapet_core::enrichment::RugcheckClient;
 
 pub async fn check_token_security(mint_address: &str) -> Result<Value> {
     #[cfg(feature = "reqwest")]

@@ -2,13 +2,13 @@ use crate::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use anyhow::Result;
 use reqwest::Client;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::sync::{Mutex, Semaphore};
 use tokio::time::{sleep, Duration, Instant};
 
 /// Circuit breaker states
 #[derive(Debug, Clone, Copy, PartialEq)]
-enum CircuitState {
+pub enum CircuitState {
     Closed,      // Normal operation
     Open,        // Failing, reject requests
     HalfOpen,    // Testing if service recovered
@@ -21,7 +21,6 @@ struct CircuitBreaker {
     last_failure_time: Arc<Mutex<Option<Instant>>>,
     failure_threshold: usize,
     timeout_duration: Duration,
-    half_open_max_calls: usize,
 }
 
 impl CircuitBreaker {
@@ -32,7 +31,6 @@ impl CircuitBreaker {
             last_failure_time: Arc::new(Mutex::new(None)),
             failure_threshold,
             timeout_duration: Duration::from_secs(timeout_secs),
-            half_open_max_calls: 3,
         }
     }
 
@@ -117,8 +115,6 @@ pub struct UpstreamClient {
     request_delay_ms: u64,
     /// Circuit breaker to prevent cascading failures
     circuit_breaker: CircuitBreaker,
-    /// Request timeout
-    request_timeout: Duration,
     /// Retry configuration
     max_retries: usize,
     retry_base_delay_ms: u64,
@@ -167,7 +163,6 @@ impl UpstreamClient {
                 config.circuit_breaker_threshold,
                 config.circuit_breaker_timeout_secs,
             ),
-            request_timeout: Duration::from_secs(config.timeout_secs),
             max_retries: config.max_retries,
             retry_base_delay_ms: config.retry_base_delay_ms,
         }

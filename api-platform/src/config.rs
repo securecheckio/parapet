@@ -5,10 +5,8 @@ use serde::Deserialize;
 pub struct PlatformConfig {
     pub database_url: String,
     pub frontend_url: String,
-    pub frontend_cors_credentials: bool,
     pub push_notifications: PushConfig,
     pub payments: PaymentConfig,
-    pub learning_enabled: bool,
     pub rules_display_path: String,
 }
 
@@ -23,9 +21,6 @@ pub struct PushConfig {
 pub struct PaymentConfig {
     pub enabled: bool,
     pub token: TokenInfo,
-    pub usdc_mint: String,
-    pub treasury_wallet: String,
-    pub pricing: PricingTiers,
 }
 
 #[derive(Clone)]
@@ -37,17 +32,6 @@ pub struct TokenInfo {
     pub logo: String,
 }
 
-#[derive(Clone)]
-pub struct PricingTiers {
-    pub small_price: u64,
-    pub small_credits: i64,
-    pub medium_price: u64,
-    pub medium_credits: i64,
-    pub large_price: u64,
-    pub large_credits: i64,
-    pub xlarge_price: u64,
-    pub xlarge_credits: i64,
-}
 
 pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     let content = std::fs::read_to_string(path)
@@ -59,7 +43,6 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         frontend: FrontendConfig,
         push_notifications: PushNotificationsConfig,
         payments: PaymentsConfig,
-        learning: LearningConfig,
         display: DisplayConfig,
     }
     
@@ -71,8 +54,6 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     #[derive(Deserialize)]
     struct FrontendConfig {
         url: String,
-        #[serde(default = "default_true")]
-        cors_credentials: bool,
     }
     
     #[derive(Deserialize)]
@@ -99,29 +80,6 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         token_decimals: u8,
         #[serde(default = "default_token_logo")]
         token_logo: String,
-        #[serde(default = "default_usdc_mint")]
-        usdc_mint: String,
-        #[serde(default)]
-        treasury_wallet: String,
-        pricing: PricingToml,
-    }
-    
-    #[derive(Deserialize)]
-    struct PricingToml {
-        small_price: u64,
-        small_credits: i64,
-        medium_price: u64,
-        medium_credits: i64,
-        large_price: u64,
-        large_credits: i64,
-        xlarge_price: u64,
-        xlarge_credits: i64,
-    }
-    
-    #[derive(Deserialize)]
-    struct LearningConfig {
-        #[serde(default = "default_true")]
-        enabled: bool,
     }
     
     #[derive(Deserialize)]
@@ -130,13 +88,11 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
         rules_path: String,
     }
     
-    fn default_true() -> bool { true }
     fn default_token_mint() -> String { "7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz".to_string() }
     fn default_token_name() -> String { "xLABS".to_string() }
     fn default_token_symbol() -> String { "xLABS".to_string() }
     fn default_token_decimals() -> u8 { 6 }
     fn default_token_logo() -> String { "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/7B2tQy8DwYt6aXHzt6UVDuqBB6WmykyZQodLSReQ9Wcz/logo.png".to_string() }
-    fn default_usdc_mint() -> String { "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v".to_string() }
     fn default_rules_path() -> String { "../../proxy/rules/presets/bot-essentials.json".to_string() }
     
     let toml_config: TomlConfig = toml::from_str(&content)
@@ -146,7 +102,6 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     let mut config = PlatformConfig {
         database_url: toml_config.database.url,
         frontend_url: toml_config.frontend.url,
-        frontend_cors_credentials: toml_config.frontend.cors_credentials,
         push_notifications: PushConfig {
             enabled: toml_config.push_notifications.enabled,
             public_key: if toml_config.push_notifications.public_key.is_empty() {
@@ -169,20 +124,7 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
                 decimals: toml_config.payments.token_decimals,
                 logo: toml_config.payments.token_logo,
             },
-            usdc_mint: toml_config.payments.usdc_mint,
-            treasury_wallet: toml_config.payments.treasury_wallet,
-            pricing: PricingTiers {
-                small_price: toml_config.payments.pricing.small_price,
-                small_credits: toml_config.payments.pricing.small_credits,
-                medium_price: toml_config.payments.pricing.medium_price,
-                medium_credits: toml_config.payments.pricing.medium_credits,
-                large_price: toml_config.payments.pricing.large_price,
-                large_credits: toml_config.payments.pricing.large_credits,
-                xlarge_price: toml_config.payments.pricing.xlarge_price,
-                xlarge_credits: toml_config.payments.pricing.xlarge_credits,
-            },
         },
-        learning_enabled: toml_config.learning.enabled,
         rules_display_path: toml_config.display.rules_path,
     };
     

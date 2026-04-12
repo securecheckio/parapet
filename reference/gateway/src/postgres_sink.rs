@@ -14,47 +14,6 @@ impl PostgresSecuritySink {
     pub fn new(db: PgPool, redis: redis::Client) -> Self {
         Self { db, redis }
     }
-
-    /// Update an existing security event with transaction signature
-    pub async fn update_with_signature(
-        &self,
-        event_id: &str,
-        signature: &str,
-        user_id: Option<&str>,
-    ) -> Result<()> {
-        // Update the transaction_data JSONB field to add the signature
-        sqlx::query(
-            "UPDATE security_events 
-             SET transaction_data = jsonb_set(
-                 COALESCE(transaction_data, '{}'::jsonb),
-                 '{signature}',
-                 to_jsonb($2::text),
-                 true
-             )
-             WHERE transaction_data->>'event_id' = $1"
-        )
-        .bind(event_id)
-        .bind(signature)
-        .execute(&self.db)
-        .await?;
-
-        log::info!("✅ Updated event {} with signature {}", event_id, &signature[..8]);
-
-        // Publish update notification to Redis for WebSocket clients
-        if let Some(user_id_str) = user_id {
-            if let Ok(mut conn) = self.redis.get_multiplexed_async_connection().await {
-                let channel = format!("user:{}:updates", user_id_str);
-                let update = serde_json::json!({
-                    "type": "event_updated",
-                    "event_id": event_id,
-                    "signature": signature,
-                });
-                let _ = conn.publish::<_, _, i32>(&channel, serde_json::to_string(&update).unwrap()).await;
-            }
-        }
-
-        Ok(())
-    }
 }
 
 #[async_trait]
@@ -194,7 +153,6 @@ impl OutputSink for PostgresSecuritySink {
             
             // Send push notification for blocked or critical events
             if event_type == "blocked" || severity == "critical" {
-                let db = self.db.clone();
                 let user_id = user_id_str.to_string();
                 let title = if event_type == "blocked" {
                     "🚫 Transaction Blocked"

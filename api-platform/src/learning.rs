@@ -78,14 +78,6 @@ pub struct Badge {
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct UserBadge {
-    pub id: Uuid,
-    pub user_id: Uuid,
-    pub badge_id: Uuid,
-    pub earned_at: DateTime<Utc>,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct BadgeWithDetails {
     pub id: Uuid,
     pub course_id: Option<Uuid>,

@@ -1,16 +1,13 @@
 use axum::{
     extract::{
         ws::{Message, WebSocket, WebSocketUpgrade},
-        Query,
         State,
     },
     response::IntoResponse,
 };
 use axum_extra::extract::CookieJar;
 use futures::{SinkExt, StreamExt};
-use redis::AsyncCommands;
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 
 use crate::state::PlatformState;
 
@@ -62,7 +59,7 @@ pub async fn websocket_handler(
     })
 }
 
-async fn handle_socket(socket: WebSocket, state: PlatformState, user_id: String) {
+async fn handle_socket(socket: WebSocket, _state: PlatformState, user_id: String) {
     let (mut sender, mut receiver) = socket.split();
 
     log::info!("✅ WebSocket connected for user {}", user_id);
@@ -77,15 +74,15 @@ async fn handle_socket(socket: WebSocket, state: PlatformState, user_id: String)
         }
     };
 
-    let conn = match redis_client.get_async_connection().await {
+    let pubsub_conn = match redis_client.get_async_pubsub().await {
         Ok(conn) => conn,
         Err(e) => {
-            log::error!("❌ Failed to get Redis connection: {}", e);
+            log::error!("❌ Failed to get Redis pubsub connection: {}", e);
             return;
         }
     };
 
-    let mut pubsub_conn = conn.into_pubsub();
+    let mut pubsub_conn = pubsub_conn;
 
     // Subscribe to user-specific channel
     let channel = format!("user:{}:updates", user_id);
@@ -156,51 +153,4 @@ async fn handle_socket(socket: WebSocket, state: PlatformState, user_id: String)
     }
 
     log::info!("🔌 WebSocket disconnected for user {}", user_id);
-}
-
-pub async fn publish_stats_update(
-    redis_client: &redis::Client,
-    user_id: &str,
-    credits_balance: i64,
-    credits_used_this_month: i64,
-) -> Result<(), redis::RedisError> {
-    let mut conn = redis_client.get_multiplexed_async_connection().await?;
-    
-    let update = DashboardUpdate::StatsUpdate {
-        credits_balance,
-        credits_used_this_month,
-        credits_remaining: credits_balance - credits_used_this_month,
-    };
-
-    let channel = format!("user:{}:updates", user_id);
-    let payload = serde_json::to_string(&update).unwrap();
-    
-    conn.publish::<_, _, ()>(&channel, &payload).await?;
-    
-    log::debug!("📤 Published stats update to {}", channel);
-    Ok(())
-}
-
-pub async fn publish_new_event(
-    redis_client: &redis::Client,
-    user_id: &str,
-    event_id: &str,
-    event_type: &str,
-    severity: &str,
-) -> Result<(), redis::RedisError> {
-    let mut conn = redis_client.get_multiplexed_async_connection().await?;
-    
-    let update = DashboardUpdate::NewEvent {
-        event_id: event_id.to_string(),
-        event_type: event_type.to_string(),
-        severity: severity.to_string(),
-    };
-
-    let channel = format!("user:{}:updates", user_id);
-    let payload = serde_json::to_string(&update).unwrap();
-    
-    conn.publish::<_, _, ()>(&channel, &payload).await?;
-    
-    log::debug!("📤 Published new event to {}", channel);
-    Ok(())
 }

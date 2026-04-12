@@ -730,15 +730,6 @@ struct SecurityEvent {
     matched_rule_ids: Option<Vec<String>>, // Just IDs for performance
 }
 
-#[derive(Serialize, Deserialize, Clone)]
-struct MatchedRuleInfo {
-    rule_id: String,
-    rule_name: String,
-    action: String,
-    weight: i32,
-    message: String,
-}
-
 async fn get_security_events(
     State(state): State<PlatformState>,
     axum::extract::Path(api_key): axum::extract::Path<String>,
