@@ -238,8 +238,7 @@
         </div>
     </div>
 
-    <script src="https://unpkg.com/@solana/wallet-adapter-wallets@latest/lib/index.iife.js"></script>
-    <script src="https://unpkg.com/@solana/wallet-adapter-base@latest/lib/index.iife.js"></script>
+    <script src="https://unpkg.com/@solana/web3.js@latest/lib/index.iife.min.js"></script>
     <script>
         // Support both direct API access (port 3001) and nginx proxy (port 8080)
         const API_URL = window.location.port === '8080' 
@@ -248,25 +247,50 @@
         const WS_URL = API_URL.replace('http', 'ws') + '/ws/escalations';
         
         let wallet = null;
+        let walletProvider = null;
         let ws = null;
         let escalations = new Map();
+        
+        // Detect any Solana wallet
+        function detectWallet() {
+            // Standard Wallet Adapter
+            if (window.solana) return window.solana;
+            
+            // Check for specific wallets
+            if (window.phantom?.solana) return window.phantom.solana;
+            if (window.backpack) return window.backpack;
+            if (window.solflare) return window.solflare;
+            if (window.coinbase) return window.coinbase;
+            if (window.glow) return window.glow;
+            if (window.exodus?.solana) return window.exodus.solana;
+            
+            return null;
+        }
         
         // Connect wallet
         document.getElementById('connect-wallet').addEventListener('click', async () => {
             try {
-                // Check if Phantom is installed
-                const solana = window.solana;
-                if (!solana || !solana.isPhantom) {
-                    alert('Please install Phantom wallet');
+                // Detect any Solana wallet
+                walletProvider = detectWallet();
+                
+                if (!walletProvider) {
+                    alert('No Solana wallet detected.\n\nPlease install:\n• Phantom\n• Backpack\n• Solflare\n• Glow\n• Or any other Solana wallet');
                     return;
                 }
                 
                 // Connect
-                const response = await solana.connect();
+                const response = await walletProvider.connect();
                 wallet = response.publicKey.toString();
                 
+                // Get wallet name
+                const walletName = walletProvider.isPhantom ? 'Phantom' :
+                                   walletProvider.isBackpack ? 'Backpack' :
+                                   walletProvider.isSolflare ? 'Solflare' :
+                                   walletProvider.isGlow ? 'Glow' :
+                                   'Wallet';
+                
                 document.getElementById('wallet-address').textContent = 
-                    `${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
+                    `${walletName}: ${wallet.slice(0, 4)}...${wallet.slice(-4)}`;
                 document.getElementById('wallet-address').style.display = 'inline';
                 document.getElementById('connect-wallet').textContent = 'Connected';
                 document.getElementById('connect-wallet').disabled = true;
@@ -279,7 +303,11 @@
                 
             } catch (err) {
                 console.error('Failed to connect wallet:', err);
-                alert('Failed to connect wallet');
+                if (err.message && err.message.includes('User rejected')) {
+                    alert('Connection cancelled');
+                } else {
+                    alert('Failed to connect wallet.\n\nPlease:\n1. Unlock your wallet\n2. Approve the connection\n3. Make sure you\'re on Mainnet');
+                }
             }
         });
         
