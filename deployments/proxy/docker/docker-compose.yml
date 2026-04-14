@@ -22,8 +22,8 @@ services:
   # Parapet RPC Proxy - Transaction analysis and blocking
   proxy:
     build:
-      context: ../..
-      dockerfile: deployment/docker/Dockerfile
+      context: ../../..
+      dockerfile: deployments/proxy/docker/Dockerfile
     container_name: parapet-proxy
     ports:
       - "8899:8899"
@@ -84,8 +84,8 @@ services:
   # Parapet API - Escalation management and rule management
   api:
     build:
-      context: ../..
-      dockerfile: deployment/docker/Dockerfile.api
+      context: ../../..
+      dockerfile: deployments/proxy/docker/Dockerfile.api
     container_name: parapet-api
     ports:
       - "3001:3001"
