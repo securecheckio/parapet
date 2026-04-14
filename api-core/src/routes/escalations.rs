@@ -2,7 +2,7 @@ use crate::auth::{verify_timestamp, verify_wallet_signature};
 use crate::types::*;
 use crate::ApiStateAccess;
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     Json,
 };
@@ -10,10 +10,48 @@ use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
 use redis::AsyncCommands;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+#[derive(serde::Deserialize)]
+pub struct EscalationReadAuthQuery {
+    pub wallet: String,
+    pub message: String,
+    pub signature: String,
+    pub timestamp: u64,
+}
+
+fn verify_escalation_read_auth(
+    escalation_id: &str,
+    query: &EscalationReadAuthQuery,
+    escalation: &Escalation,
+) -> Result<(), (StatusCode, String)> {
+    verify_timestamp(query.timestamp)
+        .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid timestamp: {}", e)))?;
+    let expected_message = format!("parapet:escalation:read:{}:{}", escalation_id, query.timestamp);
+    if query.message != expected_message {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            "Message does not match expected escalation read challenge".to_string(),
+        ));
+    }
+    verify_wallet_signature(&query.wallet, &query.message, &query.signature).map_err(|e| {
+        (
+            StatusCode::UNAUTHORIZED,
+            format!("Signature verification failed: {}", e),
+        )
+    })?;
+    if query.wallet != escalation.approver_wallet {
+        return Err((
+            StatusCode::FORBIDDEN,
+            "Wallet is not authorized for this escalation".to_string(),
+        ));
+    }
+    Ok(())
+}
+
 /// Get escalation details
 pub async fn get_escalation<S>(
     State(state): State<S>,
     Path(escalation_id): Path<String>,
+    Query(query): Query<EscalationReadAuthQuery>,
 ) -> Result<Json<Escalation>, (StatusCode, String)>
 where
     S: ApiStateAccess,
@@ -43,6 +81,7 @@ where
             "Invalid escalation data".to_string(),
         )
     })?;
+    verify_escalation_read_auth(&escalation_id, &query, &escalation)?;
 
     Ok(Json(escalation))
 }
@@ -348,6 +387,7 @@ where
 pub async fn get_status<S>(
     State(state): State<S>,
     Path(escalation_id): Path<String>,
+    Query(query): Query<EscalationReadAuthQuery>,
 ) -> Result<Json<EscalationStatusResponse>, (StatusCode, String)>
 where
     S: ApiStateAccess,
@@ -376,6 +416,7 @@ where
             "Invalid escalation data".to_string(),
         )
     })?;
+    verify_escalation_read_auth(&escalation_id, &query, &escalation)?;
 
     // TODO: Get rule_id and transaction_signature from escalation metadata
 
@@ -487,5 +528,79 @@ async fn forward_transaction_to_network(tx_bytes: &[u8], rpc_url: &str) -> Resul
         Err(format!("RPC error: {:?}", error))
     } else {
         Err("Unknown error forwarding transaction".to_string())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use ed25519_dalek::Signer as _;
+    use sha2::Digest as _;
+
+    fn sample_escalation(approver_wallet: String) -> Escalation {
+        Escalation {
+            escalation_id: "esc_1".to_string(),
+            canonical_hash: "hash".to_string(),
+            requester_wallet: "req".to_string(),
+            approver_wallet,
+            risk_score: 90,
+            warnings: vec![],
+            decoded_instructions: vec![],
+            suggested_rules: vec![],
+            status: EscalationStatus::Pending,
+            created_at: 0,
+            expires_at: u64::MAX,
+        }
+    }
+
+    fn signed_query(escalation_id: &str) -> (EscalationReadAuthQuery, String) {
+        let seed = sha2::Sha256::digest(b"parapet-escalation-test-wallet");
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&seed[..32]);
+        let signing_key = ed25519_dalek::SigningKey::from_bytes(&bytes);
+        let wallet = bs58::encode(signing_key.verifying_key().to_bytes()).into_string();
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let message = format!("parapet:escalation:read:{}:{}", escalation_id, timestamp);
+        let sig = signing_key.sign(message.as_bytes());
+        let signature = bs58::encode(sig.to_bytes()).into_string();
+        (
+            EscalationReadAuthQuery {
+                wallet: wallet.clone(),
+                message,
+                signature,
+                timestamp,
+            },
+            wallet,
+        )
+    }
+
+    #[test]
+    fn escalation_read_auth_accepts_valid_signature() {
+        let escalation_id = "esc_1";
+        let (query, wallet) = signed_query(escalation_id);
+        let escalation = sample_escalation(wallet);
+        assert!(verify_escalation_read_auth(escalation_id, &query, &escalation).is_ok());
+    }
+
+    #[test]
+    fn escalation_read_auth_rejects_message_mismatch() {
+        let escalation_id = "esc_1";
+        let (mut query, wallet) = signed_query(escalation_id);
+        query.message = "parapet:escalation:read:wrong".to_string();
+        let escalation = sample_escalation(wallet);
+        let err = verify_escalation_read_auth(escalation_id, &query, &escalation).unwrap_err();
+        assert_eq!(err.0, StatusCode::BAD_REQUEST);
+    }
+
+    #[test]
+    fn escalation_read_auth_rejects_wrong_wallet() {
+        let escalation_id = "esc_1";
+        let (query, _) = signed_query(escalation_id);
+        let escalation = sample_escalation("other-wallet".to_string());
+        let err = verify_escalation_read_auth(escalation_id, &query, &escalation).unwrap_err();
+        assert_eq!(err.0, StatusCode::FORBIDDEN);
     }
 }

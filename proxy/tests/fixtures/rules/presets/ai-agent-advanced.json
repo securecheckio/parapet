@@ -1,6 +1,31 @@
 [
   {
     "version": "1.0",
+    "id": "track-exfiltration-transfers",
+    "name": "Track Exfiltration Transfers",
+    "description": "Increments per-recipient transfer counter (no alert)",
+    "enabled": true,
+    "tags": ["ai-agent", "tracker", "exfiltration"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "all": [
+          {"field": "system:has_sol_transfer", "operator": "equals", "value": true}
+        ]
+      },
+      "flowbits": {
+        "scope": "perwallet",
+        "increment": ["transfers_to:{system:sol_recipients[0]}"],
+        "ttl_seconds": 86400
+      },
+      "message": ""
+    },
+    "metadata": {
+      "note": "Tracker rule — increments before the block rule reads the counter"
+    }
+  },
+  {
+    "version": "1.0",
     "id": "ai-agent-gradual-exfiltration",
     "name": "AI Agent Gradual Exfiltration",
     "description": "Detects repeated transfers to the same recipient (4+ in 24h) indicating gradual fund exfiltration",
@@ -13,11 +38,6 @@
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
           {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
         ]
-      },
-      "flowbits": {
-        "scope": "perwallet",
-        "increment": ["transfers_to:{system:sol_recipients[0]}"],
-        "ttl_seconds": 86400
       },
       "message": "🚨 AI Agent: Repeated transfers to same recipient (4+ in 24h) - possible gradual exfiltration"
     },

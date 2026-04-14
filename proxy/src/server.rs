@@ -6,6 +6,8 @@ use tower_http::{compression::CompressionLayer, cors::CorsLayer};
 
 use crate::{auth, cache, output, rpc_handler, types::AppState, upstream, usage_tracker};
 use parapet_core::rules;
+use parapet_core::rules::analyzers::BlockedHash;
+use std::time::Duration;
 
 /// Authentication mode for the RPC proxy
 #[derive(Clone)]
@@ -37,6 +39,9 @@ pub struct ServerConfig {
     pub allowed_wallets: Option<Vec<String>>,
 
     pub blocked_programs: Option<Vec<String>>,
+    pub blocked_hashes: Option<Vec<BlockedHash>>,
+    pub blocked_program_feeds: Option<Vec<String>>,
+    pub feed_poll_interval_secs: u64,
     pub rules_path: Option<String>,
     pub rule_action_override: Option<String>,
 
@@ -91,6 +96,9 @@ impl Default for ServerConfig {
             default_requests_per_month: 10_000,
             allowed_wallets: None,
             blocked_programs: None,
+            blocked_hashes: None,
+            blocked_program_feeds: None,
+            feed_poll_interval_secs: 3600,
             rules_path: None,
             rule_action_override: None,
             wasm_analyzers_path: Some("./analyzers".to_string()),
@@ -112,7 +120,6 @@ impl Default for ServerConfig {
 }
 
 /// Create router with given state (useful for tests and custom deployments)
-#[allow(dead_code)]
 pub fn create_router_with_state(state: Arc<AppState>) -> Router {
     Router::new()
         .route("/", post(rpc_handler::handle_rpc))
@@ -138,6 +145,11 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
     let rule_engine = initialize_rule_engine(
         config.rules_path.as_deref(),
         config.rule_action_override.as_deref(),
+        &config.upstream_url,
+        config.blocked_programs.clone().unwrap_or_default(),
+        config.blocked_hashes.clone().unwrap_or_default(),
+        config.blocked_program_feeds.clone().unwrap_or_default(),
+        config.feed_poll_interval_secs,
     )?;
 
     // Wrap rule engine in Arc<RwLock> for live updates
@@ -481,6 +493,11 @@ fn mask_api_key(url: &str) -> String {
 fn initialize_rule_engine(
     rules_path: Option<&str>,
     action_override_str: Option<&str>,
+    upstream_rpc_url: &str,
+    blocked_programs: Vec<String>,
+    blocked_hashes: Vec<BlockedHash>,
+    blocked_program_feeds: Vec<String>,
+    feed_poll_interval_secs: u64,
 ) -> Result<rules::RuleEngine> {
     use parapet_core::rules::analyzers::*;
     use parapet_core::rules::types::ActionOverride;
@@ -511,6 +528,17 @@ fn initialize_rule_engine(
     }
     if ac.should_register("complexity") {
         registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
+    }
+    if ac.should_register("program_analysis") {
+        if let Ok(analyzer) = ProgramAnalyzer::with_feed_poller(
+            upstream_rpc_url.to_string(),
+            blocked_programs,
+            blocked_hashes,
+            blocked_program_feeds,
+            Duration::from_secs(feed_poll_interval_secs.max(30)),
+        ) {
+            registry.register(Arc::new(analyzer));
+        }
     }
     if ac.should_register("logs") {
         registry.register(Arc::new(TransactionLogAnalyzer::new()));

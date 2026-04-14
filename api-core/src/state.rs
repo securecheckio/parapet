@@ -66,6 +66,23 @@ impl AppState {
             config.scans_per_hour_per_key
         );
 
+        if config.authorized_wallets.is_empty() {
+            let allow = std::env::var("ALLOW_INSECURE_EMPTY_AUTHORIZED_WALLETS")
+                .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+                .unwrap_or(false);
+            if allow {
+                log::warn!(
+                    "⚠️  authorized_wallets is empty — allowing all rule-management wallets (INSECURE). \
+                     Set AUTHORIZED_WALLETS or remove ALLOW_INSECURE_EMPTY_AUTHORIZED_WALLETS."
+                );
+            } else {
+                anyhow::bail!(
+                    "authorized_wallets is empty in config. This allows any wallet to manage rules (INSECURE). \
+                     Set AUTHORIZED_WALLETS, or set ALLOW_INSECURE_EMPTY_AUTHORIZED_WALLETS=1 for development only."
+                );
+            }
+        }
+
         let config_arc = Arc::new(config);
 
         Ok(Self {
@@ -76,6 +93,20 @@ impl AppState {
                 config_arc.scans_per_hour_per_key,
             ),
         })
+    }
+
+    /// Create AppState without Redis connection (for testing)
+    pub fn new_without_redis(config: Config) -> Self {
+        let config_arc = Arc::new(config);
+
+        Self {
+            redis: Arc::new(None),
+            config: config_arc.clone(),
+            mcp_rate_limiter: McpRateLimiter::new(
+                config_arc.max_concurrent_scans,
+                config_arc.scans_per_hour_per_key,
+            ),
+        }
     }
 }
 

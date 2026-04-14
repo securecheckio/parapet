@@ -32,7 +32,7 @@ pub struct ErrorResponse {
 /// POST /wallet/scan
 /// Requires: API key in X-API-Key header
 pub async fn scan_wallet(
-    State(_state): State<PlatformState>,
+    State(state): State<PlatformState>,
     headers: HeaderMap,
     Json(req): Json<WalletScanRequest>,
 ) -> Result<Json<WalletScanResponse>, (StatusCode, Json<ErrorResponse>)> {
@@ -49,8 +49,36 @@ pub async fn scan_wallet(
             )
         })?;
 
-    // TODO: Verify API key against database and check rate limits
-    log::info!("Wallet scan request from API key: {}", api_key);
+    // Verify API key against database.
+    let api_key_hash = crate::auth::hash_api_key(api_key);
+    let is_valid = sqlx::query_scalar::<_, bool>(
+        "SELECT EXISTS(
+            SELECT 1 FROM users WHERE api_key_hash = $1 AND active = true
+            UNION
+            SELECT 1 FROM api_keys WHERE key_hash = $1
+        )",
+    )
+    .bind(&api_key_hash)
+    .fetch_one(&state.db)
+    .await
+    .map_err(|_| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(ErrorResponse {
+                error: "Failed to validate API key".to_string(),
+            }),
+        )
+    })?;
+    if !is_valid {
+        return Err((
+            StatusCode::UNAUTHORIZED,
+            Json(ErrorResponse {
+                error: "Invalid API key".to_string(),
+            }),
+        ));
+    }
+
+    log::info!("Wallet scan request authenticated");
 
     // Get RPC URL from environment
     let rpc_url = std::env::var("SOLANA_RPC_URL")

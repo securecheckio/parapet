@@ -161,20 +161,36 @@ Environment variables override TOML settings when present.
 
 ## Integration with Rules Engine
 
-Program analysis results are exposed to rules via the `program_complexity` analyzer:
+Program analysis results are now exposed to rules via the `program_analysis` analyzer (raw evidence only):
 
 ```json
 {
-  "id": "block-unverified-complex-programs",
+  "id": "block-missing-signer-check",
   "condition": {
     "all": [
-      "program_complexity:cpi_count > 5",
-      "program_complexity:verified == false"
+      "program_analysis:missing_signer_check == true",
+      "program_analysis:has_account_write == true"
     ]
   },
   "action": "block"
 }
 ```
+
+Key exposed fields:
+- `program_analysis:missing_signer_check`
+- `program_analysis:missing_owner_check`
+- `program_analysis:arbitrary_cpi`
+- `program_analysis:has_account_write`
+- `program_analysis:has_cpi_call`
+- `program_analysis:reads_account_data`
+- `program_analysis:bytecode_hashes`
+- `program_analysis:is_in_blocklist`
+- `program_analysis:spl_token_related`
+- `program_analysis:token_2022_related`
+
+Hash blocklists can be provided locally and via remote feed polling:
+- `blocked_hashes` in `proxy/config.toml`
+- `blocked_program_feeds` with `feed_poll_interval_secs`
 
 ## Future Enhancements
 

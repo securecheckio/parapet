@@ -22,6 +22,8 @@ pub fn initialize_analyzers_and_rules(
     use parapet_core::rules::analyzers::*;
 
     fn register_all_analyzers(registry: &mut AnalyzerRegistry, safe_programs_file: Option<String>) {
+        let rpc_url = std::env::var("UPSTREAM_RPC_URL")
+            .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
         registry.register(Arc::new(BasicAnalyzer::new()));
         registry.register(Arc::new(CoreSecurityAnalyzer::new(
             std::collections::HashSet::new(),
@@ -29,6 +31,9 @@ pub fn initialize_analyzers_and_rules(
         registry.register(Arc::new(TokenInstructionAnalyzer::new()));
         registry.register(Arc::new(SystemProgramAnalyzer::new()));
         registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
+        if let Ok(program_analyzer) = ProgramAnalyzer::with_empty_blocklists(rpc_url) {
+            registry.register(Arc::new(program_analyzer));
+        }
 
         let inner_analyzer = if let Some(ref path) = safe_programs_file {
             match InnerInstructionAnalyzer::with_custom_list(path) {

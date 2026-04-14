@@ -22,7 +22,7 @@ path = "src/bin/keygen.rs"
 [dependencies]
 rand = "0.8"
 # Parapet Core (our standalone security analysis engine with all analyzers)
-parapet-core = { path = "../core", features = ["all-analyzers"] }
+parapet-core = { path = "../core", features = ["all-analyzers", "program-analysis"] }
 
 # Utilities
 tokio-util = "0.7"
@@ -75,3 +75,7 @@ wasm-analyzers = []
 [dev-dependencies]
 tempfile = "3.0"
 serial_test = "3.0"
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+wiremock = "0.6"
+testcontainers = "0.23"

@@ -54,6 +54,7 @@ goblin = { version = "0.8", optional = true }
 tokio = { version = "1.0", features = ["rt", "macros"] }
 serial_test = "3.0"
 criterion = "0.5"
+tempfile = "3.8"
 
 [features]
 default = []
@@ -65,6 +66,6 @@ jupiter = ["reqwest", "chrono"]
 rugcheck = ["reqwest"]
 token-mint = ["solana-client"]
 wasm-analyzers = ["wasmtime"]
-program-analysis = ["solana-client", "goblin", "chrono"]
+program-analysis = ["solana-client", "goblin", "chrono", "reqwest"]
 ai-analysis = ["program-analysis", "reqwest", "chrono"]
 all-analyzers = ["helius", "ottersec", "token-mint", "jupiter", "rugcheck"]

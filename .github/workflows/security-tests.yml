@@ -1,0 +1,39 @@
+name: Security Tests
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main, master ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  security-tests:
+    name: Security Test Suite
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run api-core escalation auth tests
+        run: cargo test -p parapet-api-core routes::escalations::tests --lib
+
+      - name: Run api-core websocket auth tests
+        run: cargo test -p parapet-api-core routes::websocket::tests --lib
+
+      - name: Run api-platform payment tests
+        run: cargo test -p parapet-platform payments::tests --bin parapet-platform
+
+      - name: Run proxy flowbits integration tests
+        run: cargo test -p parapet-proxy --test test_flowbits_integration
+
+      - name: Run proxy upstream resilience tests
+        run: cargo test -p parapet-proxy upstream::tests --lib

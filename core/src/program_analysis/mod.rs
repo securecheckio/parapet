@@ -3,6 +3,7 @@
 
 pub mod cache;
 pub mod disassembler;
+pub mod feed_poller;
 pub mod fetcher;
 pub mod semantic;
 pub mod types;
@@ -13,6 +14,7 @@ pub mod ai_analyzer;
 // Re-exports
 pub use cache::{CacheConfig, ProgramCache};
 pub use disassembler::ProgramDisassembler;
+pub use feed_poller::{BlocklistFeed, FeedPoller, ProgramBlocklistState};
 pub use fetcher::ProgramFetcher;
 pub use semantic::SemanticAnalyzer;
 

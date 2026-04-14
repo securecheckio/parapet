@@ -1,6 +1,31 @@
 [
   {
     "version": "1.0",
+    "id": "track-enterprise-recipient-velocity",
+    "name": "Track Enterprise Recipient Velocity",
+    "description": "Tracks recipient fan-in across wallets (no alert)",
+    "enabled": true,
+    "tags": ["enterprise", "tracker", "lateral-movement"],
+    "rule": {
+      "action": "pass",
+      "conditions": {
+        "field": "system:has_sol_transfer",
+        "operator": "equals",
+        "value": true
+      },
+      "flowbits": {
+        "scope": "global",
+        "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
+        "ttl_seconds": 3600
+      },
+      "message": ""
+    },
+    "metadata": {
+      "note": "Tracker rule - increments recipient counter before block rule check"
+    }
+  },
+  {
+    "version": "1.0",
     "id": "enterprise-lateral-movement",
     "name": "Enterprise Lateral Movement Detection",
     "description": "Detects when same recipient receives from 3+ internal wallets in 1 hour (coordinated breach)",
@@ -13,11 +38,6 @@
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
           {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
         ]
-      },
-      "flowbits": {
-        "scope": "global",
-        "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
-        "ttl_seconds": 3600
       },
       "message": "🚨 Enterprise: Lateral movement detected - recipient received from 3+ wallets in 1h - possible coordinated breach"
     },

@@ -1,4 +1,8 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::State,
+    http::{HeaderMap, StatusCode},
+    Json,
+};
 use axum_extra::extract::CookieJar;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -69,8 +73,23 @@ pub async fn subscribe_push(
 
 pub async fn internal_send_push(
     State(state): State<PlatformState>,
+    headers: HeaderMap,
     Json(req): Json<InternalPushRequest>,
 ) -> Result<StatusCode, StatusCode> {
+    // Service-to-service auth for internal endpoint.
+    let expected_secret = state
+        .platform_config
+        .internal_api_secret
+        .as_deref()
+        .ok_or(StatusCode::SERVICE_UNAVAILABLE)?;
+    let provided_secret = headers
+        .get("X-Internal-Secret")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+    if provided_secret != expected_secret {
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
     log::info!(
         "📨 Received push request for user {}: {}",
         req.user_id,

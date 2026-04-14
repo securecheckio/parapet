@@ -91,7 +91,14 @@ impl DecoderRegistry {
         ix: &CompiledInstruction,
         account_keys: &[Pubkey],
     ) -> DecodedInstruction {
-        let program_id = account_keys[ix.program_id_index as usize];
+        let Some(program_id) = account_keys.get(ix.program_id_index as usize).copied() else {
+            return DecodedInstruction::Unknown {
+                program_id: Pubkey::default(),
+                program_name: Some("invalid_program_id_index".to_string()),
+                instruction_data: hex::encode(&ix.data),
+                account_count: ix.accounts.len(),
+            };
+        };
 
         // Try registered decoder
         if let Some(decoder) = self.decoders.get(&program_id) {
@@ -168,6 +175,13 @@ pub enum DecodedInstruction {
 
 impl DecodedInstruction {
     pub fn to_human_readable(&self) -> String {
+        fn short_addr(addr: &str) -> String {
+            if addr.len() >= 8 {
+                addr[..8].to_string()
+            } else {
+                addr.to_string()
+            }
+        }
         match self {
             Self::Transfer {
                 from,
@@ -177,8 +191,8 @@ impl DecodedInstruction {
                 format!(
                     "Transfer {} SOL from {}... to {}...",
                     *amount_lamports as f64 / 1_000_000_000.0,
-                    &from[..8],
-                    &to[..8]
+                    short_addr(from),
+                    short_addr(to)
                 )
             }
             Self::TokenTransfer {
@@ -187,8 +201,8 @@ impl DecodedInstruction {
                 format!(
                     "Token transfer: {} tokens from {}... to {}...",
                     amount,
-                    &from[..8],
-                    &to[..8]
+                    short_addr(from),
+                    short_addr(to)
                 )
             }
             Self::TokenApprove {
@@ -199,8 +213,8 @@ impl DecodedInstruction {
                 format!(
                     "Token approve: {} tokens to {}... (owner: {}...)",
                     amount,
-                    &delegate[..8],
-                    &owner[..8]
+                    short_addr(delegate),
+                    short_addr(owner)
                 )
             }
             Self::ComputeBudget {
@@ -223,10 +237,11 @@ impl DecodedInstruction {
                 account_count,
             } => {
                 let name = program_name.as_deref().unwrap_or("Unknown Program");
+                let pid = program_id.to_string();
                 format!(
                     "{} ({}...): {} bytes data, {} accounts",
                     name,
-                    &program_id.to_string()[..8],
+                    short_addr(&pid),
                     instruction_data.len() / 2,
                     account_count
                 )
@@ -270,8 +285,8 @@ impl ProgramDecoder for SystemProgramDecoder {
                 }
 
                 let lamports = u64::from_le_bytes(ix.data[4..12].try_into().ok()?);
-                let from = account_keys[ix.accounts[0] as usize];
-                let to = account_keys[ix.accounts[1] as usize];
+                let from = *account_keys.get(ix.accounts[0] as usize)?;
+                let to = *account_keys.get(ix.accounts[1] as usize)?;
 
                 Some(DecodedInstruction::Transfer {
                     from: from.to_string(),
@@ -315,8 +330,8 @@ impl ProgramDecoder for TokenProgramDecoder {
                 }
 
                 let amount = u64::from_le_bytes(ix.data[1..9].try_into().ok()?);
-                let from = account_keys[ix.accounts[0] as usize];
-                let to = account_keys[ix.accounts[1] as usize];
+                let from = *account_keys.get(ix.accounts[0] as usize)?;
+                let to = *account_keys.get(ix.accounts[1] as usize)?;
 
                 Some(DecodedInstruction::TokenTransfer {
                     from: from.to_string(),
@@ -332,8 +347,8 @@ impl ProgramDecoder for TokenProgramDecoder {
                 }
 
                 let amount = u64::from_le_bytes(ix.data[1..9].try_into().ok()?);
-                let owner = account_keys[ix.accounts[0] as usize];
-                let delegate = account_keys[ix.accounts[1] as usize];
+                let owner = *account_keys.get(ix.accounts[0] as usize)?;
+                let delegate = *account_keys.get(ix.accounts[1] as usize)?;
 
                 Some(DecodedInstruction::TokenApprove {
                     owner: owner.to_string(),

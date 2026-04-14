@@ -66,6 +66,18 @@ pub struct SecurityConfig {
     pub rules_path: Option<String>,
     pub rule_action_override: Option<String>,
     pub blocked_programs: Option<Vec<String>>,
+    pub blocked_hashes: Option<Vec<BlockedHash>>,
+    pub blocked_program_feeds: Option<Vec<String>>,
+    #[serde(default = "default_feed_poll_interval")]
+    pub feed_poll_interval_secs: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct BlockedHash {
+    pub program_id: String,
+    pub hash: String,
+    pub reason: Option<String>,
+    pub added_at: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -163,6 +175,9 @@ fn default_requests_per_month() -> u64 {
 fn default_poll_interval() -> u64 {
     3600
 }
+fn default_feed_poll_interval() -> u64 {
+    3600
+}
 fn default_min_interval() -> u64 {
     300
 }
@@ -206,6 +221,9 @@ impl Default for SecurityConfig {
             rules_path: None,
             rule_action_override: None,
             blocked_programs: None,
+            blocked_hashes: None,
+            blocked_program_feeds: None,
+            feed_poll_interval_secs: default_feed_poll_interval(),
         }
     }
 }
@@ -354,6 +372,9 @@ impl Config {
                 rules_path: std::env::var("RULES_PATH").ok(),
                 rule_action_override: std::env::var("RULE_ACTION_OVERRIDE").ok(),
                 blocked_programs: None,
+                blocked_hashes: None,
+                blocked_program_feeds: None,
+                feed_poll_interval_secs: default_feed_poll_interval(),
             },
             auth: AuthConfig {
                 mode: std::env::var("AUTH_MODE").unwrap_or_else(|_| "none".to_string()),

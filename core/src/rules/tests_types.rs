@@ -236,6 +236,14 @@ fn test_comparison_operator_serialization() {
         serde_json::to_string(&ComparisonOperator::Contains).unwrap(),
         "\"contains\""
     );
+    assert_eq!(
+        serde_json::to_string(&ComparisonOperator::IsNotSet).unwrap(),
+        "\"isnotset\""
+    );
+    assert_eq!(
+        serde_json::to_string(&ComparisonOperator::Exists).unwrap(),
+        "\"exists\""
+    );
 }
 
 #[test]

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use axum::{
     extract::{Json, State},
-    http::StatusCode,
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, post, put},
     Router,
@@ -1304,8 +1304,11 @@ struct UpdateSignatureRequest {
 
 async fn update_event_signature(
     State(state): State<PlatformState>,
+    headers: HeaderMap,
     Json(req): Json<UpdateSignatureRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
+    verify_internal_secret(&state, &headers)?;
+
     // Update the transaction_data JSONB field to add the signature
     let result = sqlx::query(
         "UPDATE security_events 
@@ -1331,6 +1334,22 @@ async fn update_event_signature(
         log::warn!("⚠️ Event {} not found for signature update", req.event_id);
         Err(AppError::Internal)
     }
+}
+
+fn verify_internal_secret(state: &PlatformState, headers: &HeaderMap) -> Result<(), AppError> {
+    let expected_secret = state
+        .platform_config
+        .internal_api_secret
+        .as_deref()
+        .ok_or_else(|| AppError::BadRequest("Internal API secret is not configured".to_string()))?;
+    let provided_secret = headers
+        .get("X-Internal-Secret")
+        .and_then(|v| v.to_str().ok())
+        .ok_or(AppError::Unauthorized)?;
+    if provided_secret != expected_secret {
+        return Err(AppError::Unauthorized);
+    }
+    Ok(())
 }
 
 #[derive(Serialize)]

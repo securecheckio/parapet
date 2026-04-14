@@ -9,8 +9,9 @@
     "rule": {
       "action": "pass",
       "conditions": {
-        "field": "basic:signature",
-        "operator": "exists"
+        "field": "basic:instruction_count",
+        "operator": "greater_than_or_equal",
+        "value": 0
       },
       "flowbits": {
         "increment": ["transaction_count"],

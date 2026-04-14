@@ -315,3 +315,37 @@ impl Default for UpstreamConfig {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn retryable_error_classification_covers_expected_statuses() {
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=500")));
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=429")));
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("connection reset")));
+        assert!(!UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=400")));
+    }
+
+    #[tokio::test]
+    async fn circuit_breaker_opens_after_threshold() {
+        let cb = CircuitBreaker::new(2, 60);
+        cb.record_failure().await;
+        assert_eq!(cb.get_state().await, CircuitState::Closed);
+        cb.record_failure().await;
+        assert_eq!(cb.get_state().await, CircuitState::Open);
+        assert!(!cb.call_permitted().await);
+    }
+
+    #[tokio::test]
+    async fn circuit_breaker_half_open_and_recovery() {
+        let cb = CircuitBreaker::new(1, 0);
+        cb.record_failure().await;
+        assert_eq!(cb.get_state().await, CircuitState::Open);
+        assert!(cb.call_permitted().await);
+        assert_eq!(cb.get_state().await, CircuitState::HalfOpen);
+        cb.record_success().await;
+        assert_eq!(cb.get_state().await, CircuitState::Closed);
+    }
+}

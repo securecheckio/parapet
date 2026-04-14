@@ -190,11 +190,17 @@ impl OutputSink for PostgresSecuritySink {
                         "require_interaction": require_interaction,
                     });
 
-                    match reqwest::Client::new()
+                    let mut req = reqwest::Client::new()
                         .post(format!("{}/internal/push/send", auth_api_url))
-                        .json(&payload)
-                        .send()
-                        .await
+                        .json(&payload);
+                    if let Ok(secret) = std::env::var("INTERNAL_API_SECRET") {
+                        req = req.header("X-Internal-Secret", secret);
+                    } else {
+                        log::warn!(
+                            "INTERNAL_API_SECRET is not set; /internal/push/send may be rejected by the auth API"
+                        );
+                    }
+                    match req.send().await
                     {
                         Ok(resp) if resp.status().is_success() => {
                             log::info!("✅ Push notification sent for {}", event_type);

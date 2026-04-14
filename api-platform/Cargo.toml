@@ -78,3 +78,9 @@ lto = true
 codegen-units = 1
 # Panic strategy: abort instead of unwind (smaller binary, faster panics)
 panic = "abort"
+
+[dev-dependencies]
+tokio = { version = "1.0", features = ["full"] }
+serde_json = "1.0"
+uuid = { version = "1.0", features = ["v4"] }
+testcontainers = "0.23"

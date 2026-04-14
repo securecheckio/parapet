@@ -92,6 +92,9 @@ async fn main() -> Result<()> {
         default_requests_per_month: 10_000,
         allowed_wallets: None,  // Handled by auth provider
         blocked_programs: None, // Will use rules
+        blocked_hashes: None,
+        blocked_program_feeds: None,
+        feed_poll_interval_secs: 3600,
         rules_path: std::env::var("RULES_PATH").ok().or(Some(
             "../../proxy/rules/presets/bot-essentials.json".to_string(),
         )),

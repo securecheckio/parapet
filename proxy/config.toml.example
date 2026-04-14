@@ -37,6 +37,17 @@ rules_path = "./rules/presets/default-protection.json"
 #   "Program222222222222222222222222222222222222"
 # ]
 
+# Optional: Block specific bytecode hashes (program version-aware)
+# blocked_hashes = [
+#   { program_id = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4", hash = "deadbeef...", reason = "Known exploit variant", added_at = "2026-04-13T10:00:00Z" }
+# ]
+
+# Optional: Remote monetized feed endpoints for blocked programs/hashes
+# blocked_program_feeds = [
+#   "https://feeds.securecheck.io/blocked.json?api_key=sk_live_xxx"
+# ]
+# feed_poll_interval_secs = 3600
+
 [auth]
 # Options: "none", "api_key", "wallet_allowlist"
 mode = "none"

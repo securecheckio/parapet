@@ -22,6 +22,8 @@ pub use core::{
     ProgramComplexityAnalyzer, SystemProgramAnalyzer, TokenInstructionAnalyzer,
     TransactionLogAnalyzer,
 };
+#[cfg(feature = "program-analysis")]
+pub use core::{BlockedHash, ProgramAnalyzer};
 
 // Re-export simulation analyzers
 pub use simulation::{

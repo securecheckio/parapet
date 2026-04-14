@@ -125,7 +125,8 @@ async fn main() -> Result<()> {
 
     // Initialize analyzers and rule engine (just like the proxy does)
     println!("⚙️  Initializing analyzers and rule engine...");
-    let (registry, engine) = initialize_analyzers_and_rules(args.safe_programs_file.clone())?;
+    let (registry, engine) =
+        initialize_analyzers_and_rules(args.safe_programs_file.clone(), args.rpc_url.clone())?;
 
     // Calculate recommended delay based on active analyzers (dynamic!)
     let analyzer_delay = registry.get_recommended_delay_ms();
@@ -198,11 +199,16 @@ async fn main() -> Result<()> {
 /// Initialize analyzers and rule engine (same as proxy does)
 fn initialize_analyzers_and_rules(
     safe_programs_file: Option<String>,
+    rpc_url: String,
 ) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
     use parapet_core::rules::analyzers::*;
 
     // Helper to register analyzers
-    fn register_all_analyzers(registry: &mut AnalyzerRegistry, safe_programs_file: Option<String>) {
+    fn register_all_analyzers(
+        registry: &mut AnalyzerRegistry,
+        safe_programs_file: Option<String>,
+        rpc_url: &str,
+    ) {
         // Register built-in core analyzers
         registry.register(Arc::new(BasicAnalyzer::new()));
         registry.register(Arc::new(CoreSecurityAnalyzer::new(
@@ -211,6 +217,9 @@ fn initialize_analyzers_and_rules(
         registry.register(Arc::new(TokenInstructionAnalyzer::new()));
         registry.register(Arc::new(SystemProgramAnalyzer::new()));
         registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
+        if let Ok(program_analyzer) = ProgramAnalyzer::with_empty_blocklists(rpc_url.to_string()) {
+            registry.register(Arc::new(program_analyzer));
+        }
 
         // Register instruction padding analyzer (protection against padding attacks)
         registry.register(Arc::new(
@@ -261,7 +270,7 @@ fn initialize_analyzers_and_rules(
 
     // Create registry for rule engine
     let mut engine_registry = AnalyzerRegistry::new();
-    register_all_analyzers(&mut engine_registry, safe_programs_file.clone());
+    register_all_analyzers(&mut engine_registry, safe_programs_file.clone(), &rpc_url);
 
     // Create rule engine (consumes the registry)
     let mut engine = RuleEngine::new(engine_registry);
@@ -300,7 +309,7 @@ fn initialize_analyzers_and_rules(
 
     // Create separate registry for scanner (needs it to call analyzers directly)
     let mut scanner_registry = AnalyzerRegistry::new();
-    register_all_analyzers(&mut scanner_registry, safe_programs_file);
+    register_all_analyzers(&mut scanner_registry, safe_programs_file, &rpc_url);
 
     Ok((Arc::new(scanner_registry), Arc::new(engine)))
 }

@@ -114,7 +114,7 @@ async fn test_blocked_transaction_event() -> Result<()> {
         rule_name: "Test Block Rule".to_string(),
         action: parapet_core::rules::types::RuleAction::Block,
         message: "Unlimited delegation detected".to_string(),
-        total_risk: 100,
+        total_risk: 60,
         matched_rules: vec![],
         structural_risk: Some(100),
         simulation_risk: None,

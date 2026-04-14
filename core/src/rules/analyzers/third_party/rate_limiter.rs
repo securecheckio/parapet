@@ -22,6 +22,9 @@ impl ApiRateLimiter {
     ///
     /// # Example
     /// ```
+    /// use parapet_core::rules::analyzers::third_party::rate_limiter::ApiRateLimiter;
+    /// use std::time::Duration;
+    ///
     /// // Jupiter free tier: 60 requests per 60 seconds
     /// let limiter = ApiRateLimiter::new(60, Duration::from_secs(60));
     ///

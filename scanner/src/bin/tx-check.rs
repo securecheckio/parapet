@@ -269,6 +269,9 @@ async fn main() -> Result<()> {
     registry.register(Arc::new(SystemProgramAnalyzer::new()));
     registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
     registry.register(Arc::new(TransactionLogAnalyzer::new()));
+    if let Ok(program_analyzer) = ProgramAnalyzer::with_empty_blocklists(args.rpc_url.clone()) {
+        registry.register(Arc::new(program_analyzer));
+    }
 
     // Load instruction fingerprints from config alongside the rules file, or use defaults
     {
@@ -317,6 +320,9 @@ async fn main() -> Result<()> {
         debug_registry.register(Arc::new(SystemProgramAnalyzer::new()));
         debug_registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
         debug_registry.register(Arc::new(TransactionLogAnalyzer::new()));
+        if let Ok(program_analyzer) = ProgramAnalyzer::with_empty_blocklists(args.rpc_url.clone()) {
+            debug_registry.register(Arc::new(program_analyzer));
+        }
         debug_registry.register(Arc::new(
             InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
         ));

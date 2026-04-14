@@ -1,3 +1,4 @@
+use parapet_core::rules::analyzers::BlockedHash;
 use parapet_proxy::{config, server};
 
 #[tokio::main]
@@ -60,6 +61,17 @@ async fn main() -> anyhow::Result<()> {
         default_requests_per_month: config.usage.default_requests_per_month,
         allowed_wallets: config.auth.allowed_wallets,
         blocked_programs: config.security.blocked_programs,
+        blocked_hashes: config.security.blocked_hashes.map(|entries| {
+            entries
+                .into_iter()
+                .map(|entry| BlockedHash {
+                    program_id: entry.program_id,
+                    hash: entry.hash,
+                })
+                .collect()
+        }),
+        blocked_program_feeds: config.security.blocked_program_feeds,
+        feed_poll_interval_secs: config.security.feed_poll_interval_secs,
         rules_path: config.security.rules_path,
         rule_action_override: config.security.rule_action_override,
         wasm_analyzers_path: config.wasm.analyzers_path,

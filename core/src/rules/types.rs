@@ -191,6 +191,7 @@ pub struct FlowbitCondition {
 pub struct SimpleCondition {
     pub field: String,
     pub operator: ComparisonOperator,
+    #[serde(default)]
     pub value: serde_json::Value,
 }
 
@@ -206,7 +207,7 @@ pub struct CompoundCondition {
     pub not: Option<Box<RuleCondition>>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum ComparisonOperator {
     Equals,
@@ -218,6 +219,12 @@ pub enum ComparisonOperator {
     In,
     NotIn,
     Contains,
+    /// True when a flowbit flag is not set (used with `flowbit:` / `flowbit_global:` fields)
+    #[serde(rename = "isnotset")]
+    IsNotSet,
+    /// True when the analyzer field is present (non-null) in the evaluated field map
+    #[serde(rename = "exists")]
+    Exists,
 }
 
 #[derive(Debug, Clone)]

@@ -9,7 +9,11 @@ url = "postgresql://localhost:5432/parapet"
 [frontend]
 # Frontend URL for CORS
 url = "http://localhost:5173"
-cors_credentials = true
+
+[security]
+# Shared secret for internal service routes: POST /internal/push/send, POST /events/update-signature
+# Prefer environment variable INTERNAL_API_SECRET in production (overrides this field when set in loader).
+internal_api_secret = ""
 
 [push_notifications]
 # Web Push VAPID keys (generate with web-push crate)
@@ -63,3 +67,4 @@ rules_path = "../../proxy/rules/presets/bot-essentials.json"
 # - VAPID_PRIVATE_KEY → overrides [push_notifications].private_key
 # - PAYMENTS_ENABLED → overrides [payments].enabled
 # - PAYMENT_TOKEN_* → overrides respective payment token fields
+# - INTERNAL_API_SECRET → shared secret for internal HTTP calls (push, event signature updates)

@@ -16,6 +16,8 @@ pub struct McpRateLimiter {
     quotas: Arc<Mutex<HashMap<String, ApiKeyQuota>>>,
     /// Global concurrent scan limiter (prevent API quota exhaustion)
     concurrent_scans: Arc<Semaphore>,
+    /// Configured scans/hour quota per API key.
+    max_scans_per_hour: u32,
 }
 
 struct ApiKeyQuota {
@@ -35,6 +37,7 @@ impl McpRateLimiter {
         Self {
             quotas: Arc::new(Mutex::new(HashMap::new())),
             concurrent_scans: Arc::new(Semaphore::new(max_concurrent_scans)),
+            max_scans_per_hour: scans_per_hour_per_key,
         }
     }
 
@@ -48,7 +51,7 @@ impl McpRateLimiter {
             .or_insert_with(|| ApiKeyQuota {
                 scans_this_hour: 0,
                 hour_started: Instant::now(),
-                max_scans_per_hour: 10, // Default: 10 scans/hour
+                max_scans_per_hour: self.max_scans_per_hour,
             });
 
         // Reset quota if hour has elapsed

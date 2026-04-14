@@ -160,6 +160,8 @@ impl TransactionAnalyzer for SystemProgramAnalyzer {
             "assign_count".to_string(),
             // Advanced features
             "uses_durable_nonce".to_string(),
+            "advances_nonce".to_string(),
+            "nonce_account".to_string(),
             "allocate_count".to_string(),
             // Security indicators
             "high_rent_spam".to_string(),

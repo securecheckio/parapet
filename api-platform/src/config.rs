@@ -5,6 +5,7 @@ use serde::Deserialize;
 pub struct PlatformConfig {
     pub database_url: String,
     pub frontend_url: String,
+    pub internal_api_secret: Option<String>,
     pub push_notifications: PushConfig,
     pub payments: PaymentConfig,
     pub rules_display_path: String,
@@ -40,6 +41,8 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     struct TomlConfig {
         database: DatabaseConfig,
         frontend: FrontendConfig,
+        #[serde(default)]
+        security: SecurityConfig,
         push_notifications: PushNotificationsConfig,
         payments: PaymentsConfig,
         display: DisplayConfig,
@@ -53,6 +56,12 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     #[derive(Deserialize)]
     struct FrontendConfig {
         url: String,
+    }
+
+    #[derive(Deserialize, Default)]
+    struct SecurityConfig {
+        #[serde(default)]
+        internal_api_secret: String,
     }
 
     #[derive(Deserialize)]
@@ -113,6 +122,11 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     let mut config = PlatformConfig {
         database_url: toml_config.database.url,
         frontend_url: toml_config.frontend.url,
+        internal_api_secret: if toml_config.security.internal_api_secret.is_empty() {
+            None
+        } else {
+            Some(toml_config.security.internal_api_secret)
+        },
         push_notifications: PushConfig {
             enabled: toml_config.push_notifications.enabled,
             public_key: if toml_config.push_notifications.public_key.is_empty() {
@@ -148,6 +162,10 @@ pub fn load_platform_config_from_file(path: &str) -> Result<PlatformConfig> {
     if let Ok(frontend) = std::env::var("FRONTEND_URL") {
         log::info!("  ↳ Overriding frontend.url from FRONTEND_URL env var");
         config.frontend_url = frontend;
+    }
+    if let Ok(secret) = std::env::var("INTERNAL_API_SECRET") {
+        log::info!("  ↳ Loaded INTERNAL_API_SECRET from env var");
+        config.internal_api_secret = Some(secret);
     }
 
     if let Ok(key) = std::env::var("VAPID_PUBLIC_KEY") {

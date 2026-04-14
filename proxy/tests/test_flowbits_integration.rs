@@ -23,7 +23,7 @@ async fn test_ai_agent_velocity_limit() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry);
+    let mut engine = RuleEngine::new(registry).with_flowbits(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -66,7 +66,7 @@ async fn test_ai_agent_account_spam() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry);
+    let mut engine = RuleEngine::new(registry).with_flowbits(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -83,7 +83,7 @@ async fn test_ai_agent_account_spam() {
         );
         let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
         let mut tx = Transaction::new_unsigned(message);
-        tx.sign(&[&agent_keypair], solana_sdk::hash::Hash::default());
+        tx.sign(&[&agent_keypair, &new_account], solana_sdk::hash::Hash::default());
 
         let decision = engine.evaluate(&tx).await.unwrap();
         assert_ne!(
@@ -105,7 +105,7 @@ async fn test_ai_agent_account_spam() {
     );
     let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
     let mut tx = Transaction::new_unsigned(message);
-    tx.sign(&[&agent_keypair], solana_sdk::hash::Hash::default());
+    tx.sign(&[&agent_keypair, &new_account], solana_sdk::hash::Hash::default());
 
     let decision = engine.evaluate(&tx).await.unwrap();
     assert_eq!(
@@ -122,7 +122,7 @@ async fn test_enterprise_lateral_movement() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry);
+    let mut engine = RuleEngine::new(registry).with_flowbits(None);
     engine.load_rules(rules).unwrap();
 
     // Simulate 3 different wallets sending to same recipient
@@ -181,7 +181,7 @@ async fn test_ai_agent_gradual_exfiltration() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry);
+    let mut engine = RuleEngine::new(registry).with_flowbits(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -227,7 +227,7 @@ async fn test_repeated_block_detection() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry);
+    let mut engine = RuleEngine::new(registry).with_flowbits(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();

@@ -237,23 +237,23 @@ impl RuleEngine {
     pub fn load_rules(&mut self, mut rules: Vec<RuleDefinition>) -> Result<()> {
         log::info!("📜 Loading {} rules", rules.len());
 
-        // OPTIMIZATION: Sort rules by action priority (block > alert > pass)
-        // This ensures block rules are checked first for faster short-circuiting
+        // Run pass (tracker) rules before block/alert so flowbit counters increment before
+        // dependent rules read them. Within each tier, preserve input order via stable sort.
         rules.sort_by(|a, b| {
             let priority_a = match a.rule.action {
-                super::types::RuleAction::Block => 0,
+                super::types::RuleAction::Pass => 0,
                 super::types::RuleAction::Alert => 1,
-                super::types::RuleAction::Pass => 2,
+                super::types::RuleAction::Block => 2,
             };
             let priority_b = match b.rule.action {
-                super::types::RuleAction::Block => 0,
+                super::types::RuleAction::Pass => 0,
                 super::types::RuleAction::Alert => 1,
-                super::types::RuleAction::Pass => 2,
+                super::types::RuleAction::Block => 2,
             };
             priority_a.cmp(&priority_b)
         });
 
-        log::debug!("✅ Rules sorted by priority (block → alert → pass)");
+        log::debug!("✅ Rules sorted by priority (pass → alert → block)");
 
         // Log action override if configured
         if let Some(override_config) = &self.action_override {
@@ -367,6 +367,13 @@ impl RuleEngine {
     ) -> Result<()> {
         match condition {
             RuleCondition::Simple(simple) => {
+                // Flowbit counter/flag fields are engine-managed, not analyzer outputs
+                if simple.field.starts_with("flowbit:")
+                    || simple.field.starts_with("flowbit_global:")
+                {
+                    self.validate_operator_value_compatibility(&simple.operator, &simple.value)?;
+                    return Ok(());
+                }
                 // Check if field exists in any analyzer
                 if !available_fields.contains(&simple.field) {
                     return Err(anyhow!(
@@ -432,6 +439,7 @@ impl RuleEngine {
         use ComparisonOperator::*;
 
         match operator {
+            ComparisonOperator::IsNotSet | ComparisonOperator::Exists => Ok(()),
             GreaterThan | LessThan | GreaterThanOrEqual | LessThanOrEqual => {
                 // Numeric operators require numeric values
                 match value {
@@ -531,6 +539,9 @@ impl RuleEngine {
         let mut required_analyzers = std::collections::HashSet::new();
 
         for field in &self.required_fields {
+            if field.starts_with("flowbit:") || field.starts_with("flowbit_global:") {
+                continue;
+            }
             // Check if field is prefixed (analyzer:field)
             if let Some((analyzer_name, _)) = field.split_once(':') {
                 required_analyzers.insert(analyzer_name.to_string());
@@ -797,7 +808,6 @@ impl RuleEngine {
                             Some(Duration::from_secs(3600)),
                         );
                     }
-
                     return Ok(RuleDecision {
                         action: super::types::RuleAction::Block,
                         rule_id: rule_def.id.clone(),
@@ -860,7 +870,6 @@ impl RuleEngine {
                                 Some(Duration::from_secs(3600)),
                             );
                         }
-
                         return Ok(RuleDecision {
                             action: super::types::RuleAction::Block,
                             rule_id: "composite".to_string(),
@@ -878,7 +887,6 @@ impl RuleEngine {
                 }
             }
         }
-
         // Determine final action based on accumulated risk
         let (final_action, message) = if total_risk >= threshold {
             // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
@@ -1034,7 +1042,9 @@ impl RuleEngine {
         Box::pin(async move {
             match condition {
                 RuleCondition::Simple(simple) => {
-                    Ok(self.evaluate_simple(simple, fields, missing_field_override)?)
+                    Ok(self
+                        .evaluate_simple_with_flowbits(simple, fields, missing_field_override, wallet)
+                        .await?)
                 }
                 RuleCondition::Flowbit(flowbit) => self.evaluate_flowbit(flowbit, wallet).await,
                 RuleCondition::Compound(compound) => {
@@ -1089,12 +1099,96 @@ impl RuleEngine {
         }
     }
 
+    async fn evaluate_simple_with_flowbits(
+        &self,
+        condition: &SimpleCondition,
+        fields: &HashMap<String, Value>,
+        missing_field_override: Option<&str>,
+        wallet: &solana_sdk::pubkey::Pubkey,
+    ) -> Result<bool> {
+        if condition.field.starts_with("flowbit:") {
+            let rest = &condition.field["flowbit:".len()..];
+            return self
+                .evaluate_flowbit_counter_field(false, rest, condition, fields, wallet)
+                .await;
+        }
+        if condition.field.starts_with("flowbit_global:") {
+            let rest = &condition.field["flowbit_global:".len()..];
+            return self
+                .evaluate_flowbit_counter_field(true, rest, condition, fields, wallet)
+                .await;
+        }
+        self.evaluate_simple(condition, fields, missing_field_override)
+    }
+
+    /// Resolve `flowbit:` / `flowbit_global:` simple fields against flowbit state (counters and flags).
+    async fn evaluate_flowbit_counter_field(
+        &self,
+        global: bool,
+        name_template: &str,
+        condition: &SimpleCondition,
+        fields: &HashMap<String, Value>,
+        wallet: &solana_sdk::pubkey::Pubkey,
+    ) -> Result<bool> {
+        if condition.operator == ComparisonOperator::IsNotSet {
+            let Some(state) = &self.flowbit_state else {
+                return Ok(true);
+            };
+            let name = match self.interpolate_flowbit_name(name_template, fields) {
+                Ok(Some(n)) => n,
+                _ => return Ok(true),
+            };
+            let lock = state.lock().await;
+            let is_set = if global {
+                lock.is_set_global(&name)
+            } else {
+                lock.is_set(wallet, &name)
+            };
+            return Ok(!is_set);
+        }
+
+        let Some(state) = &self.flowbit_state else {
+            let v = Value::from(0u64);
+            return self.compare(&v, &condition.operator, &condition.value);
+        };
+
+        let name = match self.interpolate_flowbit_name(name_template, fields) {
+            Ok(Some(n)) => n,
+            _ => {
+                let v = Value::Null;
+                return self.compare(&v, &condition.operator, &condition.value);
+            }
+        };
+
+        let lock = state.lock().await;
+        let count = if global {
+            lock.get_counter_global(&name)
+        } else {
+            lock.get_counter(wallet, &name)
+        };
+        let v = Value::from(count);
+        self.compare(&v, &condition.operator, &condition.value)
+    }
+
     fn evaluate_simple(
         &self,
         condition: &SimpleCondition,
         fields: &HashMap<String, Value>,
         missing_field_override: Option<&str>,
     ) -> Result<bool> {
+        if condition.operator == ComparisonOperator::IsNotSet {
+            let present = fields
+                .get(&condition.field)
+                .filter(|v| !v.is_null());
+            return Ok(present.is_none());
+        }
+        if condition.operator == ComparisonOperator::Exists {
+            return Ok(fields
+                .get(&condition.field)
+                .map(|v| !v.is_null())
+                .unwrap_or(false));
+        }
+
         let field_value = fields.get(&condition.field);
 
         if field_value.is_none() {
@@ -1271,6 +1365,8 @@ impl RuleEngine {
             ComparisonOperator::In => self.in_array(actual, expected),
             ComparisonOperator::NotIn => Ok(!self.in_array(actual, expected)?),
             ComparisonOperator::Contains => self.contains(actual, expected),
+            ComparisonOperator::IsNotSet => Ok(actual.is_null()),
+            ComparisonOperator::Exists => Ok(!actual.is_null()),
         }
     }
 

@@ -10,6 +10,7 @@ Extend `parapet-mcp` with **differential analysis** tools that compare malicious
 ## Core Insight: Differential Analysis
 
 Instead of analyzing a single malicious transaction in isolation, comparing it against baseline (normal) transactions reveals:
+
 - Which analyzer fields actually discriminate between good and bad behavior
 - Automatic threshold calculation (midpoint between malicious and baseline ranges)
 - Zero false positives by design (tested against baseline set)
@@ -36,6 +37,8 @@ flowchart TD
     VerifyBase --> Result
 ```
 
+
+
 ## New MCP Tools
 
 ### 1. `compare_transactions_for_rule_creation` (Primary Tool)
@@ -43,12 +46,14 @@ flowchart TD
 **Purpose:** Differential analysis comparing malicious vs baseline transactions to identify discriminating features and auto-suggest rules.
 
 **Inputs:**
+
 - `malicious_signatures` (string[]): Array of known malicious transaction signatures (min 1, recommended 3-5)
 - `baseline_signatures` (string[]): Array of known good/normal transaction signatures (min 1, recommended 3-5)
 - `analyzer_filter` (string[], optional): Focus on specific analyzers (default: all available)
 - `include_logs` (bool, optional): Include transaction logs in output (default: false)
 
 **Output:**
+
 ```typescript
 {
   "malicious_analysis": {
@@ -146,6 +151,7 @@ flowchart TD
 Shows which analyzers are available, enabled, and configured.
 
 **Output:**
+
 ```typescript
 {
   "core_analyzers": {
@@ -185,6 +191,7 @@ Validates rule JSON against the current analyzer registry.
 Tests whether a rule would match specific transactions (single or batch).
 
 **Supports:**
+
 - Single transaction testing
 - Batch testing with accuracy metrics
 - Expected outcome validation (true positives, false positives, etc.)
@@ -198,16 +205,19 @@ Fallback for when user only has one malicious transaction (warns about lack of b
 ### Access Control
 
 Rule creation tools are gated behind "dev mode" enabled via:
+
 1. **Server config:** `PARAPET_ENABLE_DEV_TOOLS=true`
 2. **Per-request header:** `X-Parapet-Dev-Mode: true`
 
 ### Deployment Configurations
 
-| Environment | `enable_dev_tools` | Usage |
-|-------------|-------------------|-------|
-| **Production** | `false` (default) | Dev tools completely disabled |
-| **Staging/Dev** | `true` | Dev tools available with header |
-| **Local development** | `true` | Dev tools available for testing |
+
+| Environment           | `enable_dev_tools` | Usage                           |
+| --------------------- | ------------------ | ------------------------------- |
+| **Production**        | `false` (default)  | Dev tools completely disabled   |
+| **Staging/Dev**       | `true`             | Dev tools available with header |
+| **Local development** | `true`             | Dev tools available for testing |
+
 
 ### Why Dev Mode?
 
@@ -223,14 +233,14 @@ Rule creation tools are gated behind "dev mode" enabled via:
 1. User: "These are drainer txs [sig1, sig2, sig3], these are normal Raydium swaps [sig4, sig5, sig6]"
 2. MCP: `compare_transactions_for_rule_creation({malicious: [...], baseline: [...]})`
 3. Returns:
-   ```
+  ```
    Analysis confidence: MODERATE
    Discriminating features found:
    - delegation_is_unlimited: true vs false - PERFECT separation
    - risk_score: [75-90] vs [10-25] - STRONG separation
-   
+
    Suggested rule: Check delegation_is_unlimited == true (confidence: 1.0)
-   ```
+  ```
 4. LLM creates rule JSON
 5. MCP: `test_rule_against_transaction({rule, signatures: [all 6 txs]})`
 6. Returns: Matched 3/3 malicious, 0/3 false positives, 100% accuracy
@@ -276,3 +286,4 @@ Rule creation tools are gated behind "dev mode" enabled via:
 - Historical pattern search (find similar past attacks)
 - Flowbit rule generation for velocity/frequency patterns
 - Integration with rule deployment APIs
+

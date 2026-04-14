@@ -9,6 +9,10 @@ port = 3000
 [runtime]
 # Tokio worker threads (optional, defaults to one per CPU core)
 # worker_threads = 4
+# MCP concurrent scan limit (protects against resource exhaustion)
+max_concurrent_scans = 10
+# MCP scans per hour per API key (used by McpRateLimiter)
+scans_per_hour_per_key = 100
 
 [redis]
 # Redis URL for dynamic rules, escalations, nonces, and temporary storage
@@ -20,28 +24,23 @@ rpc_url = "https://api.devnet.solana.com"
 network = "devnet"
 
 [auth]
-# Wallet-based authentication (for rule/escalation management)
-# Comma-separated list of authorized wallet addresses
+# Wallet-based authentication (for rule/escalation management).
+# For production, set at least one approver wallet. For local dev only, you may use
+# ALLOW_INSECURE_EMPTY_AUTHORIZED_WALLETS=1 with an empty list (see env overrides below).
 authorized_wallets = []
 
 # Nonce TTL in seconds (for signature verification)
 nonce_ttl_seconds = 60
 
-# API key authentication (for MCP endpoints)
-# Comma-separated list of API keys
-# SECURITY: Use environment variables in production!
-mcp_api_keys = []
-
-[rate_limiting]
-# MCP concurrent scan limit (protects against resource exhaustion)
-max_concurrent_scans = 10
-
-# MCP scans per hour per API key
-scans_per_hour_per_key = 100
+[mcp]
+# API key authentication (for MCP HTTP endpoints)
+# SECURITY: Prefer MCP_API_KEYS environment variable in production
+api_keys = []
 
 # Environment Variable Overrides:
 # - REDIS_URL → overrides [redis].url
 # - SOLANA_RPC_URL → overrides [solana].rpc_url
 # - SOLANA_NETWORK → overrides [solana].network
 # - AUTHORIZED_WALLETS → overrides [auth].authorized_wallets (comma-separated)
-# - MCP_API_KEYS → overrides [auth].mcp_api_keys (comma-separated)
+# - MCP_API_KEYS → overrides [mcp].api_keys (comma-separated)
+# - ALLOW_INSECURE_EMPTY_AUTHORIZED_WALLETS=1 → allow empty authorized_wallets (development only)
