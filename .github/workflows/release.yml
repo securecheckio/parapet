@@ -149,7 +149,7 @@ jobs:
       run: ls -R artifacts/
 
     - name: Create Release
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v3
       with:
         files: |
           artifacts/parapet-linux-x86_64/parapet-linux-x86_64.tar.gz
