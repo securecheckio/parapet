@@ -205,11 +205,7 @@ parapet = { version = "0.1", features = ["all-analyzers"] }
 
 ## Examples
 
-See [examples/](./examples/) directory for:
-- Basic usage
-- Rules engine usage
-- Custom analyzer creation
-- Mobile integration
+See the [integrations/](../integrations/) directory for integration examples and the [docs/](../docs/) directory for usage guides.
 
 ## Development
 

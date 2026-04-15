@@ -10,7 +10,7 @@ This tree ships a **minimal** set of JSON bundles:
 | **`presets/bot-essentials.json`** | Scanner / MCP / API fallbacks when resolving bundled rules. |
 | **`presets/wallet-scan-enhanced.json`** | Same (wallet-oriented preset). |
 
-**Additional sample presets, `examples/`, and `policies/` fragments** used by tests and docs live under **`proxy/tests/fixtures/rules/`** (same JSON files, moved — not duplicated).
+**Additional sample presets and `policies/` fragments** used by tests and docs live under **`proxy/tests/fixtures/rules/`** (same JSON files, moved — not duplicated).
 
 | Topic | Notes |
 | --- | --- |

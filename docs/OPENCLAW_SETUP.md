@@ -262,7 +262,7 @@ Add to OpenClaw's MCP configuration:
   "mcpServers": {
     "parapet-solana": {
       "command": "node",
-      "args": ["/absolute/path/to/parapet/examples/openclaw-mcp-server.ts"],
+      "args": ["/absolute/path/to/parapet/mcp/parapet-mcp-server.ts"],
       "env": {
         "PARAPET_RPC_URL": "http://localhost:8899",
         "PARAPET_API_URL": "http://localhost:3000"
@@ -606,9 +606,8 @@ events = ["escalation_created", "transaction_blocked"]
 ## Getting Help
 
 - **Documentation**: `parapet/docs/`
-- **Examples**: `parapet/examples/`
+- **Integration examples**: `parapet/integrations/`
 - **Issues**: GitHub Issues
-- **Community**: Discord/Telegram
 
 ---
 

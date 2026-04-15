@@ -332,4 +332,4 @@ grep "Registered analyzer" logs/parapet.log
 For issues or questions:
 - GitHub Issues: https://github.com/securecheck/parapet/issues
 - Documentation: https://github.com/securecheck/parapet/docs
-- Examples: `parapet/examples/`
+- Integration examples: `parapet/integrations/`

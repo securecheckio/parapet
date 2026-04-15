@@ -170,7 +170,6 @@ parapet/
 │   ├── flowbits-perf/     # Flowbits Criterion benchmarks
 │   └── risk-register/     # Risk database & analysis
 ├── docs/                   # Documentation
-├── examples/               # Example configurations
 └── deployments/           # Deployment configurations
     ├── proxy/             # Standalone proxy deployment
     └── reference/         # Reference stack (optional)
