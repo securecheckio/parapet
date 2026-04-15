@@ -53,6 +53,7 @@ fn create_test_state() -> Arc<AppState> {
         default_blocking_threshold: 70,
         simulation_registry: Arc::new(sim_registry),
         escalation_config: None,
+        activity_feed_config: None,
     })
 }
 

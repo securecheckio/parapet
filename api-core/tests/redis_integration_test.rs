@@ -296,9 +296,8 @@ async fn test_websocket_event_publish() -> Result<()> {
         .publish(&channel, serde_json::to_string(&event)?)
         .await?;
 
-    // Note: subscribers will be 0 in test since no WebSocket clients are connected
-    // In production, this would be > 0 if clients are subscribed
-    assert!(subscribers >= 0);
+    // No WebSocket clients are connected in this test path.
+    assert_eq!(subscribers, 0);
 
     Ok(())
 }

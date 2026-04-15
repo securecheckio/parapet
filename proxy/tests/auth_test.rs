@@ -101,6 +101,7 @@ fn create_state_with_api_key_auth(valid_keys: Vec<String>) -> Arc<AppState> {
         default_blocking_threshold: 70,
         simulation_registry: Arc::new(sim_registry),
         escalation_config: None,
+        activity_feed_config: None,
     })
 }
 
@@ -129,6 +130,7 @@ fn create_state_with_wallet_allowlist(allowed: Vec<String>) -> Arc<AppState> {
         default_blocking_threshold: 70,
         simulation_registry: Arc::new(sim_registry),
         escalation_config: None,
+        activity_feed_config: None,
     })
 }
 
