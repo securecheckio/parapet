@@ -77,6 +77,15 @@ where
             "/api/v1/escalations/pending",
             post(routes::escalations::list_pending::<S>),
         )
+        // Activity Feed (non-blocking transaction monitoring)
+        .route(
+            "/api/v1/activity/recent",
+            get(routes::activity::get_recent_activity::<S>),
+        )
+        .route(
+            "/ws/activity",
+            get(routes::activity_websocket::activity_websocket_handler::<S>),
+        )
         // WebSocket for real-time notifications
         .route(
             "/ws/escalations",

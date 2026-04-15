@@ -1,19 +1,26 @@
 use parapet_core::rules::analyzers::BlockedHash;
 use parapet_proxy::{config, server};
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     dotenvy::dotenv().ok();
     env_logger::init();
 
+    // Determine config file path
+    let config_path = if std::path::Path::new("config.toml").exists() {
+        "config.toml"
+    } else if std::path::Path::new("proxy/config.toml").exists() {
+        "proxy/config.toml"
+    } else {
+        ""
+    };
+
     // Load configuration
     // Priority: config.toml (if exists) + env overrides, else env only (backwards compat)
-    let config = if std::path::Path::new("config.toml").exists() {
-        log::info!("📄 Loading configuration from config.toml");
-        config::Config::from_file_with_env("config.toml")?
-    } else if std::path::Path::new("proxy/config.toml").exists() {
-        log::info!("📄 Loading configuration from proxy/config.toml");
-        config::Config::from_file_with_env("proxy/config.toml")?
+    let config = if !config_path.is_empty() {
+        log::info!("📄 Loading configuration from {}", config_path);
+        config::Config::from_file_with_env(config_path)?
     } else {
         log::info!("📄 Loading configuration from environment variables");
         config::Config::from_env()?
@@ -28,6 +35,9 @@ async fn main() -> anyhow::Result<()> {
         "wallet_allowlist" => server::AuthMode::WalletAllowlist,
         _ => server::AuthMode::None,
     };
+
+    // Store rules path for reloading before moving config
+    let rules_path_for_reload = config.security.rules_path.clone();
 
     // Convert feed sources from config format
     let rules_feed_sources = if !config.rule_feeds.sources.is_empty() {
@@ -88,10 +98,82 @@ async fn main() -> anyhow::Result<()> {
         rules_feed_enabled: config.rule_feeds.enabled,
         rules_feed_sources,
         rules_feed_poll_interval: config.rule_feeds.poll_interval,
+        enable_activity_feed: config.activity_feed.enabled,
+        activity_feed_min_risk_score: config.activity_feed.min_risk_score,
+        activity_feed_max_events_per_wallet: config.activity_feed.max_events_per_wallet,
+        activity_feed_ttl_seconds: config.activity_feed.ttl_seconds,
+        network: config.network.network,
     };
 
-    // Start server
-    server::start_server(server_config).await
+    // Store config path for reloading
+    let config_path = Arc::new(config_path.to_string());
+    let rules_path = Arc::new(rules_path_for_reload);
+
+    // Start server (returns the rule engine handle for hot-reloading)
+    let (server_handle, rule_engine) = server::start_server_with_reload(server_config).await?;
+
+    // Spawn signal handler for SIGHUP (Unix only)
+    #[cfg(unix)]
+    {
+        let config_path = Arc::clone(&config_path);
+        let rules_path = Arc::clone(&rules_path);
+        let rule_engine = Arc::clone(&rule_engine);
+
+        tokio::spawn(async move {
+            use tokio::signal::unix::{signal, SignalKind};
+
+            let mut sighup = signal(SignalKind::hangup())
+                .expect("Failed to register SIGHUP handler");
+
+            loop {
+                sighup.recv().await;
+                log::info!("🔄 Received SIGHUP signal, reloading configuration...");
+
+                if let Err(e) = reload_configuration(
+                    &config_path,
+                    &rules_path,
+                    &rule_engine,
+                ).await {
+                    log::error!("❌ Failed to reload configuration: {}", e);
+                } else {
+                    log::info!("✅ Configuration reloaded successfully");
+                }
+            }
+        });
+
+        log::info!("📡 Signal handler registered - send SIGHUP to reload config");
+    }
+
+    // Wait for server to complete
+    server_handle.await?
+}
+
+/// Reload configuration without restarting the server
+async fn reload_configuration(
+    config_path: &str,
+    rules_path: &Option<String>,
+    rule_engine: &Arc<tokio::sync::RwLock<parapet_core::rules::RuleEngine>>,
+) -> anyhow::Result<()> {
+    // Reload config from file if it exists
+    let _config = if !config_path.is_empty() {
+        log::info!("📄 Reloading configuration from {}", config_path);
+        config::Config::from_file_with_env(config_path)?
+    } else {
+        log::info!("📄 Reloading configuration from environment variables");
+        config::Config::from_env()?
+    };
+
+    // Reload rules if path is specified
+    if let Some(rules_file) = rules_path {
+        log::info!("📋 Reloading rules from {}", rules_file);
+        
+        let mut engine = rule_engine.write().await;
+        engine.load_rules_from_file(rules_file)?;
+        
+        log::info!("✅ Rules reloaded from {}", rules_file);
+    }
+
+    Ok(())
 }
 
 fn parse_bind_address(addr: &str) -> [u8; 4] {

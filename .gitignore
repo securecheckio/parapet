@@ -15,6 +15,10 @@ proxy/analyzers.toml
 # Scanner: only *.example is versioned; copy to local TOML
 scanner/config.toml
 
+# Dashboard: build artifacts and dependencies
+dashboard/dist/
+dashboard/node_modules/
+
 # IDEs
 .vscode/
 .idea/

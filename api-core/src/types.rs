@@ -219,3 +219,28 @@ pub enum EscalationEvent {
         forwarded_at: u64,
     },
 }
+
+// ============================================================================
+// Activity Feed Types (Non-blocking Transaction Monitoring)
+// ============================================================================
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActivityEvent {
+    pub activity_id: String,
+    pub wallet: String,
+    pub risk_score: u8,
+    pub rule_id: String,
+    pub rule_name: String,
+    pub message: String,
+    pub canonical_hash: String,
+    pub timestamp: u64,
+    pub action: ActivityAction,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ActivityAction {
+    Allowed,
+    Blocked,
+    Flagged,
+}

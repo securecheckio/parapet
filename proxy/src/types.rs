@@ -29,10 +29,22 @@ pub struct AppState {
 
     /// Escalation configuration (when Redis is enabled)
     pub escalation_config: Option<EscalationConfig>,
+
+    /// Activity feed configuration (when Redis is enabled)
+    pub activity_feed_config: Option<ActivityFeedConfig>,
 }
 
 #[derive(Clone)]
 pub struct EscalationConfig {
     pub redis_url: String,
     pub approver_wallet: String,
+}
+
+#[derive(Clone)]
+pub struct ActivityFeedConfig {
+    pub redis_url: String,
+    pub min_risk_score: u8,
+    pub max_events_per_wallet: usize,
+    pub ttl_seconds: u64,
+    pub network: String,
 }

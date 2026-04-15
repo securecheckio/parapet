@@ -1,3 +1,5 @@
+pub mod activity;
+pub mod activity_websocket;
 pub mod auth;
 pub mod escalations;
 pub mod mcp;

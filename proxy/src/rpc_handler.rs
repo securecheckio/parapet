@@ -264,6 +264,8 @@ async fn handle_transaction_send(
                         decision.action
                     );
 
+                    // Activity event will be published after we get signature from upstream
+
                     match decision.action {
                         parapet_core::rules::types::RuleAction::Block => {
                             log::warn!("🚫 Transaction BLOCKED: {}", decision.message);
@@ -399,6 +401,7 @@ async fn handle_transaction_send(
                     }
                 } else {
                     log::info!("✅ No rules matched, transaction passes");
+                    // Activity event will be published after we get signature from upstream
                 }
             }
             Err(e) => {
@@ -425,7 +428,7 @@ async fn handle_transaction_send(
             );
 
             let mut event_builder = EventBuilder::new(
-                wallet_address.unwrap_or_else(|| "unknown".to_string()),
+                wallet_address.clone().unwrap_or_else(|| "unknown".to_string()),
                 req.method.clone(),
             )
             .with_auth_context(&auth_context);
@@ -436,13 +439,69 @@ async fn handle_transaction_send(
             }
 
             // Add rule decision if we evaluated security rules
-            if let Some(decision) = rule_decision_for_event {
-                event_builder = event_builder.with_rule_decision(&decision);
+            if let Some(ref decision) = rule_decision_for_event {
+                event_builder = event_builder.with_rule_decision(decision);
             }
 
             let event = event_builder.build();
             emit_event(&state.output_manager, event).await;
             log::info!("✅ ALLOWED event emitted (audit trail complete)");
+
+            // Publish to activity feed (with signature if available)
+            if let Some(activity_config) = &state.activity_feed_config {
+                if let Some(wallet_addr) = &wallet_address {
+                    // Get rule decision details or use defaults for clean transactions
+                    let (risk_score, rule_id, rule_name, message, action) = if let Some(decision) = &rule_decision_for_event {
+                        (
+                            decision.total_risk,
+                            decision.rule_id.as_str(),
+                            decision.rule_name.as_str(),
+                            decision.message.as_str(),
+                            match decision.action {
+                                parapet_core::rules::types::RuleAction::Block => crate::activity::ActivityAction::Blocked,
+                                parapet_core::rules::types::RuleAction::Pass => crate::activity::ActivityAction::Allowed,
+                                parapet_core::rules::types::RuleAction::Alert => crate::activity::ActivityAction::Flagged,
+                            }
+                        )
+                    } else {
+                        (0, "no_match", "Clean Transaction", "No security rules matched - transaction is safe", crate::activity::ActivityAction::Allowed)
+                    };
+
+                    // Check if event should be published based on risk threshold
+                    if risk_score >= activity_config.min_risk_score {
+                        let canonical_hash = if let Some(ref tx) = transaction {
+                            use parapet_core::rules::analyzers::core::CanonicalTransactionAnalyzer;
+                            CanonicalTransactionAnalyzer::compute_canonical_hash_versioned(tx)
+                                .unwrap_or_else(|e| format!("error:{}", e))
+                        } else {
+                            "no_transaction".to_string()
+                        };
+
+                        let network = activity_config.network.clone();
+
+                        if let Err(e) = crate::activity::publish_activity_event_with_details(
+                            wallet_addr,
+                            risk_score,
+                            rule_id,
+                            rule_name,
+                            message,
+                            &canonical_hash,
+                            signature.clone(),
+                            Some(network),
+                            action,
+                            &activity_config.redis_url,
+                            activity_config.max_events_per_wallet,
+                            activity_config.ttl_seconds,
+                        )
+                        .await
+                        {
+                            log::warn!("Failed to publish activity event: {}", e);
+                        } else {
+                            log::debug!("📊 Activity event published with signature");
+                        }
+                    }
+                }
+            }
 
             (StatusCode::OK, Json(response))
         }

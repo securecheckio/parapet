@@ -39,11 +39,28 @@ pub struct RuleEngine {
     flowbit_state: Option<Arc<Mutex<FlowbitStateManager>>>,
 }
 
+/// Detect Solana network from RPC URL
+fn detect_network_from_url(url: &str) -> String {
+    let url_lower = url.to_lowercase();
+    if url_lower.contains("devnet") {
+        "devnet".to_string()
+    } else if url_lower.contains("testnet") {
+        "testnet".to_string()
+    } else {
+        "mainnet-beta".to_string()
+    }
+}
+
 impl RuleEngine {
     pub fn new(registry: AnalyzerRegistry) -> Self {
-        // Default to mainnet for production safety
-        let current_network =
-            std::env::var("SOLANA_NETWORK").unwrap_or_else(|_| "mainnet-beta".to_string());
+        // Try to auto-detect from UPSTREAM_RPC_URL first, fall back to SOLANA_NETWORK env var
+        let current_network = if let Ok(rpc_url) = std::env::var("UPSTREAM_RPC_URL") {
+            let detected = detect_network_from_url(&rpc_url);
+            // Allow explicit override if someone really wants it
+            std::env::var("SOLANA_NETWORK").unwrap_or(detected)
+        } else {
+            std::env::var("SOLANA_NETWORK").unwrap_or_else(|_| "mainnet-beta".to_string())
+        };
 
         // Check if performance tracking is enabled via env var
         let perf_enabled = std::env::var("RULE_ENGINE_PERFORMANCE_TRACKING")
@@ -1383,6 +1400,7 @@ impl RuleEngine {
         match value {
             Value::Number(n) => n.as_f64().ok_or_else(|| anyhow!("Invalid number")),
             Value::String(s) => s.parse::<f64>().map_err(|e| anyhow!("Parse error: {}", e)),
+            Value::Null => Ok(0.0), // Treat null as zero for numeric comparisons
             _ => Err(anyhow!("Value is not a number")),
         }
     }

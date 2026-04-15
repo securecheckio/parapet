@@ -73,6 +73,13 @@ pub struct ServerConfig {
     pub rules_feed_enabled: bool,
     pub rules_feed_sources: Option<Vec<FeedSourceConfig>>,
     pub rules_feed_poll_interval: u64,
+
+    /// Activity feed configuration (requires redis_url)
+    pub enable_activity_feed: bool,
+    pub activity_feed_min_risk_score: u8,
+    pub activity_feed_max_events_per_wallet: usize,
+    pub activity_feed_ttl_seconds: u64,
+    pub network: String,
 }
 
 /// Feed source configuration from environment
@@ -92,6 +99,7 @@ impl Default for ServerConfig {
             redis_url: None,
             bind_address: [0, 0, 0, 0], // Bind to all interfaces by default
             auth_mode: AuthMode::None,  // No auth by default (backwards compatible)
+            network: "mainnet-beta".to_string(),
             enable_usage_tracking: false,
             default_requests_per_month: 10_000,
             allowed_wallets: None,
@@ -115,6 +123,10 @@ impl Default for ServerConfig {
             rules_feed_enabled: false,
             rules_feed_sources: None,
             rules_feed_poll_interval: 3600,
+            enable_activity_feed: false,
+            activity_feed_min_risk_score: 40,
+            activity_feed_max_events_per_wallet: 100,
+            activity_feed_ttl_seconds: 86400,
         }
     }
 }
@@ -130,7 +142,20 @@ pub fn create_router_with_state(state: Arc<AppState>) -> Router {
 }
 
 /// Build the Axum router for the RPC proxy (used by `start_server` and in-process tooling such as `rpc-perf`).
+/// Build app router and return the rule engine for hot-reloading
+pub async fn build_app_router_with_engine(
+    config: ServerConfig,
+) -> Result<(Router, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
+    let (router, engine) = build_app_router_internal(config).await?;
+    Ok((router, engine))
+}
+
 pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
+    let (router, _) = build_app_router_internal(config).await?;
+    Ok(router)
+}
+
+async fn build_app_router_internal(config: ServerConfig) -> Result<(Router, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
     // Initialize cache (side effect: connects Redis or allocates in-memory store)
     if let Some(redis_url) = &config.redis_url {
         log::info!("💾 Connecting to Redis: {}", redis_url);
@@ -370,6 +395,33 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
         None
     };
 
+    // Initialize activity feed if enabled
+    let activity_feed_config = if config.enable_activity_feed {
+        if let Some(redis_url) = &config.redis_url {
+            log::info!(
+                "📊 Activity feed enabled (min_risk: {}, max_events: {}, ttl: {}s)",
+                config.activity_feed_min_risk_score,
+                config.activity_feed_max_events_per_wallet,
+                config.activity_feed_ttl_seconds
+            );
+            Some(crate::types::ActivityFeedConfig {
+                redis_url: redis_url.clone(),
+                min_risk_score: config.activity_feed_min_risk_score,
+                max_events_per_wallet: config.activity_feed_max_events_per_wallet,
+                ttl_seconds: config.activity_feed_ttl_seconds,
+                network: config.network.clone(),
+            })
+        } else {
+            log::warn!("⚠️  Activity feed enabled but Redis URL not configured");
+            None
+        }
+    } else {
+        None
+    };
+
+    // Clone rule_engine for hot-reloading before moving into state
+    let rule_engine_handle = Arc::clone(&rule_engine);
+
     // Create app state
     let state = Arc::new(AppState {
         upstream_client,
@@ -381,24 +433,36 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
         default_blocking_threshold: config.default_blocking_threshold,
         simulation_registry: Arc::new(simulation_registry),
         escalation_config,
+        activity_feed_config,
     });
 
-    Ok(Router::new()
+    let router = Router::new()
         .route("/", post(rpc_handler::handle_rpc))
         .route("/health", axum::routing::get(health_check))
         .layer(CorsLayer::permissive())
         .layer(CompressionLayer::new())
-        .with_state(state))
+        .with_state(state);
+
+    Ok((router, rule_engine_handle))
 }
 
 pub async fn start_server(config: ServerConfig) -> Result<()> {
+    let (handle, _) = start_server_with_reload(config).await?;
+    handle.await?
+}
+
+/// Start server and return handle + rule engine for hot-reloading
+pub async fn start_server_with_reload(
+    config: ServerConfig,
+) -> Result<(tokio::task::JoinHandle<Result<()>>, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
     log::info!("🚀 Starting Parapet RPC Proxy");
     log::info!("📡 Upstream RPC: {}", mask_api_key(&config.upstream_url));
 
     let port = config.port;
     let bind_address = config.bind_address;
     let addr = SocketAddr::from((bind_address, port));
-    let app = build_app_router(config).await?;
+    
+    let (app, rule_engine) = build_app_router_with_engine(config).await?;
 
     log::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     log::info!("🎯 Parapet RPC Proxy Ready");
@@ -410,8 +474,21 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     log::info!("   Loopback:  http://127.0.0.1:{}", port);
 
     if bind_address == [0, 0, 0, 0] {
-        log::info!("   Network:   http://<YOUR_IP>:{}", port);
-        log::info!("   (Accessible from your local network)");
+        // Get all network interfaces
+        if let Ok(interfaces) = get_network_interfaces() {
+            if !interfaces.is_empty() {
+                log::info!("");
+                log::info!("   Network Interfaces:");
+                for (name, ip) in interfaces {
+                    log::info!("   📱 {} → http://{}:{}", name, ip, port);
+                }
+                log::info!("");
+                log::info!("   💡 For mobile wallets (Backpack, etc), use any network URL above");
+            } else {
+                log::info!("   Network:   http://<YOUR_IP>:{}", port);
+                log::info!("   (Accessible from your local network)");
+            }
+        }
     } else {
         log::info!("   Bind:      http://{}", addr);
     }
@@ -425,9 +502,13 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
     log::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    
+    // Spawn server in background
+    let server_handle = tokio::spawn(async move {
+        axum::serve(listener, app).await.map_err(|e| anyhow::anyhow!("Server error: {}", e))
+    });
 
-    Ok(())
+    Ok((server_handle, rule_engine))
 }
 
 async fn health_check() -> &'static str {
@@ -474,6 +555,58 @@ fn load_analyzers_config() -> rules::AnalyzersConfig {
         "📋 No analyzers.toml — registering all analyzers (copy analyzers.toml.example to customize)"
     );
     AnalyzersConfig::default()
+}
+
+fn get_network_interfaces() -> Result<Vec<(String, String)>> {
+    use std::process::Command;
+    
+    let mut interfaces = Vec::new();
+    
+    // Try to get network interfaces using `ip addr` (Linux)
+    if let Ok(output) = Command::new("ip").arg("addr").output() {
+        if output.status.success() {
+            let output_str = String::from_utf8_lossy(&output.stdout);
+            let mut current_interface = String::new();
+            
+            for line in output_str.lines() {
+                let line = line.trim();
+                
+                // Parse interface name (e.g., "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP>")
+                if line.chars().next().map_or(false, |c| c.is_numeric()) {
+                    if let Some(name_part) = line.split(':').nth(1) {
+                        current_interface = name_part.trim().to_string();
+                    }
+                }
+                
+                // Parse IPv4 address (e.g., "inet 192.168.1.100/24")
+                if line.starts_with("inet ") && !line.contains("127.0.0.1") {
+                    if let Some(ip_part) = line.split_whitespace().nth(1) {
+                        if let Some(ip) = ip_part.split('/').next() {
+                            if !current_interface.is_empty() && current_interface != "lo" {
+                                interfaces.push((current_interface.clone(), ip.to_string()));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // Fallback: try `hostname -I` for simpler output
+    if interfaces.is_empty() {
+        if let Ok(output) = Command::new("hostname").arg("-I").output() {
+            if output.status.success() {
+                let ips = String::from_utf8_lossy(&output.stdout);
+                for (idx, ip) in ips.split_whitespace().enumerate() {
+                    if !ip.starts_with("127.") && !ip.contains(':') {
+                        interfaces.push((format!("network{}", idx), ip.to_string()));
+                    }
+                }
+            }
+        }
+    }
+    
+    Ok(interfaces)
 }
 
 fn mask_api_key(url: &str) -> String {

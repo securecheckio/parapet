@@ -108,7 +108,7 @@ impl CircuitBreaker {
 
 pub struct UpstreamClient {
     client: Client,
-    upstream_url: String,
+    pub upstream_url: String,
     /// Semaphore to limit concurrent requests to upstream
     concurrency_limiter: Arc<Semaphore>,
     /// Minimum delay between requests (milliseconds)

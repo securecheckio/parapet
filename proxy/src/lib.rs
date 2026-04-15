@@ -2,6 +2,7 @@
 
 pub mod auth;
 pub mod cache;
+pub mod activity;
 pub mod config;
 pub mod escalations;
 pub mod output;

@@ -24,6 +24,8 @@ pub struct Config {
     pub escalations: EscalationsConfig,
     #[serde(default)]
     pub rule_feeds: RuleFeedsConfig,
+    #[serde(default)]
+    pub activity_feed: ActivityFeedConfig,
 }
 
 #[derive(Debug, Deserialize)]
@@ -126,6 +128,18 @@ pub struct RuleFeedsConfig {
     pub sources: Vec<FeedSourceConfig>,
 }
 
+#[derive(Debug, Deserialize)]
+pub struct ActivityFeedConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_min_risk_score")]
+    pub min_risk_score: u8,
+    #[serde(default = "default_max_events_per_wallet")]
+    pub max_events_per_wallet: usize,
+    #[serde(default = "default_ttl_seconds")]
+    pub ttl_seconds: u64,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct FeedSourceConfig {
     pub url: String,
@@ -180,6 +194,15 @@ fn default_feed_poll_interval() -> u64 {
 }
 fn default_min_interval() -> u64 {
     300
+}
+fn default_min_risk_score() -> u8 {
+    40
+}
+fn default_max_events_per_wallet() -> usize {
+    100
+}
+fn default_ttl_seconds() -> u64 {
+    86400 // 24 hours
 }
 
 impl Default for ServerConfig {
@@ -278,6 +301,17 @@ impl Default for RuleFeedsConfig {
             poll_interval: default_poll_interval(),
             default_min_interval: default_min_interval(),
             sources: Vec::new(),
+        }
+    }
+}
+
+impl Default for ActivityFeedConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            min_risk_score: default_min_risk_score(),
+            max_events_per_wallet: default_max_events_per_wallet(),
+            ttl_seconds: default_ttl_seconds(),
         }
     }
 }
@@ -421,6 +455,24 @@ impl Config {
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(300),
                 sources: Vec::new(), // Parsed separately in main.rs
+            },
+            activity_feed: ActivityFeedConfig {
+                enabled: std::env::var("ENABLE_ACTIVITY_FEED")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(false),
+                min_risk_score: std::env::var("ACTIVITY_FEED_MIN_RISK_SCORE")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(40),
+                max_events_per_wallet: std::env::var("ACTIVITY_FEED_MAX_EVENTS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(100),
+                ttl_seconds: std::env::var("ACTIVITY_FEED_TTL_SECONDS")
+                    .ok()
+                    .and_then(|v| v.parse().ok())
+                    .unwrap_or(86400),
             },
         };
 
