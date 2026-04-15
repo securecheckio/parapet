@@ -48,22 +48,9 @@ jobs:
       - name: Run cargo deny
         run: cargo deny check
 
-  dependency-review:
-    name: Review Dependency Changes
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    permissions:
-      contents: read
-      pull-requests: write
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Dependency Review
-        uses: actions/dependency-review-action@v4
-        with:
-          fail-on-severity: moderate
-          deny-licenses: GPL-3.0, AGPL-3.0
-          
+  # dependency-review removed - requires GitHub Advanced Security
+  # cargo-audit and cargo-deny provide better coverage for Rust projects
+  
   sbom:
     name: Generate SBOM (Software Bill of Materials)
     runs-on: ubuntu-latest
