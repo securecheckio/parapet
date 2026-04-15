@@ -1,0 +1,83 @@
+# cargo-deny configuration for supply chain security
+# https://github.com/EmbarkStudios/cargo-deny
+
+[advisories]
+# Check for security vulnerabilities in dependencies
+version = 2
+ignore = [
+    # Add any advisories to temporarily ignore here
+    # Format: "RUSTSEC-YYYY-NNNN"
+]
+
+# Warn about unmaintained crates (not updated in 365+ days)
+unmaintained = "warn"
+# Warn about yanked crates
+yanked = "warn"
+# Deny crates with known security vulnerabilities
+vulnerability = "deny"
+
+[licenses]
+# Ensure all dependencies have acceptable licenses
+version = 2
+# Allow permissive and copyleft licenses compatible with MIT
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Unlicense",
+    "CC0-1.0",
+    "0BSD",
+    "Zlib",
+]
+
+# Deny copyleft licenses that could affect Parapet's MIT licensing
+deny = [
+    "GPL-3.0",
+    "AGPL-3.0",
+    "LGPL-3.0",
+]
+
+# Warn about unclear or custom licenses
+copyleft = "warn"
+# Allow proceeding with licenses not explicitly listed (but warn)
+unlicensed = "deny"
+# Don't allow multiple licenses unless all are acceptable
+allow-osi-fsf-free = "neither"
+# Confidence threshold for license detection
+confidence-threshold = 0.8
+
+[bans]
+# Ensure we don't have duplicate dependencies or banned crates
+multiple-versions = "warn"
+wildcards = "warn"
+# Warn when same crate is sourced from multiple places
+highlight = "all"
+
+# Ban specific crates known to be problematic
+deny = [
+    # Example: { name = "openssl", wrappers = ["openssl-sys"] }
+]
+
+# Skip checking dev/build dependencies for duplicates (speeds up CI)
+skip = []
+skip-tree = []
+
+[sources]
+# Ensure dependencies only come from trusted sources
+unknown-registry = "deny"
+unknown-git = "deny"
+
+# Only allow crates.io as source
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+# Allow specific git sources if needed (add as required)
+allow-git = []
+
+[sources.allow-org]
+# Allow dependencies from specific GitHub orgs if needed
+github = [
+    # "solana-labs",
+]

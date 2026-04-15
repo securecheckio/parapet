@@ -1,0 +1,100 @@
+name: Dependency Security
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  schedule:
+    # Run daily at 2 AM UTC to catch new CVEs
+    - cron: '0 2 * * *'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  cargo-audit:
+    name: Audit Dependencies for CVEs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      
+      - name: Run cargo audit
+        run: cargo audit --deny warnings
+      
+      - name: Generate audit report (JSON)
+        if: failure()
+        run: cargo audit --json > audit-report.json
+      
+      - name: Upload audit report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: audit-report
+          path: audit-report.json
+
+  cargo-deny:
+    name: Check Supply Chain Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked
+      
+      - name: Run cargo deny
+        run: cargo deny check
+
+  dependency-review:
+    name: Review Dependency Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: moderate
+          deny-licenses: GPL-3.0, AGPL-3.0
+          
+  sbom:
+    name: Generate SBOM (Software Bill of Materials)
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Install cargo-sbom
+        run: cargo install cargo-sbom
+      
+      - name: Generate SBOM (SPDX format)
+        run: cargo sbom > parapet-sbom.spdx.json
+      
+      - name: Generate SBOM (CycloneDX format)
+        run: cargo sbom --format cyclonedx > parapet-sbom.cdx.json
+      
+      - name: Attest SBOM
+        uses: actions/attest-sbom@v1
+        with:
+          subject-path: parapet-sbom.spdx.json
+          sbom-path: parapet-sbom.spdx.json
+      
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: |
+            parapet-sbom.spdx.json
+            parapet-sbom.cdx.json
+          retention-days: 90
