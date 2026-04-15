@@ -45,7 +45,8 @@ reqwest = { version = "0.11", features = ["json", "blocking"], optional = true }
 chrono = { version = "0.4", features = ["serde"], optional = true }
 
 # WASM runtime for dynamic analyzers
-wasmtime = { version = "25", optional = true }
+# Updated to 43.0.1 to fix RUSTSEC-2026-0095 (critical sandbox escape)
+wasmtime = { version = "43.0.1", optional = true }
 
 # Program analysis dependencies
 goblin = { version = "0.8", optional = true }

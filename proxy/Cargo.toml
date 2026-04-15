@@ -78,4 +78,4 @@ serial_test = "3.0"
 serde_json = "1.0"
 tokio = { version = "1.0", features = ["full"] }
 wiremock = "0.6"
-testcontainers = "0.23"
+# Removed testcontainers 0.23 - contains tokio-tar with RUSTSEC-2025-0111 (no fix available)

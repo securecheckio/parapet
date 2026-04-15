@@ -67,8 +67,9 @@ ed25519-dalek = "2.1"
 sha2 = "0.10"
 hex = "0.4"
 base64 = "0.22"
-testcontainers = "0.23"
+# Removed testcontainers 0.23 - contains tokio-tar with RUSTSEC-2025-0111 (no fix available)
 tower = { version = "0.5", features = ["util"] }
 chrono = "0.4"
-tokio-tungstenite = "0.20"
+# Updated to 0.24 to fix rustls-webpki vulnerabilities (RUSTSEC-2026-0098, RUSTSEC-2026-0099)
+tokio-tungstenite = "0.24"
 futures = "0.3"
