@@ -17,7 +17,7 @@ jobs:
     name: Audit Dependencies for CVEs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
@@ -40,7 +40,7 @@ jobs:
     name: Check Supply Chain Security
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked
@@ -60,7 +60,7 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - name: Install cargo-sbom
         run: cargo install cargo-sbom
