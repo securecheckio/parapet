@@ -15,19 +15,7 @@ env:
 jobs:
   test:
     name: Test
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest]
-        include:
-          - os: ubuntu-latest
-            artifact-name: parapet-linux-x86_64
-          - os: macos-latest
-            artifact-name: parapet-macos-aarch64
-    runs-on: ${{ matrix.os }}
-    permissions:
-      contents: read
-      id-token: write
-      attestations: write
+    runs-on: ubuntu-latest
     
     steps:
       - uses: actions/checkout@v4
@@ -43,8 +31,7 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       
-      - name: Free disk space (Linux only)
-        if: matrix.os == 'ubuntu-latest'
+      - name: Free disk space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /opt/ghc
@@ -66,18 +53,6 @@ jobs:
       
       - name: Build release binaries
         run: cargo build --workspace --release --verbose
-      
-      - name: Generate attestation for parapet binary
-        uses: actions/attest-build-provenance@v1
-        with:
-          subject-path: target/release/parapet
-      
-      - name: Upload parapet binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ matrix.artifact-name }}-${{ github.sha }}
-          path: target/release/parapet
-          retention-days: 30
 
   build-image:
     name: Build Docker Image

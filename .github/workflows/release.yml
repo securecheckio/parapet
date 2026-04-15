@@ -12,11 +12,28 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
 
 jobs:
   build:
     name: Build Release Binary
-    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            artifact-name: parapet-linux-x86_64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            artifact-name: parapet-macos-aarch64
+    runs-on: ${{ matrix.os }}
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     
     steps:
     - name: Checkout code
@@ -25,33 +42,46 @@ jobs:
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
-    - name: Install dependencies
+    - name: Install dependencies (Linux)
+      if: matrix.os == 'ubuntu-latest'
       run: |
         sudo apt-get update
         sudo apt-get install -y pkg-config libssl-dev build-essential
 
     - name: Cache cargo build
       uses: Swatinem/rust-cache@v2
+      with:
+        key: ${{ matrix.target }}
 
-    - name: Build release binary
-      run: cargo build --release -p parapet-proxy
+    - name: Build all release binaries
+      run: cargo build --workspace --release --verbose
 
-    - name: Strip binary
-      run: strip target/release/parapet-proxy
+    - name: Strip binary (Linux)
+      if: matrix.os == 'ubuntu-latest'
+      run: strip target/release/parapet
+
+    - name: Strip binary (macOS)
+      if: matrix.os == 'macos-latest'
+      run: strip target/release/parapet
+
+    - name: Generate attestation for parapet binary
+      uses: actions/attest-build-provenance@v1
+      with:
+        subject-path: target/release/parapet
 
     - name: Create tarball
       run: |
         cd target/release
-        tar -czf parapet-proxy-linux-x86_64.tar.gz parapet-proxy
-        sha256sum parapet-proxy-linux-x86_64.tar.gz > parapet-proxy-linux-x86_64.tar.gz.sha256
+        tar -czf ${{ matrix.artifact-name }}.tar.gz parapet
+        sha256sum ${{ matrix.artifact-name }}.tar.gz > ${{ matrix.artifact-name }}.tar.gz.sha256
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: parapet-proxy-linux-x86_64
+        name: ${{ matrix.artifact-name }}
         path: |
-          target/release/parapet-proxy-linux-x86_64.tar.gz
-          target/release/parapet-proxy-linux-x86_64.tar.gz.sha256
+          target/release/${{ matrix.artifact-name }}.tar.gz
+          target/release/${{ matrix.artifact-name }}.tar.gz.sha256
 
   docker:
     name: Build and Push Docker Image
@@ -110,31 +140,49 @@ jobs:
       contents: write
     
     steps:
-    - name: Download artifacts
+    - name: Download all artifacts
       uses: actions/download-artifact@v4
       with:
-        name: parapet-proxy-linux-x86_64
+        path: artifacts
+
+    - name: List artifacts
+      run: ls -R artifacts/
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          parapet-proxy-linux-x86_64.tar.gz
-          parapet-proxy-linux-x86_64.tar.gz.sha256
+          artifacts/parapet-linux-x86_64/parapet-linux-x86_64.tar.gz
+          artifacts/parapet-linux-x86_64/parapet-linux-x86_64.tar.gz.sha256
+          artifacts/parapet-macos-aarch64/parapet-macos-aarch64.tar.gz
+          artifacts/parapet-macos-aarch64/parapet-macos-aarch64.tar.gz.sha256
         draft: false
         prerelease: false
         generate_release_notes: true
         body: |
-          ## Deployment Options
+          ## Installation
           
-          ### Docker (Recommended for Open Source)
+          ### Verify Binary Authenticity
+          All binaries are signed with GitHub attestations. Verify before use:
+          ```bash
+          # Download the binary
+          tar -xzf parapet-*.tar.gz
+          
+          # Verify with GitHub CLI
+          gh attestation verify parapet --owner securecheckio
+          ```
+          
+          ### Platform-Specific Downloads
+          
+          - **Linux (x86_64)**: `parapet-linux-x86_64.tar.gz`
+          - **macOS (Apple Silicon)**: `parapet-macos-aarch64.tar.gz`
+          
+          ### Docker (Recommended for servers)
           ```bash
           docker pull ghcr.io/securecheckio/parapet-proxy:${{ github.ref_name }}
           ```
           
-          ### Native Binary (Maximum Performance)
-          Download the tarball below and extract to your server.
-          
-          See [Terraform deployment guide](https://github.com/${{ github.repository }}/tree/main/terraform) for automated setup.
+          ### SHA256 Checksums
+          Verify checksums are provided for each binary tarball.
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
