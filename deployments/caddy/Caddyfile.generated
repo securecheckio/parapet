@@ -1,0 +1,32 @@
+# Caddy config for LOCAL testing with self-signed certs
+# Use your local IP address (e.g., 10.0.0.84)
+
+# RPC Proxy (for mobile wallets)
+https://10.0.0.84:8443 {
+    tls internal
+    reverse_proxy localhost:8899
+    
+    log {
+        output file /var/log/caddy/proxy.log
+    }
+}
+
+# Activity API
+https://10.0.0.84:3443 {
+    tls internal
+    reverse_proxy localhost:3001
+    
+    log {
+        output file /var/log/caddy/api.log
+    }
+}
+
+# Dashboard
+https://10.0.0.84:8443/dashboard {
+    tls internal
+    reverse_proxy localhost:8080
+    
+    log {
+        output file /var/log/caddy/dashboard.log
+    }
+}

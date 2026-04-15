@@ -1,0 +1,32 @@
+# Caddy config for Docker with self-signed certs
+# Proxies to host machine services
+
+# RPC Proxy (for mobile wallets)
+:9443 {
+    tls internal
+    reverse_proxy host.docker.internal:8899
+    
+    log {
+        output file /var/log/caddy/proxy.log
+    }
+}
+
+# Activity API
+:9444 {
+    tls internal
+    reverse_proxy host.docker.internal:3001
+    
+    log {
+        output file /var/log/caddy/api.log
+    }
+}
+
+# Dashboard  
+:9445 {
+    tls internal
+    reverse_proxy host.docker.internal:8080
+    
+    log {
+        output file /var/log/caddy/dashboard.log
+    }
+}

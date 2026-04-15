@@ -114,10 +114,11 @@ pub async fn publish_activity_event_with_details(
     // Store in wallet-specific list (newest first)
     let list_key = format!("activity:wallet:{}", wallet);
     conn.lpush::<_, _, ()>(&list_key, &event_json).await?;
-    
+
     // Trim to max events
-    conn.ltrim::<_, ()>(&list_key, 0, (max_events - 1) as isize).await?;
-    
+    conn.ltrim::<_, ()>(&list_key, 0, (max_events - 1) as isize)
+        .await?;
+
     // Set TTL
     conn.expire::<_, ()>(&list_key, ttl as i64).await?;
 

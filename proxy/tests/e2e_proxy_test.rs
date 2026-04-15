@@ -27,7 +27,8 @@ fn create_test_state() -> Arc<AppState> {
     let engine = RuleEngine::new(registry).with_flowbits(None);
 
     // Create simulation registry
-    let mut sim_registry = parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
+    let mut sim_registry =
+        parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     sim_registry.register(Box::new(
         parapet_core::rules::analyzers::simulation::SimulationBalanceAnalyzer::new(),
     ));
@@ -39,7 +40,8 @@ fn create_test_state() -> Arc<AppState> {
     ));
 
     // Create upstream client with default config
-    let upstream_client = upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
+    let upstream_client =
+        upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
 
     Arc::new(AppState {
         upstream_client,
@@ -177,7 +179,8 @@ async fn test_sendTransaction_blocks_high_risk() {
                         "value": 0
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Transaction blocked for testing".to_string(),
             flowbits: None,
         },
@@ -335,7 +338,8 @@ async fn test_rule_engine_decision_flow() {
                         "value": 0
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Transaction passed for testing".to_string(),
             flowbits: None,
         },
@@ -391,7 +395,6 @@ async fn test_cors_headers_present() {
     // Should handle CORS preflight
     let headers = response.headers();
     assert!(
-        headers.contains_key("access-control-allow-origin")
-            || response.status() == StatusCode::OK
+        headers.contains_key("access-control-allow-origin") || response.status() == StatusCode::OK
     );
 }

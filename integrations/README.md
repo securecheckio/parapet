@@ -5,7 +5,9 @@ Integration tools and examples for connecting Parapet to external systems.
 ## Available Integrations
 
 ### [agent-kit/](./agent-kit/)
+
 Tools for AI agents and autonomous systems:
+
 - MCP (Model Context Protocol) integration
 - Programmatic API access
 - Async transaction monitoring
@@ -14,21 +16,25 @@ Tools for AI agents and autonomous systems:
 ## Planned Integrations
 
 ### Wallet Providers
+
 - Phantom SDK integration
 - Backpack API examples
 - Solflare adapter
 
 ### RPC Providers
+
 - Helius enriched transactions
 - QuickNode integration
 - Triton examples
 
 ### Security Services
+
 - OtterSec integration
 - Rugcheck API adapter
 - Security.txt discovery
 
 ### Monitoring & Alerting
+
 - Telegram bot examples
 - Slack notifications
 - Email alerts
@@ -36,6 +42,7 @@ Tools for AI agents and autonomous systems:
 ## Integration Patterns
 
 ### 1. Client-Side (Wallet/DApp)
+
 Integrate Parapet directly into your application:
 
 ```rust
@@ -50,6 +57,7 @@ if result.risk_score > threshold {
 ```
 
 ### 2. Proxy Mode (RPC Layer)
+
 Route RPC traffic through Parapet proxy:
 
 ```typescript
@@ -61,6 +69,7 @@ const connection = new Connection(
 ```
 
 ### 3. API Mode (Backend Service)
+
 Query Parapet API from your backend:
 
 ```bash
@@ -89,6 +98,7 @@ curl -X POST http://localhost:3001/api/v1/transactions/analyze \
 ## Support
 
 For integration help:
+
 - Check [docs/](../docs/) for API documentation
 - Open an issue for integration requests
 - Join our community for support

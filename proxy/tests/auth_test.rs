@@ -3,7 +3,7 @@ use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
-use parapet_proxy::auth::{AuthProvider, AuthResult, AuthContext};
+use parapet_proxy::auth::{AuthContext, AuthProvider, AuthResult};
 use parapet_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use parapet_proxy::types::AppState;
 use parapet_proxy::upstream;
@@ -18,9 +18,10 @@ mod common;
 fn create_state_with_api_key_auth(valid_keys: Vec<String>) -> Arc<AppState> {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
-    
+
     let engine = RuleEngine::new(registry).with_flowbits(None);
-    let mut sim_registry = parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
+    let mut sim_registry =
+        parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     sim_registry.register(Box::new(
         parapet_core::rules::analyzers::simulation::SimulationBalanceAnalyzer::new(),
     ));
@@ -87,7 +88,8 @@ fn create_state_with_api_key_auth(valid_keys: Vec<String>) -> Arc<AppState> {
         valid_keys: valid_keys.into_iter().collect(),
     });
 
-    let upstream_client = upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
+    let upstream_client =
+        upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
 
     Arc::new(AppState {
         upstream_client,
@@ -106,14 +108,16 @@ fn create_state_with_api_key_auth(valid_keys: Vec<String>) -> Arc<AppState> {
 fn create_state_with_wallet_allowlist(allowed: Vec<String>) -> Arc<AppState> {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
-    
+
     let engine = RuleEngine::new(registry).with_flowbits(None);
-    let mut sim_registry = parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
+    let mut sim_registry =
+        parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     sim_registry.register(Box::new(
         parapet_core::rules::analyzers::simulation::SimulationBalanceAnalyzer::new(),
     ));
 
-    let upstream_client = upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
+    let upstream_client =
+        upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
 
     Arc::new(AppState {
         upstream_client,
@@ -185,7 +189,11 @@ async fn test_api_key_auth_failure() {
     let json_response: JsonRpcResponse = serde_json::from_slice(&body).unwrap();
 
     assert!(json_response.error.is_some());
-    assert!(json_response.error.unwrap().message.contains("Authentication failed"));
+    assert!(json_response
+        .error
+        .unwrap()
+        .message
+        .contains("Authentication failed"));
 }
 
 #[tokio::test]

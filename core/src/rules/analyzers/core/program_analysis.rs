@@ -1,4 +1,6 @@
-use crate::program_analysis::{FeedPoller, ProgramBlocklistState, ProgramDisassembler, ProgramFetcher};
+use crate::program_analysis::{
+    FeedPoller, ProgramBlocklistState, ProgramDisassembler, ProgramFetcher,
+};
 use crate::rules::analyzer::TransactionAnalyzer;
 use anyhow::Result;
 use serde_json::{json, Value};
@@ -70,11 +72,8 @@ impl ProgramAnalyzer {
     ) -> Result<Self> {
         let analyzer = Self::new(rpc_url, blocked_programs, blocked_hashes)?;
         if !feed_urls.is_empty() {
-            let poller = FeedPoller::new(
-                feed_urls,
-                analyzer.blocklist_state.clone(),
-                poll_interval,
-            );
+            let poller =
+                FeedPoller::new(feed_urls, analyzer.blocklist_state.clone(), poll_interval);
             tokio::spawn(async move {
                 poller.start().await;
             });
@@ -211,7 +210,10 @@ impl TransactionAnalyzer for ProgramAnalyzer {
             let bytecode_hash = format!("{:x}", hasher.finalize());
             bytecode_hashes.insert(program_id.clone(), bytecode_hash.clone());
             detail.insert("bytecode_hash".to_string(), json!(bytecode_hash.clone()));
-            detail.insert("is_upgradeable".to_string(), json!(program_data.is_upgradeable));
+            detail.insert(
+                "is_upgradeable".to_string(),
+                json!(program_data.is_upgradeable),
+            );
 
             if program_data.is_upgradeable {
                 any_upgradeable = true;
@@ -265,7 +267,10 @@ impl TransactionAnalyzer for ProgramAnalyzer {
                 "missing_owner_check".to_string(),
                 json!(disassembly.missing_owner_check),
             );
-            detail.insert("arbitrary_cpi".to_string(), json!(disassembly.arbitrary_cpi));
+            detail.insert(
+                "arbitrary_cpi".to_string(),
+                json!(disassembly.arbitrary_cpi),
+            );
             detail.insert(
                 "has_account_write".to_string(),
                 json!(disassembly.has_account_write),
@@ -304,22 +309,46 @@ impl TransactionAnalyzer for ProgramAnalyzer {
             "is_in_blocklist".to_string(),
             json!(!blocked_program_ids.is_empty() || !blocked_hashes.is_empty()),
         );
-        fields.insert("blocked_program_ids".to_string(), json!(blocked_program_ids));
+        fields.insert(
+            "blocked_program_ids".to_string(),
+            json!(blocked_program_ids),
+        );
         fields.insert("blocked_hashes".to_string(), json!(blocked_hashes));
-        fields.insert("missing_signer_check".to_string(), json!(any_missing_signer_check));
-        fields.insert("missing_owner_check".to_string(), json!(any_missing_owner_check));
+        fields.insert(
+            "missing_signer_check".to_string(),
+            json!(any_missing_signer_check),
+        );
+        fields.insert(
+            "missing_owner_check".to_string(),
+            json!(any_missing_owner_check),
+        );
         fields.insert("arbitrary_cpi".to_string(), json!(any_arbitrary_cpi));
-        fields.insert("has_account_write".to_string(), json!(any_has_account_write));
-        fields.insert("account_write_count".to_string(), json!(account_write_count));
+        fields.insert(
+            "has_account_write".to_string(),
+            json!(any_has_account_write),
+        );
+        fields.insert(
+            "account_write_count".to_string(),
+            json!(account_write_count),
+        );
         fields.insert("has_cpi_call".to_string(), json!(any_has_cpi_call));
         fields.insert("cpi_call_count".to_string(), json!(cpi_call_count));
-        fields.insert("reads_account_data".to_string(), json!(any_reads_account_data));
+        fields.insert(
+            "reads_account_data".to_string(),
+            json!(any_reads_account_data),
+        );
         fields.insert("account_read_count".to_string(), json!(account_read_count));
         fields.insert("has_signer_check".to_string(), json!(any_has_signer_check));
         fields.insert("has_owner_check".to_string(), json!(any_has_owner_check));
         fields.insert("has_key_check".to_string(), json!(any_has_key_check));
-        fields.insert("checked_account_count".to_string(), json!(checked_account_count));
-        fields.insert("unchecked_account_count".to_string(), json!(unchecked_account_count));
+        fields.insert(
+            "checked_account_count".to_string(),
+            json!(checked_account_count),
+        );
+        fields.insert(
+            "unchecked_account_count".to_string(),
+            json!(unchecked_account_count),
+        );
         fields.insert("bytecode_hashes".to_string(), json!(bytecode_hashes));
         fields.insert("is_upgradeable".to_string(), json!(any_upgradeable));
         fields.insert("instruction_count".to_string(), json!(instruction_count));

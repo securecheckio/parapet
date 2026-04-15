@@ -1,6 +1,6 @@
+use base64::Engine as _;
 use ed25519_dalek::{Signer, SigningKey};
 use sha2::{Digest, Sha256};
-use base64::Engine as _;
 
 pub fn test_wallet() -> (String, SigningKey) {
     // Deterministic keypair for reproducible test vectors.

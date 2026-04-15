@@ -17,7 +17,8 @@ fn create_test_config() -> Config {
         worker_threads: None,
         max_concurrent_scans: 2,
         scans_per_hour_per_key: 10,
-        redis_url: std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+        redis_url: std::env::var("REDIS_URL")
+            .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         solana_rpc_url: "https://api.devnet.solana.com".to_string(),
         solana_network: "devnet".to_string(),
         authorized_wallets: vec!["test_wallet".to_string()],
@@ -29,7 +30,7 @@ fn create_test_config() -> Config {
 #[tokio::test]
 async fn test_websocket_endpoint_exists() {
     let config = create_test_config();
-    
+
     // Check Redis availability
     let redis_available = if let Ok(client) = redis::Client::open(config.redis_url.as_str()) {
         client.get_multiplexed_async_connection().await.is_ok()
@@ -57,13 +58,13 @@ async fn test_websocket_endpoint_exists() {
         .unwrap();
 
     let response = tower::ServiceExt::oneshot(app, request).await.unwrap();
-    
+
     // Should either upgrade or return error (need valid auth)
     let status = response.status();
     assert!(
         status == StatusCode::SWITCHING_PROTOCOLS
-        || status.is_client_error()
-        || status.is_server_error(),
+            || status.is_client_error()
+            || status.is_server_error(),
         "Unexpected status: {:?}",
         status
     );
@@ -72,7 +73,7 @@ async fn test_websocket_endpoint_exists() {
 #[tokio::test]
 async fn test_redis_pubsub_channel_format() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -103,8 +104,11 @@ async fn test_redis_pubsub_channel_format() {
     });
 
     // Publish event
-    let subscribers: usize = conn.publish(&channel, serde_json::to_string(&event).unwrap()).await.unwrap();
-    
+    let subscribers: usize = conn
+        .publish(&channel, serde_json::to_string(&event).unwrap())
+        .await
+        .unwrap();
+
     // No subscribers in test, so should be 0
     assert_eq!(subscribers, 0);
 }
@@ -139,34 +143,46 @@ async fn test_websocket_message_structure() {
 async fn test_websocket_event_types() {
     // Test all escalation event types
     let event_types = vec![
-        ("escalation_created", json!({
-            "type": "escalation_created",
-            "escalation": {
+        (
+            "escalation_created",
+            json!({
+                "type": "escalation_created",
+                "escalation": {
+                    "escalation_id": "esc_1",
+                    "status": "pending"
+                }
+            }),
+        ),
+        (
+            "escalation_approved",
+            json!({
+                "type": "escalation_approved",
                 "escalation_id": "esc_1",
-                "status": "pending"
-            }
-        })),
-        ("escalation_approved", json!({
-            "type": "escalation_approved",
-            "escalation_id": "esc_1",
-            "approved_by": "approver_wallet"
-        })),
-        ("escalation_denied", json!({
-            "type": "escalation_denied",
-            "escalation_id": "esc_1",
-            "denied_by": "approver_wallet",
-            "reason": "Too risky"
-        })),
-        ("escalation_expired", json!({
-            "type": "escalation_expired",
-            "escalation_id": "esc_1"
-        })),
+                "approved_by": "approver_wallet"
+            }),
+        ),
+        (
+            "escalation_denied",
+            json!({
+                "type": "escalation_denied",
+                "escalation_id": "esc_1",
+                "denied_by": "approver_wallet",
+                "reason": "Too risky"
+            }),
+        ),
+        (
+            "escalation_expired",
+            json!({
+                "type": "escalation_expired",
+                "escalation_id": "esc_1"
+            }),
+        ),
     ];
 
     for (event_type, event) in event_types {
         let serialized = serde_json::to_string(&event).unwrap();
         assert!(serialized.contains(event_type));
-        
+
         // Verify deserialization
         let parsed: serde_json::Value = serde_json::from_str(&serialized).unwrap();
         assert_eq!(parsed["type"], event_type);
@@ -194,7 +210,7 @@ async fn test_websocket_subscription_message() {
 #[tokio::test]
 async fn test_redis_channel_isolation() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -214,7 +230,7 @@ async fn test_redis_channel_isolation() {
     // Each wallet should have its own channel
     let wallet1 = "approver_1";
     let wallet2 = "approver_2";
-    
+
     let channel1 = format!("escalation:events:{}", wallet1);
     let channel2 = format!("escalation:events:{}", wallet2);
 
@@ -224,8 +240,14 @@ async fn test_redis_channel_isolation() {
     let event2 = json!({"type": "test", "wallet": wallet2});
 
     // Publish to different channels
-    let _: usize = conn.publish(&channel1, serde_json::to_string(&event1).unwrap()).await.unwrap();
-    let _: usize = conn.publish(&channel2, serde_json::to_string(&event2).unwrap()).await.unwrap();
+    let _: usize = conn
+        .publish(&channel1, serde_json::to_string(&event1).unwrap())
+        .await
+        .unwrap();
+    let _: usize = conn
+        .publish(&channel2, serde_json::to_string(&event2).unwrap())
+        .await
+        .unwrap();
 
     // Events should be isolated (no subscribers, so both return 0)
     assert!(true);

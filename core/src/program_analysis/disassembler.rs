@@ -232,7 +232,11 @@ impl ProgramDisassembler {
         patterns
     }
 
-    fn detect_behavioral_patterns(&self, data: &[u8], instructions: &[Instruction]) -> BehavioralPatternResult {
+    fn detect_behavioral_patterns(
+        &self,
+        data: &[u8],
+        instructions: &[Instruction],
+    ) -> BehavioralPatternResult {
         let mut instruction_categories = HashMap::new();
 
         let mut account_write_count = 0usize;
@@ -246,10 +250,15 @@ impl ProgramDisassembler {
         let mut suspicious_patterns = Vec::new();
 
         // Heuristics are symbol/string based because Solana programs usually preserve syscall labels.
-        let marker_count = |needle: &[u8]| data.windows(needle.len()).filter(|w| *w == needle).count();
+        let marker_count =
+            |needle: &[u8]| data.windows(needle.len()).filter(|w| *w == needle).count();
         let has_marker = |needle: &[u8]| data.windows(needle.len()).any(|w| w == needle);
 
-        let write_markers = [b"try_borrow_mut_data".as_slice(), b"set_lamports", b"transfer"];
+        let write_markers = [
+            b"try_borrow_mut_data".as_slice(),
+            b"set_lamports",
+            b"transfer",
+        ];
         for marker in write_markers {
             account_write_count += marker_count(marker);
         }
@@ -257,7 +266,11 @@ impl ProgramDisassembler {
             instruction_categories.insert("account_write".to_string(), account_write_count);
         }
 
-        let cpi_markers = [b"invoke_signed".as_slice(), b"invoke".as_slice(), b"sol_invoke"];
+        let cpi_markers = [
+            b"invoke_signed".as_slice(),
+            b"invoke".as_slice(),
+            b"sol_invoke",
+        ];
         for marker in cpi_markers {
             cpi_call_count += marker_count(marker);
         }
@@ -265,7 +278,11 @@ impl ProgramDisassembler {
             instruction_categories.insert("cpi_call".to_string(), cpi_call_count);
         }
 
-        let read_markers = [b"try_borrow_data".as_slice(), b"account.data", b"AccountInfo"];
+        let read_markers = [
+            b"try_borrow_data".as_slice(),
+            b"account.data",
+            b"AccountInfo",
+        ];
         for marker in read_markers {
             account_read_count += marker_count(marker);
         }
@@ -273,15 +290,22 @@ impl ProgramDisassembler {
             instruction_categories.insert("account_read".to_string(), account_read_count);
         }
 
-        if has_marker(b"is_signer") || has_marker(b"Signer") || has_marker(b"MissingRequiredSignature") {
+        if has_marker(b"is_signer")
+            || has_marker(b"Signer")
+            || has_marker(b"MissingRequiredSignature")
+        {
             has_signer_check = true;
             checked_account_count += 1;
         }
-        if has_marker(b"owner") || has_marker(b"IncorrectProgramId") || has_marker(b"ProgramOwner") {
+        if has_marker(b"owner") || has_marker(b"IncorrectProgramId") || has_marker(b"ProgramOwner")
+        {
             has_owner_check = true;
             checked_account_count += 1;
         }
-        if has_marker(b"Pubkey::eq") || has_marker(b"account.key") || has_marker(b"InvalidAccountData") {
+        if has_marker(b"Pubkey::eq")
+            || has_marker(b"account.key")
+            || has_marker(b"InvalidAccountData")
+        {
             has_key_check = true;
             checked_account_count += 1;
         }
@@ -360,7 +384,9 @@ impl ProgramDisassembler {
                 let target = if instr.offset >= 0 {
                     instr.address + ((instr.offset as u64 + 1) * 8)
                 } else {
-                    instr.address.saturating_sub((instr.offset.unsigned_abs() as u64) * 8)
+                    instr
+                        .address
+                        .saturating_sub((instr.offset.unsigned_abs() as u64) * 8)
                 };
                 edges.insert((instr.address, target));
                 nodes.insert(target);
@@ -471,7 +497,9 @@ mod tests {
     fn detects_msc_and_acpi_patterns() {
         let disassembler = ProgramDisassembler::new().expect("disassembler");
         // two 8-byte instructions + symbol payload markers used by heuristic detection
-        let mut data = vec![0x05, 0x10, 0x01, 0x00, 0, 0, 0, 0, 0x03, 0x00, 0, 0, 0, 0, 0, 0];
+        let mut data = vec![
+            0x05, 0x10, 0x01, 0x00, 0, 0, 0, 0, 0x03, 0x00, 0, 0, 0, 0, 0, 0,
+        ];
         data.extend_from_slice(b"try_borrow_mut_data invoke_signed");
 
         let result = disassembler.disassemble(&data).expect("disassemble");

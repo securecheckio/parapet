@@ -27,10 +27,10 @@ fn test_load_wasm_from_empty_dir() {
 #[test]
 fn test_wasm_config_empty() {
     use parapet_core::rules::wasm_config::load_wasm_config_from_env;
-    
+
     // Without env vars, should return empty map
     let config = load_wasm_config_from_env();
-    
+
     // May have env vars set, so just verify it returns a HashMap
     assert!(config.is_empty() || !config.is_empty());
 }

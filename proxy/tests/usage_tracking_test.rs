@@ -6,7 +6,7 @@ async fn test_usage_tracker_creation() {
     // UsageTracker creation succeeds (client is lazy)
     let result = UsageTracker::new("redis://localhost:6379", 10_000);
     assert!(result.is_ok());
-    
+
     // Actual connection happens on first use
     // Without Redis running, operations will fail
     if let Ok(tracker) = result {

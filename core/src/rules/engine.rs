@@ -1058,11 +1058,9 @@ impl RuleEngine {
     ) -> Pin<Box<dyn Future<Output = Result<bool>> + 'a + Send>> {
         Box::pin(async move {
             match condition {
-                RuleCondition::Simple(simple) => {
-                    Ok(self
-                        .evaluate_simple_with_flowbits(simple, fields, missing_field_override, wallet)
-                        .await?)
-                }
+                RuleCondition::Simple(simple) => Ok(self
+                    .evaluate_simple_with_flowbits(simple, fields, missing_field_override, wallet)
+                    .await?),
                 RuleCondition::Flowbit(flowbit) => self.evaluate_flowbit(flowbit, wallet).await,
                 RuleCondition::Compound(compound) => {
                     self.evaluate_compound_with_override(
@@ -1194,9 +1192,7 @@ impl RuleEngine {
         missing_field_override: Option<&str>,
     ) -> Result<bool> {
         if condition.operator == ComparisonOperator::IsNotSet {
-            let present = fields
-                .get(&condition.field)
-                .filter(|v| !v.is_null());
+            let present = fields.get(&condition.field).filter(|v| !v.is_null());
             return Ok(present.is_none());
         }
         if condition.operator == ComparisonOperator::Exists {

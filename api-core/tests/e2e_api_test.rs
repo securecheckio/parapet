@@ -128,9 +128,7 @@ async fn test_create_rule_endpoint_structure() {
     // Should either succeed (with Redis) or fail gracefully (without Redis)
     let status = response.status();
     assert!(
-        status.is_success()
-            || status.is_client_error()
-            || status.is_server_error(),
+        status.is_success() || status.is_client_error() || status.is_server_error(),
         "Unexpected status: {:?}",
         status
     );
@@ -142,9 +140,7 @@ async fn test_create_rule_endpoint_structure() {
         let json_response: Value = serde_json::from_slice(&body).unwrap();
 
         // Should return success indicator
-        assert!(
-            json_response.get("success").is_some() || json_response.get("rule_id").is_some()
-        );
+        assert!(json_response.get("success").is_some() || json_response.get("rule_id").is_some());
     }
 }
 

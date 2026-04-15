@@ -155,7 +155,9 @@ pub async fn build_app_router(config: ServerConfig) -> Result<Router> {
     Ok(router)
 }
 
-async fn build_app_router_internal(config: ServerConfig) -> Result<(Router, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
+async fn build_app_router_internal(
+    config: ServerConfig,
+) -> Result<(Router, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
     // Initialize cache (side effect: connects Redis or allocates in-memory store)
     if let Some(redis_url) = &config.redis_url {
         log::info!("💾 Connecting to Redis: {}", redis_url);
@@ -454,14 +456,17 @@ pub async fn start_server(config: ServerConfig) -> Result<()> {
 /// Start server and return handle + rule engine for hot-reloading
 pub async fn start_server_with_reload(
     config: ServerConfig,
-) -> Result<(tokio::task::JoinHandle<Result<()>>, Arc<tokio::sync::RwLock<rules::RuleEngine>>)> {
+) -> Result<(
+    tokio::task::JoinHandle<Result<()>>,
+    Arc<tokio::sync::RwLock<rules::RuleEngine>>,
+)> {
     log::info!("🚀 Starting Parapet RPC Proxy");
     log::info!("📡 Upstream RPC: {}", mask_api_key(&config.upstream_url));
 
     let port = config.port;
     let bind_address = config.bind_address;
     let addr = SocketAddr::from((bind_address, port));
-    
+
     let (app, rule_engine) = build_app_router_with_engine(config).await?;
 
     log::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
@@ -502,10 +507,12 @@ pub async fn start_server_with_reload(
     log::info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    
+
     // Spawn server in background
     let server_handle = tokio::spawn(async move {
-        axum::serve(listener, app).await.map_err(|e| anyhow::anyhow!("Server error: {}", e))
+        axum::serve(listener, app)
+            .await
+            .map_err(|e| anyhow::anyhow!("Server error: {}", e))
     });
 
     Ok((server_handle, rule_engine))
@@ -559,25 +566,25 @@ fn load_analyzers_config() -> rules::AnalyzersConfig {
 
 fn get_network_interfaces() -> Result<Vec<(String, String)>> {
     use std::process::Command;
-    
+
     let mut interfaces = Vec::new();
-    
+
     // Try to get network interfaces using `ip addr` (Linux)
     if let Ok(output) = Command::new("ip").arg("addr").output() {
         if output.status.success() {
             let output_str = String::from_utf8_lossy(&output.stdout);
             let mut current_interface = String::new();
-            
+
             for line in output_str.lines() {
                 let line = line.trim();
-                
+
                 // Parse interface name (e.g., "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP>")
                 if line.chars().next().map_or(false, |c| c.is_numeric()) {
                     if let Some(name_part) = line.split(':').nth(1) {
                         current_interface = name_part.trim().to_string();
                     }
                 }
-                
+
                 // Parse IPv4 address (e.g., "inet 192.168.1.100/24")
                 if line.starts_with("inet ") && !line.contains("127.0.0.1") {
                     if let Some(ip_part) = line.split_whitespace().nth(1) {
@@ -591,7 +598,7 @@ fn get_network_interfaces() -> Result<Vec<(String, String)>> {
             }
         }
     }
-    
+
     // Fallback: try `hostname -I` for simpler output
     if interfaces.is_empty() {
         if let Ok(output) = Command::new("hostname").arg("-I").output() {
@@ -605,7 +612,7 @@ fn get_network_interfaces() -> Result<Vec<(String, String)>> {
             }
         }
     }
-    
+
     Ok(interfaces)
 }
 

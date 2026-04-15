@@ -9,8 +9,6 @@ members = [
     "mcp",
     "tools/rpc-perf",
     "tools/flowbits-perf",
-    "api-platform",
-    "reference/gateway",
 ]
 exclude = [
     "core/tests/wasm_mock",

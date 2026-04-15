@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: parapet-caddy
+    restart: unless-stopped
+    ports:
+      - "443:443"      # HTTPS
+      - "80:80"        # HTTP (redirects to HTTPS)
+      - "8443:8443"    # Custom HTTPS port for local testing
+      - "3443:3443"    # API HTTPS
+    volumes:
+      # Choose ONE of these Caddyfiles:
+      - ./Caddyfile.generated:/etc/caddy/Caddyfile:ro   # Generated from script
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./logs:/var/log/caddy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Access host services
+    environment:
+      - CADDY_ADMIN=0.0.0.0:2019
+
+  # Uncomment if you want to run all services in Docker
+  # parapet-proxy:
+  #   build: ../../proxy
+  #   ports:
+  #     - "8899:8899"
+  #   volumes:
+  #     - ../../proxy/config.toml:/app/config.toml:ro
+  #   environment:
+  #     - RUST_LOG=info
+  
+  # parapet-api:
+  #   build: ../../api-core
+  #   ports:
+  #     - "3001:3001"
+  #   environment:
+  #     - REDIS_URL=redis://redis:6379
+  
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+
+volumes:
+  caddy_data:
+  caddy_config:

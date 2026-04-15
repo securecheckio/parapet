@@ -32,14 +32,15 @@ where
     S: ApiStateAccess,
 {
     // Verify timestamp
-    verify_timestamp(query.timestamp)
-        .map_err(|e| (StatusCode::UNAUTHORIZED, format!("Invalid timestamp: {}", e)))?;
+    verify_timestamp(query.timestamp).map_err(|e| {
+        (
+            StatusCode::UNAUTHORIZED,
+            format!("Invalid timestamp: {}", e),
+        )
+    })?;
 
     // Verify message format
-    let expected_message = format!(
-        "parapet:activity:{}:{}",
-        query.wallet, query.timestamp
-    );
+    let expected_message = format!("parapet:activity:{}:{}", query.wallet, query.timestamp);
     if query.message != expected_message {
         return Err((
             StatusCode::UNAUTHORIZED,
@@ -48,8 +49,12 @@ where
     }
 
     // Verify signature
-    verify_wallet_signature(&query.wallet, &query.message, &query.signature)
-        .map_err(|e| (StatusCode::UNAUTHORIZED, format!("Invalid signature: {}", e)))?;
+    verify_wallet_signature(&query.wallet, &query.message, &query.signature).map_err(|e| {
+        (
+            StatusCode::UNAUTHORIZED,
+            format!("Invalid signature: {}", e),
+        )
+    })?;
 
     // Fetch recent activity from Redis
     let client = redis::Client::open(state.config().redis_url.as_str())

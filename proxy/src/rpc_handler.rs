@@ -428,7 +428,9 @@ async fn handle_transaction_send(
             );
 
             let mut event_builder = EventBuilder::new(
-                wallet_address.clone().unwrap_or_else(|| "unknown".to_string()),
+                wallet_address
+                    .clone()
+                    .unwrap_or_else(|| "unknown".to_string()),
                 req.method.clone(),
             )
             .with_auth_context(&auth_context);
@@ -451,21 +453,34 @@ async fn handle_transaction_send(
             if let Some(activity_config) = &state.activity_feed_config {
                 if let Some(wallet_addr) = &wallet_address {
                     // Get rule decision details or use defaults for clean transactions
-                    let (risk_score, rule_id, rule_name, message, action) = if let Some(decision) = &rule_decision_for_event {
-                        (
-                            decision.total_risk,
-                            decision.rule_id.as_str(),
-                            decision.rule_name.as_str(),
-                            decision.message.as_str(),
-                            match decision.action {
-                                parapet_core::rules::types::RuleAction::Block => crate::activity::ActivityAction::Blocked,
-                                parapet_core::rules::types::RuleAction::Pass => crate::activity::ActivityAction::Allowed,
-                                parapet_core::rules::types::RuleAction::Alert => crate::activity::ActivityAction::Flagged,
-                            }
-                        )
-                    } else {
-                        (0, "no_match", "Clean Transaction", "No security rules matched - transaction is safe", crate::activity::ActivityAction::Allowed)
-                    };
+                    let (risk_score, rule_id, rule_name, message, action) =
+                        if let Some(decision) = &rule_decision_for_event {
+                            (
+                                decision.total_risk,
+                                decision.rule_id.as_str(),
+                                decision.rule_name.as_str(),
+                                decision.message.as_str(),
+                                match decision.action {
+                                    parapet_core::rules::types::RuleAction::Block => {
+                                        crate::activity::ActivityAction::Blocked
+                                    }
+                                    parapet_core::rules::types::RuleAction::Pass => {
+                                        crate::activity::ActivityAction::Allowed
+                                    }
+                                    parapet_core::rules::types::RuleAction::Alert => {
+                                        crate::activity::ActivityAction::Flagged
+                                    }
+                                },
+                            )
+                        } else {
+                            (
+                                0,
+                                "no_match",
+                                "Clean Transaction",
+                                "No security rules matched - transaction is safe",
+                                crate::activity::ActivityAction::Allowed,
+                            )
+                        };
 
                     // Check if event should be published based on risk threshold
                     if risk_score >= activity_config.min_risk_score {

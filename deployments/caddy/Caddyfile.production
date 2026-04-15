@@ -1,0 +1,42 @@
+# Caddy config for PRODUCTION with Let's Encrypt
+# Replace with your actual domain
+
+# RPC Proxy (for mobile wallets)
+rpc.yourdomain.com {
+    reverse_proxy localhost:8899
+    
+    log {
+        output file /var/log/caddy/proxy.log
+    }
+}
+
+# Activity API
+api.yourdomain.com {
+    reverse_proxy localhost:3001
+    
+    log {
+        output file /var/log/caddy/api.log
+    }
+}
+
+# Dashboard
+dashboard.yourdomain.com {
+    reverse_proxy localhost:8080
+    
+    log {
+        output file /var/log/caddy/dashboard.log
+    }
+}
+
+# Or use a single domain with paths:
+# yourdomain.com {
+#     handle /api/* {
+#         reverse_proxy localhost:3001
+#     }
+#     handle /dashboard* {
+#         reverse_proxy localhost:8080
+#     }
+#     handle /* {
+#         reverse_proxy localhost:8899
+#     }
+# }

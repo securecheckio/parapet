@@ -2,8 +2,8 @@ use anyhow::{anyhow, Result};
 use reqwest::header::{ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::time::Instant;
 use std::time::Duration;
+use std::time::Instant;
 use tokio::sync::RwLock;
 
 use crate::rules::analyzers::BlockedHash;
@@ -79,9 +79,11 @@ impl FeedPoller {
                 Ok(Some(feed)) => {
                     self.mark_success(feed_url).await;
                     merged_programs.extend(feed.blocked_programs);
-                    merged_hashes.extend(feed.blocked_hashes.into_iter().map(|entry| BlockedHash {
-                        program_id: entry.program_id,
-                        hash: entry.hash,
+                    merged_hashes.extend(feed.blocked_hashes.into_iter().map(|entry| {
+                        BlockedHash {
+                            program_id: entry.program_id,
+                            hash: entry.hash,
+                        }
                     }));
                 }
                 Ok(None) => {
@@ -105,7 +107,10 @@ impl FeedPoller {
         Ok(())
     }
 
-    async fn fetch_feed(&self, url: &str) -> std::result::Result<Option<BlocklistFeed>, FeedFetchError> {
+    async fn fetch_feed(
+        &self,
+        url: &str,
+    ) -> std::result::Result<Option<BlocklistFeed>, FeedFetchError> {
         let mut request = self.client.get(url).timeout(Duration::from_secs(10));
 
         if let Some(state) = self.states.read().await.get(url).cloned() {
@@ -128,7 +133,8 @@ impl FeedPoller {
 
         if !response.status().is_success() {
             let status = response.status();
-            let retryable = status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error();
+            let retryable =
+                status == reqwest::StatusCode::TOO_MANY_REQUESTS || status.is_server_error();
             return Err(FeedFetchError {
                 message: format!("feed returned HTTP {}", status),
                 retryable,

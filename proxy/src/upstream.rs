@@ -322,10 +322,18 @@ mod tests {
 
     #[test]
     fn retryable_error_classification_covers_expected_statuses() {
-        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=500")));
-        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=429")));
-        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!("connection reset")));
-        assert!(!UpstreamClient::is_retryable_error(&anyhow::anyhow!("status=400")));
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!(
+            "status=500"
+        )));
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!(
+            "status=429"
+        )));
+        assert!(UpstreamClient::is_retryable_error(&anyhow::anyhow!(
+            "connection reset"
+        )));
+        assert!(!UpstreamClient::is_retryable_error(&anyhow::anyhow!(
+            "status=400"
+        )));
     }
 
     #[tokio::test]

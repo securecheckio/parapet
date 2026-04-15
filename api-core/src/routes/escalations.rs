@@ -25,7 +25,10 @@ fn verify_escalation_read_auth(
 ) -> Result<(), (StatusCode, String)> {
     verify_timestamp(query.timestamp)
         .map_err(|e| (StatusCode::BAD_REQUEST, format!("Invalid timestamp: {}", e)))?;
-    let expected_message = format!("parapet:escalation:read:{}:{}", escalation_id, query.timestamp);
+    let expected_message = format!(
+        "parapet:escalation:read:{}:{}",
+        escalation_id, query.timestamp
+    );
     if query.message != expected_message {
         return Err((
             StatusCode::BAD_REQUEST,

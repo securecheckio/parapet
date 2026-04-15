@@ -122,18 +122,15 @@ async fn main() -> anyhow::Result<()> {
         tokio::spawn(async move {
             use tokio::signal::unix::{signal, SignalKind};
 
-            let mut sighup = signal(SignalKind::hangup())
-                .expect("Failed to register SIGHUP handler");
+            let mut sighup =
+                signal(SignalKind::hangup()).expect("Failed to register SIGHUP handler");
 
             loop {
                 sighup.recv().await;
                 log::info!("🔄 Received SIGHUP signal, reloading configuration...");
 
-                if let Err(e) = reload_configuration(
-                    &config_path,
-                    &rules_path,
-                    &rule_engine,
-                ).await {
+                if let Err(e) = reload_configuration(&config_path, &rules_path, &rule_engine).await
+                {
                     log::error!("❌ Failed to reload configuration: {}", e);
                 } else {
                     log::info!("✅ Configuration reloaded successfully");
@@ -166,10 +163,10 @@ async fn reload_configuration(
     // Reload rules if path is specified
     if let Some(rules_file) = rules_path {
         log::info!("📋 Reloading rules from {}", rules_file);
-        
+
         let mut engine = rule_engine.write().await;
         engine.load_rules_from_file(rules_file)?;
-        
+
         log::info!("✅ Rules reloaded from {}", rules_file);
     }
 

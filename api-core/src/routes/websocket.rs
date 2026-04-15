@@ -46,7 +46,10 @@ where
         let (code, detail) = if let Some(rest) = e.strip_prefix("invalid_timestamp:") {
             ("invalid_timestamp", rest.to_string())
         } else if e == "invalid_message" {
-            ("invalid_message", "message must match challenge".to_string())
+            (
+                "invalid_message",
+                "message must match challenge".to_string(),
+            )
         } else if let Some(rest) = e.strip_prefix("unauthorized:") {
             ("unauthorized", rest.to_string())
         } else {
@@ -116,8 +119,10 @@ struct SubscribeRequest {
 
 fn verify_subscribe_request(sub: &SubscribeRequest) -> Result<(), String> {
     verify_timestamp(sub.timestamp).map_err(|e| format!("invalid_timestamp:{e}"))?;
-    let expected_message =
-        format!("parapet:ws:escalations:subscribe:{}:{}", sub.wallet, sub.timestamp);
+    let expected_message = format!(
+        "parapet:ws:escalations:subscribe:{}:{}",
+        sub.wallet, sub.timestamp
+    );
     if sub.message != expected_message {
         return Err("invalid_message".to_string());
     }

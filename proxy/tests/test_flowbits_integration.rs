@@ -83,7 +83,10 @@ async fn test_ai_agent_account_spam() {
         );
         let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
         let mut tx = Transaction::new_unsigned(message);
-        tx.sign(&[&agent_keypair, &new_account], solana_sdk::hash::Hash::default());
+        tx.sign(
+            &[&agent_keypair, &new_account],
+            solana_sdk::hash::Hash::default(),
+        );
 
         let decision = engine.evaluate(&tx).await.unwrap();
         assert_ne!(
@@ -105,7 +108,10 @@ async fn test_ai_agent_account_spam() {
     );
     let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
     let mut tx = Transaction::new_unsigned(message);
-    tx.sign(&[&agent_keypair, &new_account], solana_sdk::hash::Hash::default());
+    tx.sign(
+        &[&agent_keypair, &new_account],
+        solana_sdk::hash::Hash::default(),
+    );
 
     let decision = engine.evaluate(&tx).await.unwrap();
     assert_eq!(

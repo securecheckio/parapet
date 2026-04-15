@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: parapet-caddy
+    restart: unless-stopped
+    ports:
+      - "9443:9443"  # RPC Proxy HTTPS
+      - "9444:9444"  # Activity API HTTPS
+      - "9445:9445"  # Dashboard HTTPS
+    volumes:
+      - ./Caddyfile.docker:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+      - ./logs:/var/log/caddy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  caddy_data:
+  caddy_config:

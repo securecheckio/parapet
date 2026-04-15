@@ -1,7 +1,7 @@
 /// Dynamic rules tests - live rule updates from Redis
 use parapet_core::rules::analyzers::*;
+use parapet_core::rules::types::{Rule, RuleAction, RuleDefinition};
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
-use parapet_core::rules::types::{RuleDefinition, Rule, RuleAction};
 use redis::AsyncCommands;
 use serde_json::json;
 use std::sync::Arc;
@@ -10,9 +10,9 @@ use std::sync::Arc;
 async fn test_rule_engine_creation() {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
-    
+
     let engine = RuleEngine::new(registry).with_flowbits(None);
-    
+
     assert_eq!(engine.rule_count(), 0);
     assert_eq!(engine.enabled_rule_count(), 0);
 }
@@ -22,9 +22,9 @@ async fn test_load_rules_dynamically() {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
     registry.register(Arc::new(SystemProgramAnalyzer::new()));
-    
+
     let mut engine = RuleEngine::new(registry).with_flowbits(None);
-    
+
     // Load first rule
     let rule1 = RuleDefinition {
         version: "1.0".to_string(),
@@ -44,7 +44,8 @@ async fn test_load_rules_dynamically() {
                         "value": 5
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Many instructions".to_string(),
             flowbits: None,
         },
@@ -73,7 +74,8 @@ async fn test_load_rules_dynamically() {
                         "value": 1
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Single instruction".to_string(),
             flowbits: None,
         },
@@ -82,7 +84,7 @@ async fn test_load_rules_dynamically() {
 
     engine.load_rules(vec![rule2]).unwrap();
     assert_eq!(engine.enabled_rule_count(), 1);
-    
+
     // Load both rules together
     let rule1_new = rule1.clone();
     let rule2_new = RuleDefinition {
@@ -103,21 +105,23 @@ async fn test_load_rules_dynamically() {
                         "value": 3
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Few instructions".to_string(),
             flowbits: None,
         },
         metadata: Default::default(),
     };
-    
+
     engine.load_rules(vec![rule1_new, rule2_new]).unwrap();
     assert_eq!(engine.enabled_rule_count(), 2);
 }
 
 #[tokio::test]
 async fn test_redis_dynamic_rule_storage() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-    
+    let redis_url =
+        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+
     let client = match redis::Client::open(redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -157,12 +161,15 @@ async fn test_redis_dynamic_rule_storage() {
     });
 
     let rule_key = format!("dynamic_rule:{}", rule_id);
-    let _: () = conn.set_ex(&rule_key, serde_json::to_string(&rule).unwrap(), 3600).await.unwrap();
+    let _: () = conn
+        .set_ex(&rule_key, serde_json::to_string(&rule).unwrap(), 3600)
+        .await
+        .unwrap();
 
     // Verify stored
     let stored: String = conn.get(&rule_key).await.unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&stored).unwrap();
-    
+
     assert_eq!(parsed["id"], rule_id);
     assert_eq!(parsed["enabled"], true);
     assert_eq!(parsed["rule"]["action"], "alert");
@@ -175,9 +182,9 @@ async fn test_redis_dynamic_rule_storage() {
 async fn test_rule_priority_handling() {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
-    
+
     let mut engine = RuleEngine::new(registry).with_flowbits(None);
-    
+
     // Load rules with different actions
     let block_rule = RuleDefinition {
         version: "1.0".to_string(),
@@ -197,7 +204,8 @@ async fn test_rule_priority_handling() {
                         "value": 0
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Blocked".to_string(),
             flowbits: None,
         },
@@ -222,7 +230,8 @@ async fn test_rule_priority_handling() {
                         "value": 0
                     }
                 ]
-            })).unwrap(),
+            }))
+            .unwrap(),
             message: "Passed".to_string(),
             flowbits: None,
         },
@@ -230,15 +239,16 @@ async fn test_rule_priority_handling() {
     };
 
     engine.load_rules(vec![block_rule, pass_rule]).unwrap();
-    
+
     // Both rules should be loaded
     assert_eq!(engine.enabled_rule_count(), 2);
 }
 
 #[tokio::test]
 async fn test_rule_update_via_redis() {
-    let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
-    
+    let redis_url =
+        std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string());
+
     let client = match redis::Client::open(redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -272,7 +282,10 @@ async fn test_rule_update_via_redis() {
     });
 
     let rule_key = format!("dynamic_rule:{}", rule_id);
-    let _: () = conn.set_ex(&rule_key, serde_json::to_string(&rule_v1).unwrap(), 3600).await.unwrap();
+    let _: () = conn
+        .set_ex(&rule_key, serde_json::to_string(&rule_v1).unwrap(), 3600)
+        .await
+        .unwrap();
 
     // Update rule
     let rule_v2 = json!({
@@ -289,12 +302,15 @@ async fn test_rule_update_via_redis() {
         }
     });
 
-    let _: () = conn.set_ex(&rule_key, serde_json::to_string(&rule_v2).unwrap(), 3600).await.unwrap();
+    let _: () = conn
+        .set_ex(&rule_key, serde_json::to_string(&rule_v2).unwrap(), 3600)
+        .await
+        .unwrap();
 
     // Verify update
     let stored: String = conn.get(&rule_key).await.unwrap();
     let parsed: serde_json::Value = serde_json::from_str(&stored).unwrap();
-    
+
     assert_eq!(parsed["name"], "Rule Version 2");
     assert_eq!(parsed["rule"]["action"], "block");
     assert_eq!(parsed["rule"]["message"], "Version 2 - Updated");

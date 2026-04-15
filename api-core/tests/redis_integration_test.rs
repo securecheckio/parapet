@@ -1,7 +1,5 @@
 use anyhow::Result;
-use parapet_api_core::{
-    state::{AppState, Config},
-};
+use parapet_api_core::state::{AppState, Config};
 use redis::AsyncCommands;
 use solana_sdk::{
     signature::{Keypair, Signer},
@@ -36,7 +34,7 @@ async fn test_nonce_generation() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());
@@ -69,7 +67,7 @@ async fn test_escalation_lifecycle() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());
@@ -135,7 +133,7 @@ async fn test_dynamic_rule_creation() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());
@@ -186,7 +184,7 @@ async fn test_pending_transaction_storage() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());
@@ -227,7 +225,7 @@ async fn test_approver_pending_set() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());
@@ -275,7 +273,7 @@ async fn test_websocket_event_publish() -> Result<()> {
             return Ok(());
         }
     };
-    
+
     let Some(ref redis_conn) = state.redis.as_ref() else {
         println!("⚠️  Skipping test: Redis not available");
         return Ok(());

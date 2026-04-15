@@ -17,7 +17,8 @@ fn create_test_config() -> Config {
         worker_threads: None,
         max_concurrent_scans: 2,
         scans_per_hour_per_key: 10,
-        redis_url: std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+        redis_url: std::env::var("REDIS_URL")
+            .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         solana_rpc_url: "https://api.devnet.solana.com".to_string(),
         solana_network: "devnet".to_string(),
         authorized_wallets: vec!["test_approver".to_string()],
@@ -29,7 +30,7 @@ fn create_test_config() -> Config {
 #[tokio::test]
 async fn test_escalation_create_and_retrieve() {
     let config = create_test_config();
-    
+
     // Try to connect to Redis
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
@@ -67,7 +68,14 @@ async fn test_escalation_create_and_retrieve() {
     });
 
     let escalation_key = format!("escalation:pending:{}", escalation_id);
-    let _: () = conn.set_ex(&escalation_key, serde_json::to_string(&escalation).unwrap(), 300).await.unwrap();
+    let _: () = conn
+        .set_ex(
+            &escalation_key,
+            serde_json::to_string(&escalation).unwrap(),
+            300,
+        )
+        .await
+        .unwrap();
 
     // Also add to approver's pending set
     let approver_key = "escalation:pending:approver:test_approver";
@@ -82,7 +90,7 @@ async fn test_escalation_create_and_retrieve() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    
+
     let status = response.status();
     assert!(
         status.is_success() || status.is_client_error(),
@@ -97,7 +105,9 @@ async fn test_escalation_create_and_retrieve() {
         return;
     }
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json_response: Value = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(json_response["escalation_id"], escalation_id);
@@ -112,7 +122,7 @@ async fn test_escalation_create_and_retrieve() {
 #[tokio::test]
 async fn test_escalation_approve_flow() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -149,11 +159,21 @@ async fn test_escalation_approve_flow() {
     });
 
     let escalation_key = format!("escalation:pending:{}", escalation_id);
-    let _: () = conn.set_ex(&escalation_key, serde_json::to_string(&escalation).unwrap(), 300).await.unwrap();
+    let _: () = conn
+        .set_ex(
+            &escalation_key,
+            serde_json::to_string(&escalation).unwrap(),
+            300,
+        )
+        .await
+        .unwrap();
 
     // Store pending transaction
     let tx_key = format!("pending_tx:{}", escalation_id);
-    let _: () = conn.set_ex(&tx_key, vec![1u8, 2, 3, 4, 5], 50).await.unwrap();
+    let _: () = conn
+        .set_ex(&tx_key, vec![1u8, 2, 3, 4, 5], 50)
+        .await
+        .unwrap();
 
     // Approve the escalation
     let approve_payload = json!({
@@ -170,13 +190,11 @@ async fn test_escalation_approve_flow() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    
+
     // Should succeed or return validation error (signature verification)
     let status = response.status();
     assert!(
-        status.is_success() 
-        || status.is_client_error()
-        || status.is_server_error(),
+        status.is_success() || status.is_client_error() || status.is_server_error(),
         "Unexpected status: {:?}",
         status
     );
@@ -189,7 +207,7 @@ async fn test_escalation_approve_flow() {
 #[tokio::test]
 async fn test_escalation_deny_flow() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -226,7 +244,14 @@ async fn test_escalation_deny_flow() {
     });
 
     let escalation_key = format!("escalation:pending:{}", escalation_id);
-    let _: () = conn.set_ex(&escalation_key, serde_json::to_string(&escalation).unwrap(), 300).await.unwrap();
+    let _: () = conn
+        .set_ex(
+            &escalation_key,
+            serde_json::to_string(&escalation).unwrap(),
+            300,
+        )
+        .await
+        .unwrap();
 
     // Deny the escalation
     let deny_payload = json!({
@@ -243,13 +268,11 @@ async fn test_escalation_deny_flow() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    
+
     // Should succeed or return validation error
     let status = response.status();
     assert!(
-        status.is_success() 
-        || status.is_client_error()
-        || status.is_server_error(),
+        status.is_success() || status.is_client_error() || status.is_server_error(),
         "Unexpected status: {:?}",
         status
     );
@@ -261,7 +284,7 @@ async fn test_escalation_deny_flow() {
 #[tokio::test]
 async fn test_list_pending_escalations_for_approver() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -302,12 +325,25 @@ async fn test_list_pending_escalations_for_approver() {
         });
 
         let escalation_key = format!("escalation:pending:{}", esc_id);
-        let _: () = conn.set_ex(&escalation_key, serde_json::to_string(&escalation).unwrap(), 300).await.unwrap();
-        
+        let _: () = conn
+            .set_ex(
+                &escalation_key,
+                serde_json::to_string(&escalation).unwrap(),
+                300,
+            )
+            .await
+            .unwrap();
+
         // Add to approver's pending set
-        let _: () = conn.sadd("escalation:pending:approver:test_approver", esc_id).await.unwrap();
+        let _: () = conn
+            .sadd("escalation:pending:approver:test_approver", esc_id)
+            .await
+            .unwrap();
     }
-    let _: () = conn.expire("escalation:pending:approver:test_approver", 300).await.unwrap();
+    let _: () = conn
+        .expire("escalation:pending:approver:test_approver", 300)
+        .await
+        .unwrap();
 
     // List pending escalations
     let list_payload = json!({
@@ -322,9 +358,11 @@ async fn test_list_pending_escalations_for_approver() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    
+
     if response.status() == StatusCode::OK {
-        let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
         let json_response: Value = serde_json::from_slice(&body).unwrap();
 
         // Should return an array of escalations
@@ -338,13 +376,16 @@ async fn test_list_pending_escalations_for_approver() {
         let escalation_key = format!("escalation:pending:{}", esc_id);
         let _: () = conn.del(&escalation_key).await.unwrap();
     }
-    let _: () = conn.del("escalation:pending:approver:test_approver").await.unwrap();
+    let _: () = conn
+        .del("escalation:pending:approver:test_approver")
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
 async fn test_escalation_status_check() {
     let config = create_test_config();
-    
+
     let redis_client = match redis::Client::open(config.redis_url.as_str()) {
         Ok(client) => client,
         Err(_) => {
@@ -381,7 +422,14 @@ async fn test_escalation_status_check() {
     });
 
     let escalation_key = format!("escalation:pending:{}", escalation_id);
-    let _: () = conn.set_ex(&escalation_key, serde_json::to_string(&escalation).unwrap(), 300).await.unwrap();
+    let _: () = conn
+        .set_ex(
+            &escalation_key,
+            serde_json::to_string(&escalation).unwrap(),
+            300,
+        )
+        .await
+        .unwrap();
 
     // Check status
     let request = Request::builder()
@@ -391,7 +439,7 @@ async fn test_escalation_status_check() {
         .unwrap();
 
     let response = app.oneshot(request).await.unwrap();
-    
+
     let status = response.status();
     assert!(
         status.is_success() || status.is_client_error(),
@@ -405,7 +453,9 @@ async fn test_escalation_status_check() {
         return;
     }
 
-    let body = axum::body::to_bytes(response.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json_response: Value = serde_json::from_slice(&body).unwrap();
 
     assert_eq!(json_response["status"], "pending");

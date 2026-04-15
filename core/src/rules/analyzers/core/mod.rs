@@ -4,9 +4,9 @@ pub mod core_security;
 pub mod inner_instruction;
 pub mod instruction_data;
 pub mod instruction_padding;
-pub mod program_complexity;
 #[cfg(feature = "program-analysis")]
 pub mod program_analysis;
+pub mod program_complexity;
 pub mod system_program;
 pub mod token_instructions;
 pub mod transaction_logs;
@@ -29,9 +29,9 @@ pub use core_security::CoreSecurityAnalyzer;
 pub use inner_instruction::InnerInstructionAnalyzer;
 pub use instruction_data::InstructionDataAnalyzer;
 pub use instruction_padding::InstructionPaddingAnalyzer;
-pub use program_complexity::ProgramComplexityAnalyzer;
 #[cfg(feature = "program-analysis")]
 pub use program_analysis::{BlockedHash, ProgramAnalyzer};
+pub use program_complexity::ProgramComplexityAnalyzer;
 pub use system_program::SystemProgramAnalyzer;
 pub use token_instructions::TokenInstructionAnalyzer;
 pub use transaction_logs::TransactionLogAnalyzer;
