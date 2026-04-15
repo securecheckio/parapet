@@ -1,4 +1,4 @@
-name: Parapet CI
+name: Test & Build
 
 on:
   push:
