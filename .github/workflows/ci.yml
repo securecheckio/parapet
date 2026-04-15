@@ -8,11 +8,18 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  CARGO_NET_RETRY: 10
+  RUSTUP_MAX_RETRIES: 10
 
 jobs:
   test:
     name: Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
     
     steps:
       - uses: actions/checkout@v4
@@ -28,8 +35,16 @@ jobs:
       - name: Check formatting
         run: cargo fmt --all -- --check
       
-      - name: Run clippy
-        run: cargo clippy --all-targets --all-features
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+      
+      - name: Run clippy (release mode)
+        run: cargo clippy --all-targets --all-features --release
       
       - name: Install WASM target
         run: rustup target add wasm32-unknown-unknown
@@ -37,11 +52,23 @@ jobs:
       - name: Build WASM mock
         run: cd core/tests/wasm_mock && cargo build --target wasm32-unknown-unknown --release
       
-      - name: Run tests
-        run: cargo test --workspace --all-features --verbose
+      - name: Run tests (release mode)
+        run: cargo test --workspace --all-features --release --verbose
       
-      - name: Build release
+      - name: Build release binaries
         run: cargo build --workspace --release --verbose
+      
+      - name: Generate attestation for parapet binary
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: target/release/parapet
+      
+      - name: Upload parapet binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: parapet-${{ github.sha }}
+          path: target/release/parapet
+          retention-days: 30
 
   build-image:
     name: Build Docker Image
