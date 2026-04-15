@@ -65,7 +65,7 @@ jobs:
       run: strip target/release/parapet
 
     - name: Generate attestation for parapet binary
-      uses: actions/attest-build-provenance@v1
+      uses: actions/attest-build-provenance@v4
       with:
         subject-path: target/release/parapet
 
