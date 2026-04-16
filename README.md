@@ -2,13 +2,13 @@
 
 # Parapet
 
-### Fast, portable Solana transaction security
+### Stop attacks before the transaction lands
 
-**Open-source security platform for the Solana ecosystem**
+**Perimeter security for Solana wallets, AI agents 🦞, and trading firms**
 
-[License: MIT](LICENSE)
-[Rust](https://www.rust-lang.org/)
-[Solana](https://solana.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg?logo=rust)](https://www.rust-lang.org/)
+[![Solana](https://img.shields.io/badge/Solana-14F195?logo=solana&logoColor=white)](https://solana.com/)
 
   [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
 
@@ -30,8 +30,6 @@ Parapet is an open-source security platform for Solana that provides:
 - **~2,900 tx/s throughput** - 29x faster than requirement
 - **0.456ms p95 latency** - 22x better than target
 - **Zero failures** - Stable under load
-
-Blocked transactions are 28% faster than pass transactions due to early termination optimization.
 
 ## Components
 
@@ -109,16 +107,31 @@ See [docs/operators/](docs/operators/) for complete deployment guides.
 
 ## 🛡️ Security Rules
 
-Security rules for Parapet are maintained in a separate repository: [parapet-rules](https://github.com/securecheckio/parapet-rules)
+Parapet uses **JSON-based declarative rules** with condition trees, pluggable analyzers, and stateful detection. Rules can:
+
+- **Block, alert, or pass** transactions based on complex conditions
+- **Track state across transactions** with flowbits (counters, flags, TTL)
+- **Detect vulnerability patterns** at the bytecode level (missing checks, arbitrary CPI)
+- **Compose third-party signals** (Helius, OtterSec, Jupiter, Rugcheck)
+- **Use variable interpolation** for dynamic per-wallet/program/mint tracking
+
+**Documentation:**
+- [Rule Format Reference](docs/RULES_FORMAT.md) - JSON structure, operators, analyzers
+- [Rule Development Guide](docs/RULES_DEVELOPMENT.md) - Hub for rule authoring
+- [Flowbits Guide](docs/RULES_FLOWBITS.md) - Stateful detection patterns
+
+**Community Rules:** [parapet-rules](https://github.com/securecheckio/parapet-rules) (separate repository)
 
 ## 🛠️ Development
 
 ### Prerequisites
 
+**Required:**
 - Rust 1.85+ (required by Solana SDK 4.0)
-- Redis 7+ (recommended for production)
-- Node.js 18+ (for reference dashboard)
-- PostgreSQL 15+ (for reference implementations only)
+
+**Optional:**
+- Redis 7+ (only needed for escalations, activity feed, or multi-instance caching)
+- Node.js 18+ (only if you want to run the monitoring dashboard)
 
 ### Configuration
 
