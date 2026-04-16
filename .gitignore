@@ -53,6 +53,12 @@ coverage/
 *.exe
 parapet
 
+# SBOM files (generated artifacts)
+*-sbom.json
+*-sbom.cdx.json
+*.sbom.json
+sbom.json
+
 # Terraform
 .terraform/
 .terraform.lock.hcl
