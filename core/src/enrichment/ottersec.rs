@@ -15,6 +15,7 @@ pub struct OtterSecClient {
     api_key: String,
     http_client: reqwest::Client,
     rate_limiter: ApiRateLimiter,
+    base_url: String,
 }
 
 /// OtterSec verification data
@@ -30,7 +31,15 @@ pub struct OtterSecData {
 impl OtterSecClient {
     pub fn new() -> Self {
         let api_key = std::env::var("OTTERSEC_API_KEY").expect("OTTERSEC_API_KEY not set");
+        Self::new_with_config("https://verify.osec.io".to_string(), api_key)
+    }
 
+    pub fn new_with_base_url(base_url: String) -> Self {
+        let api_key = std::env::var("OTTERSEC_API_KEY").expect("OTTERSEC_API_KEY not set");
+        Self::new_with_config(base_url, api_key)
+    }
+
+    pub fn new_with_config(base_url: String, api_key: String) -> Self {
         log::info!("✅ OtterSecClient: initialized with API key");
 
         // OtterSec: conservative rate limit
@@ -44,6 +53,7 @@ impl OtterSecClient {
                 .build()
                 .expect("Failed to create HTTP client"),
             rate_limiter,
+            base_url,
         }
     }
 
@@ -52,7 +62,7 @@ impl OtterSecClient {
         // Acquire rate limit permit
         let _permit = self.rate_limiter.acquire().await;
 
-        let url = format!("https://verify.osec.io/status/{}", program_address);
+        let url = format!("{}/status/{}", self.base_url, program_address);
 
         log::debug!("Fetching OtterSec data for program: {}", program_address);
 
@@ -94,5 +104,111 @@ struct OtterSecApiResponse {
 impl Default for OtterSecClient {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_get_verification_data_verified() {
+        let mut server = mockito::Server::new_async().await;
+        let mock_url = server.url();
+
+        let mock_response = serde_json::json!({
+            "is_verified": true,
+            "verification_level": "Full Audit",
+            "audit_date": "2024-01-15",
+            "source_available": true
+        });
+
+        let _mock = server
+            .mock("GET", "/status/verified_program")
+            .match_header("Authorization", "Bearer test_key")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(mock_response.to_string())
+            .create_async()
+            .await;
+
+        let client = OtterSecClient::new_with_config(mock_url, "test_key".to_string());
+        let result = client.get_verification_data("verified_program").await;
+
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert_eq!(data.program_address, "verified_program");
+        assert!(data.is_verified);
+        assert_eq!(data.verification_level, Some("Full Audit".to_string()));
+        assert_eq!(data.audit_date, Some("2024-01-15".to_string()));
+        assert!(data.source_available);
+    }
+
+    #[tokio::test]
+    async fn test_get_verification_data_not_verified() {
+        let mut server = mockito::Server::new_async().await;
+        let mock_url = server.url();
+
+        let mock_response = serde_json::json!({
+            "is_verified": false
+        });
+
+        let _mock = server
+            .mock("GET", "/status/unverified_program")
+            .match_header("Authorization", "Bearer test_key")
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(mock_response.to_string())
+            .create_async()
+            .await;
+
+        let client = OtterSecClient::new_with_config(mock_url, "test_key".to_string());
+        let result = client.get_verification_data("unverified_program").await;
+
+        assert!(result.is_ok());
+        let data = result.unwrap();
+        assert!(!data.is_verified);
+        assert_eq!(data.verification_level, None);
+        assert!(!data.source_available);
+    }
+
+    #[tokio::test]
+    async fn test_get_verification_data_rate_limited() {
+        let mut server = mockito::Server::new_async().await;
+        let mock_url = server.url();
+
+        let _mock = server
+            .mock("GET", "/status/test_program")
+            .match_header("Authorization", "Bearer test_key")
+            .with_status(429)
+            .with_body("Too Many Requests")
+            .create_async()
+            .await;
+
+        let client = OtterSecClient::new_with_config(mock_url, "test_key".to_string());
+        let result = client.get_verification_data("test_program").await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("rate limited"));
+    }
+
+    #[tokio::test]
+    async fn test_get_verification_data_api_error() {
+        let mut server = mockito::Server::new_async().await;
+        let mock_url = server.url();
+
+        let _mock = server
+            .mock("GET", "/status/error_program")
+            .match_header("Authorization", "Bearer test_key")
+            .with_status(404)
+            .with_body("Not Found")
+            .create_async()
+            .await;
+
+        let client = OtterSecClient::new_with_config(mock_url, "test_key".to_string());
+        let result = client.get_verification_data("error_program").await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("API error"));
     }
 }

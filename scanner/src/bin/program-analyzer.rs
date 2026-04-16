@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use clap::Parser;
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
@@ -89,9 +89,9 @@ async fn main() -> Result<()> {
             println!(
                 "     Executable: {}",
                 if account.executable {
-                    "Yes ✓".green()
+                    "Yes ✓".green().to_string()
                 } else {
-                    "No ✗".red()
+                    "No ✗".red().to_string()
                 }
             );
             println!(
@@ -227,7 +227,7 @@ async fn run_program_analysis(
 
 #[cfg(feature = "program-analysis")]
 fn print_analysis_result(result: &parapet_core::program_analysis::ProgramAnalysisResult) {
-    use colored::Colorize;
+    use owo_colors::OwoColorize;
     use parapet_core::program_analysis::RiskLevel;
 
     println!("\n  📊 Analysis Summary:");
@@ -235,29 +235,29 @@ fn print_analysis_result(result: &parapet_core::program_analysis::ProgramAnalysi
     println!(
         "     Risk Score: {} / 100",
         match result.risk_level {
-            RiskLevel::VeryLow => format!("{:.1}", result.risk_score).green(),
-            RiskLevel::Low => format!("{:.1}", result.risk_score).bright_green(),
-            RiskLevel::Medium => format!("{:.1}", result.risk_score).yellow(),
-            RiskLevel::High => format!("{:.1}", result.risk_score).bright_red(),
-            RiskLevel::Critical => format!("{:.1}", result.risk_score).red().bold(),
+            RiskLevel::VeryLow => format!("{:.1}", result.risk_score).green().to_string(),
+            RiskLevel::Low => format!("{:.1}", result.risk_score).bright_green().to_string(),
+            RiskLevel::Medium => format!("{:.1}", result.risk_score).yellow().to_string(),
+            RiskLevel::High => format!("{:.1}", result.risk_score).bright_red().to_string(),
+            RiskLevel::Critical => format!("{:.1}", result.risk_score).red().bold().to_string(),
         }
     );
     println!(
         "     Risk Level: {}",
         match result.risk_level {
-            RiskLevel::VeryLow => "Very Low ✓".green(),
-            RiskLevel::Low => "Low ✓".bright_green(),
-            RiskLevel::Medium => "Medium ⚠".yellow(),
-            RiskLevel::High => "High ⚠⚠".bright_red(),
-            RiskLevel::Critical => "CRITICAL ⚠⚠⚠".red().bold(),
+            RiskLevel::VeryLow => "Very Low ✓".green().to_string(),
+            RiskLevel::Low => "Low ✓".bright_green().to_string(),
+            RiskLevel::Medium => "Medium ⚠".yellow().to_string(),
+            RiskLevel::High => "High ⚠⚠".bright_red().to_string(),
+            RiskLevel::Critical => "CRITICAL ⚠⚠⚠".red().bold().to_string(),
         }
     );
     println!(
         "     Safe: {}",
         if result.is_safe {
-            "Yes ✓".green()
+            "Yes ✓".green().to_string()
         } else {
-            "No ✗".red()
+            "No ✗".red().to_string()
         }
     );
     println!("     Analysis Time: {}ms", result.analysis_time_ms);
@@ -299,9 +299,16 @@ fn print_analysis_result(result: &parapet_core::program_analysis::ProgramAnalysi
                 "Medium" => "yellow",
                 _ => "white",
             };
+            let severity_display = match severity_color {
+                "red" => vuln.severity.as_str().red().to_string(),
+                "bright_red" => vuln.severity.as_str().bright_red().to_string(),
+                "yellow" => vuln.severity.as_str().yellow().to_string(),
+                "white" => vuln.severity.as_str().white().to_string(),
+                _ => vuln.severity.to_string(),
+            };
             println!(
                 "     • [{}] {}: {}",
-                vuln.severity.color(severity_color),
+                severity_display,
                 vuln.category.bright_white(),
                 vuln.description
             );

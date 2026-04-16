@@ -37,8 +37,11 @@ log = { workspace = true }
 env_logger = { workspace = true }
 
 # HTTP client for verification checks
-reqwest = { version = "0.11", features = ["json"] }
+reqwest = { version = "0.12", features = ["json"] }
 
 [features]
 default = ["reqwest"]
 reqwest = []
+
+[dev-dependencies]
+mockito = "1.0"

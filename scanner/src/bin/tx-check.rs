@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use base64::Engine;
 use clap::Parser;
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use parapet_core::rules::analyzer::{ConfirmedInnerInstruction, ConfirmedTransactionMetadata};
 use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
@@ -413,9 +413,9 @@ async fn main() -> Result<()> {
     } else {
         use parapet_core::rules::types::RuleAction;
         let action_str = match decision.action {
-            RuleAction::Block => "BLOCK".bright_red().bold(),
-            RuleAction::Alert => "ALERT".bright_yellow().bold(),
-            RuleAction::Pass => "PASS".bright_green().bold(),
+            RuleAction::Block => "BLOCK".bright_red().bold().to_string(),
+            RuleAction::Alert => "ALERT".bright_yellow().bold().to_string(),
+            RuleAction::Pass => "PASS".bright_green().bold().to_string(),
         };
         println!("  {} — {}", action_str, decision.message);
         println!(
@@ -430,9 +430,9 @@ async fn main() -> Result<()> {
             for rule in &decision.matched_rules {
                 use parapet_core::rules::types::RuleAction;
                 let tag = match rule.action {
-                    RuleAction::Block => "[BLOCK]".bright_red(),
-                    RuleAction::Alert => "[ALERT]".bright_yellow(),
-                    RuleAction::Pass => "[PASS]".bright_green(),
+                    RuleAction::Block => "[BLOCK]".bright_red().to_string(),
+                    RuleAction::Alert => "[ALERT]".bright_yellow().to_string(),
+                    RuleAction::Pass => "[PASS]".bright_green().to_string(),
                 };
                 println!(
                     "    {} {} — {}",

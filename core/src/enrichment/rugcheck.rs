@@ -24,6 +24,7 @@ pub struct RugcheckClient {
     rate_limiter: ApiRateLimiter,
     api_key: Option<String>,
     is_authenticated: bool,
+    base_url: String,
 }
 
 struct CachedData {
@@ -97,6 +98,10 @@ pub struct DomainRegistration {
 
 impl RugcheckClient {
     pub fn new() -> Self {
+        Self::new_with_base_url("https://api.rugcheck.xyz".to_string())
+    }
+
+    pub fn new_with_base_url(base_url: String) -> Self {
         // Check for API key in environment
         let api_key = std::env::var("RUGCHECK_API_KEY").ok();
         let is_authenticated = api_key.is_some();
@@ -134,6 +139,7 @@ impl RugcheckClient {
             rate_limiter,
             api_key,
             is_authenticated,
+            base_url,
         }
     }
 
@@ -155,7 +161,8 @@ impl RugcheckClient {
 
         // Fetch from API
         let url = format!(
-            "https://api.rugcheck.xyz/v1/tokens/{}/report",
+            "{}/v1/tokens/{}/report",
+            self.base_url,
             token_address
         );
 
@@ -314,7 +321,8 @@ impl RugcheckClient {
         let _permit = self.rate_limiter.acquire().await;
 
         let url = format!(
-            "https://api.rugcheck.xyz/v1/tokens/{}/insiders/networks",
+            "{}/v1/tokens/{}/insiders/networks",
+            self.base_url,
             token_address
         );
 
@@ -445,7 +453,8 @@ impl RugcheckClient {
         let _permit = self.rate_limiter.acquire().await;
 
         let url = format!(
-            "https://api.rugcheck.xyz/v1/tokens/{}/lockers",
+            "{}/v1/tokens/{}/lockers",
+            self.base_url,
             token_address
         );
 
@@ -534,7 +543,8 @@ impl RugcheckClient {
         let _permit = self.rate_limiter.acquire().await;
 
         let url = format!(
-            "https://api.rugcheck.xyz/v1/domains/lookup/{}",
+            "{}/v1/domains/lookup/{}",
+            self.base_url,
             token_address
         );
 
@@ -601,7 +611,7 @@ impl RugcheckClient {
             // Acquire rate limit permit
             let _permit = self.rate_limiter.acquire().await;
 
-            let url = "https://api.rugcheck.xyz/v1/bulk/tokens/summary";
+            let url = format!("{}/v1/bulk/tokens/summary", self.base_url);
 
             log::debug!("Fetching bulk Rugcheck data for {} tokens", chunk.len());
 

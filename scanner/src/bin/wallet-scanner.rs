@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Context, Result};
 use base64::Engine;
 use clap::{Parser, ValueEnum};
-use colored::Colorize;
+use owo_colors::OwoColorize;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use parapet_scanner::{ScanConfig, ScanReport, Severity, ThreatType, WalletScanner};
 use solana_client::rpc_client::RpcClient;
@@ -336,17 +336,22 @@ fn print_pretty_report(report: &ScanReport) {
         _ => ("bright green", "green", "✅"),
     };
 
-    println!(
-        "  {} Security Score: {} / 100",
-        icon,
-        format!("{}", report.security_score)
-            .color(score_color)
-            .bold()
-    );
-    println!(
-        "  Risk Level: {}",
-        report.risk_level.color(risk_color).bold()
-    );
+    let score_display = match score_color {
+        "red" => format!("{}", report.security_score).red().bold().to_string(),
+        "bright red" => format!("{}", report.security_score).bright_red().bold().to_string(),
+        "yellow" => format!("{}", report.security_score).yellow().bold().to_string(),
+        "bright green" => format!("{}", report.security_score).bright_green().bold().to_string(),
+        _ => format!("{}", report.security_score).bold().to_string(),
+    };
+    println!("  {} Security Score: {} / 100", icon, score_display);
+    
+    let risk_display = match risk_color {
+        "red" => report.risk_level.red().bold().to_string(),
+        "yellow" => report.risk_level.yellow().bold().to_string(),
+        "green" => report.risk_level.green().bold().to_string(),
+        _ => report.risk_level.bold().to_string(),
+    };
+    println!("  Risk Level: {}", risk_display);
     println!();
 
     // Statistics
@@ -429,13 +434,18 @@ fn print_pretty_report(report: &ScanReport) {
                 Severity::Low => ("ℹ️ ", "bright black"),
             };
 
+            let severity_display = match severity_color {
+                "bright red" => format!("{:?}", threat.severity).bright_red().bold().to_string(),
+                "red" => format!("{:?}", threat.severity).red().bold().to_string(),
+                "yellow" => format!("{:?}", threat.severity).yellow().bold().to_string(),
+                "bright black" => format!("{:?}", threat.severity).bright_black().bold().to_string(),
+                _ => format!("{:?}", threat.severity).bold().to_string(),
+            };
             println!(
                 "  {} {} {}",
                 format!("[{}]", idx + 1).bright_black(),
                 severity_icon,
-                format!("{:?}", threat.severity)
-                    .color(severity_color)
-                    .bold()
+                severity_display
             );
 
             // Extract details based on threat type
@@ -521,10 +531,13 @@ fn print_pretty_report(report: &ScanReport) {
             };
 
             println!("  Program: {}", program.program_id.bright_cyan());
-            println!(
-                "    Risk Score: {}/100",
-                format!("{}", program.risk_score).color(risk_color).bold()
-            );
+            let risk_score_display = match risk_color {
+                "red" => format!("{}", program.risk_score).red().bold().to_string(),
+                "yellow" => format!("{}", program.risk_score).yellow().bold().to_string(),
+                "bright black" => format!("{}", program.risk_score).bright_black().bold().to_string(),
+                _ => format!("{}", program.risk_score).bold().to_string(),
+            };
+            println!("    Risk Score: {}/100", risk_score_display);
             println!("    Type: {}", program.threat_type);
             println!("    Occurrences: {}", program.occurrence_count);
 
@@ -797,10 +810,10 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
 
     for (i, (token_account, delegate, amount, severity)) in dangerous_approvals.iter().enumerate() {
         let severity_str = match severity {
-            Severity::Critical => "CRITICAL".bright_red().bold(),
-            Severity::High => "HIGH".red().bold(),
-            Severity::Medium => "MEDIUM".yellow().bold(),
-            Severity::Low => "LOW".normal(),
+            Severity::Critical => "CRITICAL".bright_red().bold().to_string(),
+            Severity::High => "HIGH".red().bold().to_string(),
+            Severity::Medium => "MEDIUM".yellow().bold().to_string(),
+            Severity::Low => "LOW".default_color().to_string(),
         };
 
         let amount_str = if *amount == u64::MAX {

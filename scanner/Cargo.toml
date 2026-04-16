@@ -48,14 +48,15 @@ path = "src/bin/tx-check.rs"
 version = "4.5"
 features = ["derive"]
 
-[dependencies.colored]
-version = "2.1"
+[dependencies.owo-colors]
+version = "4.1"
+features = ["supports-colors"]
 
 [dependencies.env_logger]
 workspace = true
 
 [dependencies.reqwest]
-version = "0.11"
+version = "0.12"
 features = ["json"]
 
 [features]

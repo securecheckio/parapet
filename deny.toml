@@ -15,10 +15,13 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-DFS-2016",
+    "Unicode-3.0",                    # Unicode License v3 (ICU, Unicode processing)
     "Unlicense",
     "CC0-1.0",
     "0BSD",
     "Zlib",
+    "MPL-2.0",                        # Mozilla Public License 2.0 (webpki-roots TLS certificates)
+    "CDLA-Permissive-2.0",           # Community Data License Agreement (Mozilla certificate data)
 ]
 confidence-threshold = 0.8
 
