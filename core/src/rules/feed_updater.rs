@@ -52,6 +52,7 @@ pub struct RuleFeed {
     /// When this feed was published
     pub published_at: String,
     /// New or updated rules
+    #[serde(default)]
     pub rules: Vec<super::types::RuleDefinition>,
     /// Rule IDs that should be removed/deprecated
     #[serde(default)]
@@ -59,6 +60,10 @@ pub struct RuleFeed {
     /// Optional source identifier
     #[serde(default)]
     pub source: Option<String>,
+    /// Optional: Nested feed sources for meta-feed composition
+    /// Note: Currently for documentation only - use config.toml with multiple [[rule_feeds.sources]] for composition
+    #[serde(default)]
+    pub feeds: Vec<serde_json::Value>,
 }
 
 /// Merged rules from multiple sources
