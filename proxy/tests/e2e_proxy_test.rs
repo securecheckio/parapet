@@ -9,8 +9,7 @@ use parapet_proxy::types::AppState;
 use parapet_proxy::upstream;
 use serde_json::{json, Value};
 use solana_sdk::{
-    message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer,
-    transaction::Transaction,
+    message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
 };
 use solana_system_interface::instruction as system_instruction;
 use std::sync::Arc;
