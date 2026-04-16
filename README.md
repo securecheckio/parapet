@@ -16,11 +16,13 @@
 
 ## What is Parapet?
 
-Parapet is an open-source security platform for Solana that provides:
+Parapet is a **drop-in RPC that automatically inspects and blocks malicious transactions before they land**. It supports any upstream RPC from Helius, Triton, Quicknode, and others.
 
-- **Transaction analysis and threat detection** - Real-time rule-based security
-- **Wallet security scanning** - Comprehensive threat assessment for Solana wallets
-- **Secure RPC proxy** - Configurable security rules at the RPC level
+Open-source security for Solana with:
+
+- **Real-time transaction interception** - Analyzes every transaction at the RPC layer
+- **Wallet security scanning** - Comprehensive threat assessment for any Solana wallet
+- **Embeddable library** - Integrate security analysis into any application
 
 ### Performance
 
