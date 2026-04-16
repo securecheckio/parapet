@@ -59,7 +59,7 @@ Complete containerized deployment of Parapet with all components.
 ### 1. Configure Environment
 
 ```bash
-cd deployment/docker
+cd deployments/full-stack/docker-compose
 cp .env.example .env
 # Edit .env with your settings
 ```

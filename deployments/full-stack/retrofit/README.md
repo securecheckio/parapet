@@ -1,6 +1,8 @@
-# Parapet Dashboard Deployment
+# Parapet Retrofit Deployment (Advanced)
 
-Docker Compose deployment for the AI agent activity monitoring dashboard.
+Docker Compose deployment for adding dashboard/API monitoring to an existing proxy deployment.
+
+This is an advanced retrofit path. Primary deployment options are `proxy-only` and `full-stack`.
 
 ## Quick Start
 

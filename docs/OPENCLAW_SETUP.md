@@ -520,7 +520,7 @@ time curl -X POST $UPSTREAM_RPC_URL -d '{"jsonrpc":"2.0","id":1,"method":"getHea
 ### Using Docker
 
 ```bash
-cd parapet/deployments/proxy/docker
+cd parapet/deployments/full-stack/docker-compose
 cp .env.example .env
 # Edit .env with your settings
 docker-compose up -d
@@ -529,7 +529,7 @@ docker-compose up -d
 ### Using Terraform
 
 ```bash
-cd parapet/deployments/proxy/terraform
+cd parapet/deployments/proxy-only/terraform
 cp terraform.tfvars.example terraform.tfvars
 # Edit terraform.tfvars
 terraform init

@@ -122,7 +122,7 @@ jobs:
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./deployments/proxy/docker/Dockerfile
+        file: ./deployments/full-stack/docker-compose/Dockerfile
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}

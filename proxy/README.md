@@ -35,7 +35,7 @@ nano config.toml  # Edit settings
 
 **Rules:** Set `rules_path` in config.toml or `RULES_PATH` env var. Files under `rules/` are samples/fixtures.
 
-**Deploy:** `../deployment/`
+**Deploy:** `../deployments/proxy-only/` or `../deployments/full-stack/`
 
 ## RPC surface
 

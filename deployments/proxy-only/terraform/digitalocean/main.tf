@@ -41,7 +41,7 @@ resource "digitalocean_droplet" "sol_shield" {
   ssh_keys = [local.ssh_key_fingerprint]
 
   # Choose cloud-init template based on deployment mode
-  user_data = templatefile("${path.module}/../../cloud-init/cloud-init-${var.deployment_mode}.yaml", {
+  user_data = templatefile("${path.module}/../cloud-init/cloud-init-${var.deployment_mode}.yaml", {
     upstream_rpc_url           = var.upstream_rpc_url
     enable_rate_limiting       = var.enable_rate_limiting
     default_requests_per_month = var.default_requests_per_month

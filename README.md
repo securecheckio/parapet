@@ -1,4 +1,4 @@
-![Parapet Logo](parapet.png)
+Parapet Logo
 
 # Parapet
 
@@ -6,9 +6,9 @@
 
 **Perimeter security for Solana wallets, AI agents 🦞, and trading firms**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg?logo=rust)](https://www.rust-lang.org/)
-[![Solana](https://img.shields.io/badge/Solana-9945FF?logo=solana&logoColor=white)](https://solana.com/)
+[License: MIT](LICENSE)
+[Rust](https://www.rust-lang.org/)
+[Solana](https://solana.com/)
 
   [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
 
@@ -44,6 +44,7 @@ Open-source security for Solana with:
 
 ### Unique Features
 
+- **AI Agent Ready** - Drop-in RPC protection with real-time monitoring dashboard
 - **Embeddable Library** - Integrate security analysis into any Solana app
 - **MCP Server** - First-class AI agent integration (Cursor, Claude Desktop)
 - **Dual Deployment** - Client-side (fast local analysis) or server-side (centralized policies)
@@ -88,24 +89,49 @@ export JUPITER_API_KEY=your_key
 ### Docker Deployment
 
 ```bash
-cd deployments/proxy/docker
-cp .env.example .env      # Docker Compose uses .env files
-nano .env                 # Edit configuration
+cd deployments/proxy-only/docker
 docker-compose up -d
 ```
 
 ### Production Deployment
 
 ```bash
-# Terraform (DigitalOcean)
-cd deployments/proxy/terraform/digitalocean
+# Fly.io - Recommended (Global edge, auto-scaling)
+cd deployments/flyio/basic
+fly launch
+fly deploy
+
+# Terraform (DigitalOcean, proxy-only)
+cd deployments/proxy-only/terraform/digitalocean
 cp terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars
 terraform init
 terraform apply
 ```
 
-See [docs/operators/](docs/operators/) for complete deployment guides.
+See [deployments/](deployments/) for all deployment options.
+
+### 🔄 Auto-Updating Rules
+
+Parapet supports **rule feeds** - automatically update security rules from HTTP URLs without redeployment:
+
+```toml
+[rule_feeds]
+enabled = true
+poll_interval = 3600  # Check every hour
+
+[[rule_feeds.sources]]
+url = "https://rules.parapet.security/community-base.json"
+priority = 1
+```
+
+**Benefits:**
+- ✅ Zero downtime updates (background polling)
+- ✅ Instant protection from new threats
+- ✅ Compose multiple rule sources
+- ✅ Community + custom rules
+
+**📖 Read the full guide:** [Rule Feeds Documentation](docs/RULE_FEEDS.md)
 
 ## 🛡️ Security Rules
 
@@ -118,6 +144,7 @@ Parapet uses **JSON-based declarative rules** with condition trees, pluggable an
 - **Use variable interpolation** for dynamic per-wallet/program/mint tracking
 
 **Documentation:**
+
 - [Rule Format Reference](docs/RULES_FORMAT.md) - JSON structure, operators, analyzers
 - [Rule Development Guide](docs/RULES_DEVELOPMENT.md) - Hub for rule authoring
 - [Flowbits Guide](docs/RULES_FLOWBITS.md) - Stateful detection patterns
@@ -129,9 +156,11 @@ Parapet uses **JSON-based declarative rules** with condition trees, pluggable an
 ### Prerequisites
 
 **Required:**
+
 - Rust 1.85+ (required by Solana SDK 4.0)
 
 **Optional:**
+
 - Redis 7+ (only needed for escalations, activity feed, or multi-instance caching)
 - Node.js 18+ (only if you want to run the monitoring dashboard)
 
@@ -188,7 +217,9 @@ parapet/
 │   └── risk-register/     # Risk database & analysis
 ├── docs/                   # Documentation
 └── deployments/           # Deployment configurations
-    └── proxy/             # Standalone proxy deployment
+    ├── proxy-only/        # Simple proxy-only deployment
+    ├── full-stack/        # Proxy + API + Redis + dashboard
+    └── flyio/             # Fly.io basic/full variants
 ```
 
 ## 📖 Documentation

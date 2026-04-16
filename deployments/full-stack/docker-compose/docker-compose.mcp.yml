@@ -4,8 +4,8 @@ services:
   # Parapet API with MCP server
   parapet-api:
     build:
-      context: ../..
-      dockerfile: deployment/docker/Dockerfile.api
+      context: ../../..
+      dockerfile: deployments/full-stack/docker-compose/Dockerfile.api
     ports:
       - "3001:3001"
     environment:
@@ -46,7 +46,7 @@ services:
     
     volumes:
       # Mount rules directory
-      - ../../proxy/rules:/app/rules:ro
+      - ../../../proxy/rules:/app/rules:ro
     
     depends_on:
       - redis

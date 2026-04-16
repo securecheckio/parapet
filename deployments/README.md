@@ -4,38 +4,50 @@ Production deployment configurations for Parapet components.
 
 ## Available Deployments
 
-### Core Services
+### Two Primary Deployment Modes
 
-- **[proxy/](./proxy/)** - RPC proxy deployment (Docker, Terraform, cloud-init)
-- **[dashboard/](./dashboard/)** - Activity feed dashboard (Docker Compose)
+- **[proxy-only/](./proxy-only/)** - Simple protected RPC (proxy only)
+- **[full-stack/](./full-stack/)** - Complete stack (proxy + API + Redis + dashboard)
+
+### Cloud Deployments (Fly.io)
+
+- **[flyio/basic/](./flyio/basic/)** - Proxy-only deployment (maps to `proxy-only`)
+- **[flyio/full/](./flyio/full/)** - Full stack deployment (maps to `full-stack`)
+  - Ideal for AI agent operators: monitor activity, manage rules dynamically, and use the dashboard
 
 ### Infrastructure
 
 - **[https/](./https/)** - HTTPS reverse proxy with Caddy/nginx (required for wallet connections)
 
+## Rule Management
+
+**🔄 Auto-Updating Rules (Recommended):** Use [Rule Feeds](../docs/RULE_FEEDS.md) to automatically update security rules from HTTP URLs without redeployment.
+
+**Static Rules:** Bake rules into Docker images for fully offline deployments.
+
 ## Quick Start
 
 Each subdirectory contains its own README with specific deployment instructions.
 
-### Dashboard (AI Agent Monitoring)
+### Full Stack (Monitoring + Management)
 
 ```bash
-cd dashboard/
+cd full-stack/docker-compose/
 docker-compose up -d
 ```
 
 Access at: `http://localhost:8080`
 
-### Proxy (RPC Security Layer)
+### Proxy-only (RPC Security Layer)
 
 ```bash
-cd proxy/docker/
+cd proxy-only/docker/
 docker-compose up -d
 ```
 
 Proxy available at: `http://localhost:8899`
 
-## Architecture
+## Full-stack Architecture
 
 ```
 ┌─────────────┐     ┌──────────────┐     ┌─────────────┐

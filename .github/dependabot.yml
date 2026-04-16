@@ -62,7 +62,7 @@ updates:
 
   # Docker
   - package-ecosystem: "docker"
-    directory: "/deployments/proxy/docker"
+    directory: "/deployments/full-stack/docker-compose"
     schedule:
       interval: "weekly"
     labels:

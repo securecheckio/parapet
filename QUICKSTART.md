@@ -19,8 +19,8 @@ A complete security layer for Solana transactions with:
 ## Start Parapet
 
 ```bash
-# 1. Navigate to docker directory
-cd deployment/docker
+# 1. Navigate to full-stack docker directory
+cd deployments/full-stack/docker-compose
 
 # 2. Create environment file
 cp .env.example .env
@@ -177,4 +177,4 @@ docker-compose down -v
 1. Check logs: `docker-compose logs -f`
 2. Verify .env configuration
 3. Test each service health endpoint
-4. See [deployment/docker/README.md](deployment/docker/README.md) for detailed troubleshooting
+4. See [deployments/full-stack/docker-compose/README.md](deployments/full-stack/docker-compose/README.md) for detailed troubleshooting
