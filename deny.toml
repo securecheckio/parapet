@@ -3,7 +3,19 @@
 
 [advisories]
 # Check for security vulnerabilities
-ignore = []
+# Ignored vulnerabilities with justification:
+ignore = [
+    # rustls-webpki vulnerabilities in Solana SDK dependencies
+    # - RUSTSEC-2026-0098: Name constraints for URI names were ignored
+    # - RUSTSEC-2026-0099: Wildcard name constraint validation issue
+    # 
+    # Context: These are in solana-pubsub-client v2.3.13 -> rustls v0.21.12 -> rustls-webpki v0.101.7
+    # Risk: Low - requires certificate misissuance after signature verification
+    # Mitigation: Will be resolved when Solana SDK updates to newer rustls versions
+    # Tracking: Monitor Solana SDK releases for rustls/webpki updates
+    "RUSTSEC-2026-0098",
+    "RUSTSEC-2026-0099",
+]
 
 [licenses]
 # Only allow permissive licenses compatible with MIT
