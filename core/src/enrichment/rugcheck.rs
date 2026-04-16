@@ -160,11 +160,7 @@ impl RugcheckClient {
         let _permit = self.rate_limiter.acquire().await;
 
         // Fetch from API
-        let url = format!(
-            "{}/v1/tokens/{}/report",
-            self.base_url,
-            token_address
-        );
+        let url = format!("{}/v1/tokens/{}/report", self.base_url, token_address);
 
         log::debug!("Fetching Rugcheck data for token: {}", token_address);
 
@@ -322,8 +318,7 @@ impl RugcheckClient {
 
         let url = format!(
             "{}/v1/tokens/{}/insiders/networks",
-            self.base_url,
-            token_address
+            self.base_url, token_address
         );
 
         log::debug!("Fetching insider analysis for token: {}", token_address);
@@ -452,11 +447,7 @@ impl RugcheckClient {
         // Acquire rate limit permit
         let _permit = self.rate_limiter.acquire().await;
 
-        let url = format!(
-            "{}/v1/tokens/{}/lockers",
-            self.base_url,
-            token_address
-        );
+        let url = format!("{}/v1/tokens/{}/lockers", self.base_url, token_address);
 
         log::debug!("Fetching vault analysis for token: {}", token_address);
 
@@ -542,11 +533,7 @@ impl RugcheckClient {
         // Acquire rate limit permit
         let _permit = self.rate_limiter.acquire().await;
 
-        let url = format!(
-            "{}/v1/domains/lookup/{}",
-            self.base_url,
-            token_address
-        );
+        let url = format!("{}/v1/domains/lookup/{}", self.base_url, token_address);
 
         log::debug!("Looking up domain for token: {}", token_address);
 

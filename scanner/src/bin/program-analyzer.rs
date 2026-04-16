@@ -236,7 +236,9 @@ fn print_analysis_result(result: &parapet_core::program_analysis::ProgramAnalysi
         "     Risk Score: {} / 100",
         match result.risk_level {
             RiskLevel::VeryLow => format!("{:.1}", result.risk_score).green().to_string(),
-            RiskLevel::Low => format!("{:.1}", result.risk_score).bright_green().to_string(),
+            RiskLevel::Low => format!("{:.1}", result.risk_score)
+                .bright_green()
+                .to_string(),
             RiskLevel::Medium => format!("{:.1}", result.risk_score).yellow().to_string(),
             RiskLevel::High => format!("{:.1}", result.risk_score).bright_red().to_string(),
             RiskLevel::Critical => format!("{:.1}", result.risk_score).red().bold().to_string(),
