@@ -1,0 +1,9 @@
+# Fly.io deployment secrets
+.env
+
+# Fly.io local state
+.fly/
+
+# Backup files
+*.backup
+secrets-backup.txt

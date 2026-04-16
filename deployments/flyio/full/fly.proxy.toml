@@ -1,0 +1,65 @@
+# Parapet Proxy - Fly.io Configuration (Full Stack)
+
+app = "parapet-proxy"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.proxy"
+
+[env]
+  UPSTREAM_RPC_URL = "https://api.mainnet-beta.solana.com"
+  PROXY_PORT = "8899"
+  DEFAULT_BLOCK_THRESHOLD = "70"
+  SOLANA_NETWORK = "mainnet-beta"
+  
+  # Rules configuration - YOU MUST SET THIS
+  # Example: RULES_PATH = "/app/rules/examples/demo-basic-rules.json"
+  # Or use RULES_FEED_ENABLED for HTTP rule feeds (see README)
+  
+  RUGCHECK_RATE_LIMIT = "10/60"
+  HELIUS_RATE_LIMIT = "20/60"
+  JUPITER_RATE_LIMIT = "60/60"
+  OTTERSEC_RATE_LIMIT = "30/60"
+  ACTIVITY_FEED_ENABLED = "true"
+  ACTIVITY_FEED_MIN_RISK = "30"
+  RUST_LOG = "info,parapet_proxy=debug"
+
+# Secrets: REDIS_URL (auto-set), HELIUS_API_KEY, JUPITER_API_KEY, OTTERSEC_API_KEY
+
+[[services]]
+  internal_port = 8899
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 800
+
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[scaling]
+  min_count = 1
+  max_count = 10

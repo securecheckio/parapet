@@ -5,16 +5,21 @@ FROM rustlang/rust:nightly AS builder
 
 WORKDIR /build
 
-# Copy workspace files required for proxy build
+# Copy all workspace members (Cargo workspace requires them all)
+# Multi-stage build means only the final binary ends up in runtime image
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
 COPY proxy ./proxy
 COPY scanner ./scanner
+COPY api ./api
+COPY mcp ./mcp
+COPY tools ./tools
 
-# Build release binary
-RUN cargo build --release -p parapet-proxy --bin parapet-proxy
+# Build release binaries for proxy and utilities
+RUN cargo build --release -p parapet-proxy --bin parapet-proxy && \
+    cargo build --release -p parapet-scanner --bin parapet-scanner
 
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 
 RUN apt-get update && \
     apt-get install -y ca-certificates curl && \
@@ -23,7 +28,11 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY --from=builder /build/target/release/parapet-proxy /usr/local/bin/parapet-proxy
+COPY --from=builder /build/target/release/parapet-scanner /usr/local/bin/parapet-scanner
 COPY proxy/rules /app/rules
+
+# No config.toml in image - use environment variables
+# Users can volume-mount their own config.toml if needed
 
 EXPOSE 8899
 

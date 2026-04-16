@@ -1,0 +1,63 @@
+# Parapet API - Fly.io Configuration (Full Stack)
+
+app = "parapet-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile.api"
+
+[env]
+  SOLANA_RPC_URL = "https://api.mainnet-beta.solana.com"
+  SOLANA_NETWORK = "mainnet-beta"
+  API_PORT = "3001"
+  API_HOST = "0.0.0.0"
+  MAX_CONCURRENT_SCANS = "10"
+  SCANS_PER_HOUR_PER_KEY = "100"
+  NONCE_TTL_SECONDS = "60"
+  # Rules path (optional for API, mainly used by proxy)
+  # RULES_PATH = "/app/rules/examples/demo-basic-rules.json"
+  RUGCHECK_RATE_LIMIT = "10/60"
+  HELIUS_RATE_LIMIT = "20/60"
+  JUPITER_RATE_LIMIT = "60/60"
+  OTTERSEC_RATE_LIMIT = "30/60"
+  RUST_LOG = "info,parapet_api=debug"
+
+# Secrets: REDIS_URL (auto-set), AUTHORIZED_WALLETS, MCP_API_KEYS, API keys
+
+[[services]]
+  internal_port = 3001
+  protocol = "tcp"
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 400
+
+  [[services.http_checks]]
+    interval = "30s"
+    timeout = "3s"
+    grace_period = "5s"
+    method = "get"
+    path = "/health"
+    protocol = "http"
+
+[vm]
+  cpu_kind = "shared"
+  cpus = 1
+  memory_mb = 512
+
+[scaling]
+  min_count = 1
+  max_count = 5

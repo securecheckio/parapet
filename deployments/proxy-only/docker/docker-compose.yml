@@ -14,11 +14,7 @@ services:
       - DEFAULT_BLOCK_THRESHOLD=${DEFAULT_BLOCK_THRESHOLD:-70}
       - RULES_PATH=${RULES_PATH:-/app/rules/presets/default-protection.json}
       - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-false}
-      - REDIS_URL=${REDIS_URL:-}
-      - HELIUS_API_KEY=${HELIUS_API_KEY:-}
-      - JUPITER_API_KEY=${JUPITER_API_KEY:-}
-      - OTTERSEC_API_KEY=${OTTERSEC_API_KEY:-}
-      - RUST_LOG=${RUST_LOG:-info,sol_shield_proxy=debug}
+      - RUST_LOG=${RUST_LOG:-info,parapet_proxy=debug}
     volumes:
       - ../../../proxy/rules:/app/rules:ro
     restart: unless-stopped
