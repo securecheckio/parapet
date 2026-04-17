@@ -85,14 +85,26 @@ export JUPITER_API_KEY=your_key
 ./parapet proxy
 ```
 
-### Docker Deployment
+### Docker Deployment (Recommended)
+
+Pull and run from GitHub Container Registry with community security rules:
 
 ```bash
-cd deployments/proxy/docker
-cp .env.example .env      # Docker Compose uses .env files
-nano .env                 # Edit configuration
+docker run -d -p 8899:8899 \
+  -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
+  -e RULES_FEED_ENABLED=true \
+  -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
+  ghcr.io/securecheckio/parapet-proxy:latest
+```
+
+Or use docker-compose:
+
+```bash
+cd deployments/quickstart
 docker-compose up -d
 ```
+
+See [deployments/quickstart/README.md](deployments/quickstart/README.md) for full deployment guide.
 
 ### Production Deployment
 
