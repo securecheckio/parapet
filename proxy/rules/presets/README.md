@@ -1,19 +1,17 @@
 # Parapet OSS Rule Presets
 
-**This directory intentionally contains no default rules.**
+**This directory contains ONE minimal starter preset with 3 critical rules.**
 
-Parapet requires you to explicitly configure security rules - we don't include any by default to avoid unexpected transaction blocking.
+Parapet ships with minimal rules by design. You must explicitly configure comprehensive security rules to avoid unexpected behavior.
 
-## Getting Rules
+## What's Included
 
-### 1. Example Rules (Demo/Testing Only)
+**`default-protection.json`** - 3 critical rules:
+- Block unlimited token delegations (u64::MAX)
+- Block known malicious programs
+- Block large SOL transfers (>10 SOL)
 
-See [../examples/demo-basic-rules.json](../examples/demo-basic-rules.json) for a minimal example with:
-- Block unlimited token delegations
-- Block known malicious programs  
-- Block large SOL transfers
-
-**⚠️ Demo only - not for production**
+This provides basic protection but is NOT comprehensive. See below for production-grade rules.
 
 ### 2. Community Rules (Recommended)
 

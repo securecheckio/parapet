@@ -351,14 +351,13 @@ mod tests {
     #[tokio::test]
     async fn test_multi_source_fetch() {
         let config = FeedConfig {
-            feed_sources: vec![
-                FeedSource {
-                    url: "https://parapet-rules.securecheck.io/community/core-protection.json".to_string(),
-                    name: Some("SecureCheck Community".to_string()),
-                    priority: 0,
-                    min_request_interval: 60,
-                },
-            ],
+            feed_sources: vec![FeedSource {
+                url: "https://parapet-rules.securecheck.io/community/default-protection.json"
+                    .to_string(),
+                name: Some("Default Protection Rules".to_string()),
+                priority: 0,
+                min_request_interval: 60,
+            }],
             poll_interval: 3600,
             enabled: true,
         };
