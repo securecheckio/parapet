@@ -26,13 +26,14 @@ pub struct Rule {
     pub message: String,
 
     #[serde(default)]
-    pub flowbits: Option<FlowbitActions>,
+    #[serde(alias = "flowbits")]
+    pub flowstate: Option<FlowStateActions>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FlowbitActions {
+pub struct FlowStateActions {
     #[serde(default)]
-    pub scope: FlowbitScope,
+    pub scope: FlowStateScope,
 
     #[serde(default)]
     pub set: Vec<String>,
@@ -48,15 +49,15 @@ pub struct FlowbitActions {
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
-pub enum FlowbitScope {
+pub enum FlowStateScope {
     #[serde(rename = "perwallet")]
     PerWallet,
     Global,
 }
 
-impl Default for FlowbitScope {
+impl Default for FlowStateScope {
     fn default() -> Self {
-        FlowbitScope::PerWallet
+        FlowStateScope::PerWallet
     }
 }
 
@@ -169,13 +170,14 @@ impl ActionOverride {
 #[serde(untagged)]
 pub enum RuleCondition {
     Simple(SimpleCondition),
-    Flowbit(FlowbitCondition),
+    FlowState(FlowStateCondition),
     Compound(CompoundCondition),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct FlowbitCondition {
-    pub flowbit: String,
+pub struct FlowStateCondition {
+    #[serde(alias = "flowbit")]
+    pub flowstate: String,
 
     #[serde(default)]
     pub within_seconds: Option<u64>,
@@ -219,7 +221,7 @@ pub enum ComparisonOperator {
     In,
     NotIn,
     Contains,
-    /// True when a flowbit flag is not set (used with `flowbit:` / `flowbit_global:` fields)
+    /// True when a flowstate flag is not set (used with `flowstate:` / `flowstate_global:` fields)
     #[serde(rename = "isnotset")]
     IsNotSet,
     /// True when the analyzer field is present (non-null) in the evaluated field map

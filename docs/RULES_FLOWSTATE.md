@@ -1,27 +1,27 @@
-# Parapet rules — flowbits
+# Parapet rules — flowstate
 
-Stateful counters and flags across transactions, `**flowbits**` blocks on rules, environment variables, and **variable interpolation** in flowbit names. JSON shape for rules and conditions is in [RULES_FORMAT.md](RULES_FORMAT.md).
+Stateful counters and flags across transactions, `**flowstate**` blocks on rules, environment variables, and **variable interpolation** in flowstate names. JSON shape for rules and conditions is in [RULES_FORMAT.md](RULES_FORMAT.md).
 
-## Flowbits overview
+## FlowState overview
 
-Flowbits track per-wallet or global counters and flags across transactions. See the hub [RULES_DEVELOPMENT.md](RULES_DEVELOPMENT.md) for loading bundles and operational habits.
+FlowState track per-wallet or global counters and flags across transactions. See the hub [RULES_DEVELOPMENT.md](RULES_DEVELOPMENT.md) for loading bundles and operational habits.
 
-**Parapet environment variables** (today’s implementation uses the `**PARAPET_FLOWBITS_*`** prefix in `parapet-core`; treat these as Parapet settings until renamed in code):
+**Parapet environment variables** (today’s implementation uses the `**PARAPET_FLOWSTATE_*`** prefix in `parapet-core`; treat these as Parapet settings until renamed in code):
 
 
 | Variable                             | Role                                   |
 | ------------------------------------ | -------------------------------------- |
-| `PARAPET_FLOWBITS_ENABLED`         | Master switch                          |
-| `PARAPET_FLOWBITS_MAX_WALLETS`     | Cap tracked wallets                    |
-| `PARAPET_FLOWBITS_DEFAULT_TTL`     | Default seconds for flowbit expiry     |
-| `PARAPET_FLOWBITS_MAX_GLOBAL_KEYS` | Cap global keys for cross-wallet rules |
+| `PARAPET_FLOWSTATE_ENABLED`         | Master switch                          |
+| `PARAPET_FLOWSTATE_MAX_WALLETS`     | Cap tracked wallets                    |
+| `PARAPET_FLOWSTATE_DEFAULT_TTL`     | Default seconds for flowstate expiry     |
+| `PARAPET_FLOWSTATE_MAX_GLOBAL_KEYS` | Cap global keys for cross-wallet rules |
 
 
 Start with `action: alert`, tune from traffic, then tighten to `block`.
 
-## Flowbits variable interpolation
+## FlowState variable interpolation
 
-Interpolation lets flowbit **names** include values from the current transaction (dynamic keys per recipient, mint, program, etc.).
+Interpolation lets flowstate **names** include values from the current transaction (dynamic keys per recipient, mint, program, etc.).
 
 ### Syntax
 
@@ -29,7 +29,7 @@ Use `{analyzer:field_name}` to reference analyzer fields:
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["transfers_to:{system:sol_recipients[0]}"]
   }
 }
@@ -41,7 +41,7 @@ Use `{analyzer:field_name}` to reference analyzer fields:
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "transfers_to:{system:sol_recipients[0]}",
       "token_activity:{token_instructions:mints[0]}",
@@ -56,7 +56,7 @@ Use `{analyzer:field_name}` to reference analyzer fields:
 ### Array handling
 
 1. If a variable maps to an array field, default behavior uses the first element `[0]`.
-2. **Empty arrays:** the flowbit operation is skipped (no increment/set).
+2. **Empty arrays:** the flowstate operation is skipped (no increment/set).
 3. **Multiple elements:** only the first index is used unless you list multiple templates (e.g. `[0]` and `[1]`); a future wildcard `[*]` may track all elements.
 
 Example: `system:sol_recipients` empty → skip; two recipients → only `sol_recipients[0]` participates unless you add another increment line for `[1]`.
@@ -73,7 +73,7 @@ Example: `system:sol_recipients` empty → skip; two recipients → only `sol_re
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "set": ["flag_name:{variable}"],
     "ttl_seconds": 3600
   }
@@ -84,7 +84,7 @@ Example: `system:sol_recipients` empty → skip; two recipients → only `sol_re
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["counter_name:{variable}"],
     "ttl_seconds": 3600
   }
@@ -95,13 +95,13 @@ Example: `system:sol_recipients` empty → skip; two recipients → only `sol_re
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "unset": ["flag_name:{variable}"]
   }
 }
 ```
 
-Conditions that **test** flowbit state should use the **flowbit condition** shape (`{ "flowbit": "...", ... }`) with the **fully resolved** flowbit name (same string that would be produced after interpolation when incrementing). See the flowbit condition variant under **Conditions** in [RULES_FORMAT.md](RULES_FORMAT.md).
+Conditions that **test** flowstate state should use the **flowstate condition** shape (`{ "flowstate": "...", ... }`) with the **fully resolved** flowstate name (same string that would be produced after interpolation when incrementing). See the flowstate condition variant under **Conditions** in [RULES_FORMAT.md](RULES_FORMAT.md).
 
 ### Illustrative patterns
 
@@ -115,10 +115,10 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
     "conditions": {
       "all": [
         {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
+        {"field": "flowstate:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "perwallet",
       "increment": ["transfers_to:{system:sol_recipients[0]}"],
       "ttl_seconds": 86400
@@ -138,10 +138,10 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
     "conditions": {
       "all": [
         {"field": "token_instructions:has_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
+        {"field": "flowstate_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
       "ttl_seconds": 900
@@ -161,10 +161,10 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
     "conditions": {
       "all": [
         {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
+        {"field": "flowstate_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
       "ttl_seconds": 3600
@@ -187,7 +187,7 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
         "operator": "equals",
         "value": true
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "global",
         "set": ["nonce_advanced:{system:nonce_account}"],
         "ttl_seconds": 1800
@@ -204,7 +204,7 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
           {"field": "system:max_sol_transfer", "operator": "greater_than", "value": 1000000000},
           {
             "not": {
-              "flowbit": "nonce_advanced:<same_resolved_name_as_set_rule>"
+              "flowstate": "nonce_advanced:<same_resolved_name_as_set_rule>"
             }
           }
         ]
@@ -215,7 +215,7 @@ Conditions that **test** flowbit state should use the **flowbit condition** shap
 ]
 ```
 
-Use the **same** resolved flowbit name string the `set` step uses (after interpolation). If your deployment compares flowbit counters via `field` + `operator` instead, that path must match how `parapet-core` merges flowbit values into the evaluation map for your version.
+Use the **same** resolved flowstate name string the `set` step uses (after interpolation). If your deployment compares flowstate counters via `field` + `operator` instead, that path must match how `parapet-core` merges flowstate values into the evaluation map for your version.
 
 **Unknown program interaction:**
 
@@ -227,10 +227,10 @@ Use the **same** resolved flowbit name string the `set` step uses (after interpo
     "conditions": {
       "all": [
         {"field": "basic:program_ids", "operator": "not_in", "value": ["<known_programs>"]},
-        {"field": "flowbit:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
+        {"field": "flowstate:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "perwallet",
       "increment": ["program_interaction:{basic:program_ids[0]}"],
       "ttl_seconds": 604800
@@ -244,7 +244,7 @@ Use the **same** resolved flowbit name string the `set` step uses (after interpo
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "signer_activity:{basic:signers[0]}",
       "high_value_transfers:{system:max_sol_transfer}",
@@ -255,7 +255,7 @@ Use the **same** resolved flowbit name string the `set` step uses (after interpo
 }
 ```
 
-Numeric and boolean values are stringified for flowbit names.
+Numeric and boolean values are stringified for flowstate names.
 
 ### Discovering fields for templates
 
@@ -268,7 +268,7 @@ Numeric and boolean values are stringified for flowbit names.
 
 | Situation                                                | Result                   |
 | -------------------------------------------------------- | ------------------------ |
-| Invalid template (not `analyzer:field` or indexed array) | Warn; flowbit op skipped |
+| Invalid template (not `analyzer:field` or indexed array) | Warn; flowstate op skipped |
 | Field missing for this transaction                       | Warn; op skipped         |
 | Empty array for indexed access                           | Op skipped (no warn)     |
 | Unsupported type for string conversion                   | Warn; op skipped         |
@@ -291,7 +291,7 @@ Multiple indices in one rule:
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "transfers_to:{system:sol_recipients[0]}",
       "transfers_to:{system:sol_recipients[1]}"

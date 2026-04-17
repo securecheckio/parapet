@@ -40,7 +40,7 @@ Published from [`securecheckio/parapet-rules`](https://github.com/securecheckio/
 - `https://parapet-rules.securecheck.io/community/helius-protection.json` — requires `HELIUS_API_KEY`
 - `https://parapet-rules.securecheck.io/community/jupiter-protection.json` — requires `JUPITER_API_KEY`
 - `https://parapet-rules.securecheck.io/community/rugcheck-protection.json` — requires `RUGCHECK_API_KEY`
-- `https://parapet-rules.securecheck.io/community/ai-agent-protection.json` — AI-agent / flowbits patterns (no API keys)
+- `https://parapet-rules.securecheck.io/community/ai-agent-protection.json` — AI-agent / flowstate patterns (no API keys)
 - `https://parapet-rules.securecheck.io/community/advanced-patterns.json` — CPI + instruction-padding patterns (no API keys)
 - `https://parapet-rules.securecheck.io/community/trading-bot-alerts.json` — alert-first trading-oriented patterns
 

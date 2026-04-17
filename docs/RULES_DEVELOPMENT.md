@@ -1,11 +1,11 @@
 # Rule development
 
-Parapet loads **rule bundles**: JSON that describes when to `pass`, `alert`, or `block` a transaction using **conditions** over analyzer fields, optional **flowbits**, and optional third-party signals. This page is the **hub**; details live in focused docs (no duplicate long copies here).
+Parapet loads **rule bundles**: JSON that describes when to `pass`, `alert`, or `block` a transaction using **conditions** over analyzer fields, optional **flowstate**, and optional third-party signals. This page is the **hub**; details live in focused docs (no duplicate long copies here).
 
 | Topic | Document |
 | --- | --- |
 | Bundle structure, `RuleDefinition`, conditions, operators, analyzers | [RULES_FORMAT.md](RULES_FORMAT.md) |
-| Flowbits env, `flowbits` block, variable interpolation, examples | [RULES_FLOWBITS.md](RULES_FLOWBITS.md) |
+| FlowState env, `flowstate` block, variable interpolation, examples | [RULES_FLOWSTATE.md](RULES_FLOWSTATE.md) |
 
 ## Loading bundles
 
@@ -15,7 +15,7 @@ Configure the Parapet proxy or scanner with your bundle via `RULES_PATH` or the 
 
 - Prefer incremental rollout: alert first, then block.
 - Document threshold changes and allowlists with your bundle version.
-- When a rule does not fire as expected, confirm required analyzers are registered, field names match `analyzer:field` conventions (see [RULES_FORMAT.md](RULES_FORMAT.md)), and flowbits are enabled if the rule depends on them ([RULES_FLOWBITS.md](RULES_FLOWBITS.md)).
+- When a rule does not fire as expected, confirm required analyzers are registered, field names match `analyzer:field` conventions (see [RULES_FORMAT.md](RULES_FORMAT.md)), and flowstate are enabled if the rule depends on them ([RULES_FLOWSTATE.md](RULES_FLOWSTATE.md)).
 
 ## Program Vulnerability Rules
 

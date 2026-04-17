@@ -19,7 +19,7 @@ fn create_state_with_api_key_auth(valid_keys: Vec<String>) -> Arc<AppState> {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
 
-    let engine = RuleEngine::new(registry).with_flowbits(None);
+    let engine = RuleEngine::new(registry).with_flowstate(None);
     let mut sim_registry =
         parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     sim_registry.register(Box::new(
@@ -110,7 +110,7 @@ fn create_state_with_wallet_allowlist(allowed: Vec<String>) -> Arc<AppState> {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
 
-    let engine = RuleEngine::new(registry).with_flowbits(None);
+    let engine = RuleEngine::new(registry).with_flowstate(None);
     let mut sim_registry =
         parapet_core::rules::analyzers::simulation::SimulationAnalyzerRegistry::new();
     sim_registry.register(Box::new(

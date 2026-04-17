@@ -127,7 +127,7 @@ The `BasicAnalyzer` extracts fundamental transaction metadata including signatur
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["activity_by:{basic:fee_payer}"],
     "ttl_seconds": 3600
   }
@@ -137,8 +137,8 @@ The `BasicAnalyzer` extracts fundamental transaction metadata including signatur
 **Behavior**:
 
 - Always present (every transaction has a fee payer)
-- Creates unique flowbit per fee payer address
-- Note: Per-wallet flowbits already track by fee payer automatically
+- Creates unique flowstate per fee payer address
+- Note: Per-wallet flowstate already track by fee payer automatically
 
 ### `{basic:program_ids[0]}` - Invoked Program
 
@@ -150,7 +150,7 @@ The `BasicAnalyzer` extracts fundamental transaction metadata including signatur
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["program_interaction:{basic:program_ids[0]}"],
     "ttl_seconds": 604800
@@ -161,8 +161,8 @@ The `BasicAnalyzer` extracts fundamental transaction metadata including signatur
 **Behavior**:
 
 - Transaction with multiple programs: Uses first program only
-- Transaction with no programs: Skips flowbit operation (rare)
-- Creates unique flowbit per program ID
+- Transaction with no programs: Skips flowstate operation (rare)
+- Creates unique flowstate per program ID
 
 ## Common Use Cases
 
@@ -179,10 +179,10 @@ Track repeated interaction with unverified programs:
         "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
         "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
       ]},
-      {"field": "flowbit:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
+      {"field": "flowstate:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
     ]
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["program_interaction:{basic:program_ids[0]}"],
     "ttl_seconds": 604800
@@ -202,7 +202,7 @@ Track multisig activity:
     "operator": "equals",
     "value": true
   },
-  "flowbits": {
+  "flowstate": {
     "increment": ["multisig_activity"],
     "ttl_seconds": 86400
   }
@@ -347,7 +347,7 @@ Maintain allowlists for:
 
 ## See Also
 
-- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [FlowState](../RULES_FLOWSTATE.md#flowstate-variable-interpolation)
 - [Rule development hub](../RULES_DEVELOPMENT.md)
 - [Rule JSON format](../RULES_FORMAT.md)
 - [System Program Analyzer](system-program.md)

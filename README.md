@@ -123,7 +123,7 @@ See [docs/operators/](docs/operators/) for complete deployment guides.
 Parapet uses **JSON-based declarative rules** with condition trees, pluggable analyzers, and stateful detection. Rules can:
 
 - **Block, alert, or pass** transactions based on complex conditions
-- **Track state across transactions** with flowbits (counters, flags, TTL)
+- **Track state across transactions** with flowstate (counters, flags, TTL)
 - **Detect vulnerability patterns** at the bytecode level (missing checks, arbitrary CPI)
 - **Compose third-party signals** (Helius, OtterSec, Jupiter, Rugcheck)
 - **Use variable interpolation** for dynamic per-wallet/program/mint tracking
@@ -131,7 +131,7 @@ Parapet uses **JSON-based declarative rules** with condition trees, pluggable an
 **Documentation:**
 - [Rule Format Reference](docs/RULES_FORMAT.md) - JSON structure, operators, analyzers
 - [Rule Development Guide](docs/RULES_DEVELOPMENT.md) - Hub for rule authoring
-- [Flowbits Guide](docs/RULES_FLOWBITS.md) - Stateful detection patterns
+- [FlowState Guide](docs/RULES_FLOWSTATE.md) - Stateful detection patterns
 
 **Community Rules:** [parapet-rules](https://github.com/securecheckio/parapet-rules) (separate repository)
 
@@ -195,7 +195,7 @@ parapet/
 ├── api/               # Rule management API
 ├── tools/
 │   ├── rpc-perf/          # Proxy + rule-engine latency harness
-│   ├── flowbits-perf/     # Flowbits Criterion benchmarks
+│   ├── flowstate-perf/     # FlowState Criterion benchmarks
 │   └── risk-register/     # Risk database & analysis
 ├── docs/                   # Documentation
 └── deployments/           # Deployment configurations

@@ -1,8 +1,8 @@
-# Flowbits Variable Interpolation
+# FlowState Variable Interpolation
 
 ## Overview
 
-Variable interpolation allows flowbits to create dynamic flowbit names based on transaction data. This enables tracking of specific recipients, tokens, programs, or other transaction attributes.
+Variable interpolation allows flowstate to create dynamic flowstate names based on transaction data. This enables tracking of specific recipients, tokens, programs, or other transaction attributes.
 
 ## Syntax
 
@@ -10,7 +10,7 @@ Use `{analyzer:field_name}` to reference any analyzer field:
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["transfers_to:{system:sol_recipients[0]}"]
   }
 }
@@ -25,7 +25,7 @@ Use `{analyzer:field_name}` to reference any analyzer field:
 **Examples**:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "transfers_to:{system:sol_recipients[0]}",
       "token_activity:{token_instructions:mints[0]}",
@@ -42,14 +42,14 @@ Use `{analyzer:field_name}` to reference any analyzer field:
 When a variable maps to an array field:
 
 1. **Default Behavior**: Uses first element `[0]`
-2. **Empty Arrays**: Skips flowbit operation (no flowbit created)
+2. **Empty Arrays**: Skips flowstate operation (no flowstate created)
 3. **Multiple Elements**: Only tracks first element (future: `[*]` for all)
 
 ### Example: Empty Array
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["transfers_to:{recipient}"]
   }
 }
@@ -78,10 +78,10 @@ When a variable maps to an array field:
     "conditions": {
       "all": [
         {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
+        {"field": "flowstate:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "perwallet",
       "increment": ["transfers_to:{system:sol_recipients[0]}"],
       "ttl_seconds": 86400
@@ -111,10 +111,10 @@ When a variable maps to an array field:
     "conditions": {
       "all": [
         {"field": "token_instructions:has_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
+        {"field": "flowstate_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
       "ttl_seconds": 900
@@ -142,10 +142,10 @@ When a variable maps to an array field:
     "conditions": {
       "all": [
         {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-        {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
+        {"field": "flowstate_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
       "ttl_seconds": 3600
@@ -175,7 +175,7 @@ When a variable maps to an array field:
         "operator": "equals",
         "value": true
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "global",
         "set": ["nonce_advanced:{system:nonce_account}"],
         "ttl_seconds": 1800
@@ -190,7 +190,7 @@ When a variable maps to an array field:
         "all": [
           {"field": "system:uses_durable_nonce", "operator": "equals", "value": true},
           {"field": "system:max_sol_transfer", "operator": "greater_than", "value": 1000000000},
-          {"field": "flowbit_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
+          {"field": "flowstate_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
         ]
       },
       "message": "Stale nonce detected (>30 min old) on high-value transfer"
@@ -216,10 +216,10 @@ When a variable maps to an array field:
     "conditions": {
       "all": [
         {"field": "basic:program_ids", "operator": "not_in", "value": ["<known_programs>"]},
-        {"field": "flowbit:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
+        {"field": "flowstate:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "perwallet",
       "increment": ["program_interaction:{basic:program_ids[0]}"],
       "ttl_seconds": 604800
@@ -236,7 +236,7 @@ When a variable maps to an array field:
 **Examples**:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "signer_activity:{basic:signers[0]}",
       "high_value_transfers:{system:max_sol_transfer}",
@@ -247,13 +247,13 @@ When a variable maps to an array field:
 }
 ```
 
-**Note**: Numeric and boolean fields are converted to strings for flowbit names.
+**Note**: Numeric and boolean fields are converted to strings for flowstate names.
 
 ## Scope: Per-Wallet vs Global
 
 ### Per-Wallet Scope (`"scope": "perwallet"`)
 
-Tracks flowbits separately for each wallet (fee payer).
+Tracks flowstate separately for each wallet (fee payer).
 
 **Use cases**:
 - AI agent behavior monitoring
@@ -263,7 +263,7 @@ Tracks flowbits separately for each wallet (fee payer).
 **Example**:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["transfers_to:{recipient}"]
   }
@@ -277,7 +277,7 @@ Tracks flowbits separately for each wallet (fee payer).
 
 ### Global Scope (`"scope": "global"`)
 
-Tracks flowbits across all wallets.
+Tracks flowstate across all wallets.
 
 **Use cases**:
 - Enterprise lateral movement detection
@@ -287,7 +287,7 @@ Tracks flowbits across all wallets.
 **Example**:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "increment": ["suspicious_recipient:{recipient}"]
   }
@@ -303,11 +303,11 @@ Tracks flowbits across all wallets.
 
 ### Set
 
-Sets a boolean flowbit (true).
+Sets a boolean flowstate (true).
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "set": ["flag_name:{variable}"],
     "ttl_seconds": 3600
   }
@@ -318,11 +318,11 @@ Sets a boolean flowbit (true).
 
 ### Increment
 
-Increments a counter flowbit.
+Increments a counter flowstate.
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["counter_name:{variable}"],
     "ttl_seconds": 3600
   }
@@ -333,11 +333,11 @@ Increments a counter flowbit.
 
 ### Unset
 
-Removes a flowbit.
+Removes a flowstate.
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "unset": ["flag_name:{variable}"]
   }
 }
@@ -345,13 +345,13 @@ Removes a flowbit.
 
 **Use case**: Clear a flag after resolution
 
-## Checking Flowbits in Conditions
+## Checking FlowState in Conditions
 
 ### Check if Set
 
 ```json
 {
-  "field": "flowbit:name",
+  "field": "flowstate:name",
   "operator": "isset"
 }
 ```
@@ -360,7 +360,7 @@ Removes a flowbit.
 
 ```json
 {
-  "field": "flowbit:name",
+  "field": "flowstate:name",
   "operator": "isnotset"
 }
 ```
@@ -369,7 +369,7 @@ Removes a flowbit.
 
 ```json
 {
-  "field": "flowbit:counter_name",
+  "field": "flowstate:counter_name",
   "operator": "greater_than",
   "value": 5
 }
@@ -379,7 +379,7 @@ Removes a flowbit.
 
 ```json
 {
-  "field": "flowbit:name",
+  "field": "flowstate:name",
   "operator": "isset_within",
   "value": 300  // seconds
 }
@@ -450,11 +450,11 @@ WARN: Field analyzer:field has unsupported type for interpolation
 - **Regex matching**: ~0.1ms per template
 - **Field lookup**: ~0.05ms per variable
 - **String replacement**: ~0.05ms per variable
-- **Total**: <0.5ms per flowbit name
+- **Total**: <0.5ms per flowstate name
 
 ### Memory Impact
 
-Each unique interpolated flowbit name consumes:
+Each unique interpolated flowstate name consumes:
 - Per-wallet: ~100 bytes
 - Global: ~100 bytes
 
@@ -463,8 +463,8 @@ Each unique interpolated flowbit name consumes:
 ### Best Practices
 
 1. **Limit Variable Usage**: Only use variables when necessary
-2. **Set Reasonable TTLs**: Avoid accumulating stale flowbits
-3. **Monitor Unique Keys**: Track number of unique flowbit names created
+2. **Set Reasonable TTLs**: Avoid accumulating stale flowstate
+3. **Monitor Unique Keys**: Track number of unique flowstate names created
 4. **Use Allowlists**: Filter out known-good values before incrementing
 
 ## Debugging
@@ -479,8 +479,8 @@ RUST_LOG=sol_shield_core::rules::engine=debug parapet-proxy
 
 Look for log messages:
 ```
-DEBUG: Interpolated flowbit name: transfers_to:7xK...9mP
-WARN: Unknown variable in flowbit template: {invalid}
+DEBUG: Interpolated flowstate name: transfers_to:7xK...9mP
+WARN: Unknown variable in flowstate template: {invalid}
 WARN: Field not found for variable {recipient}
 ```
 
@@ -488,8 +488,8 @@ WARN: Field not found for variable {recipient}
 
 Add a debug endpoint to your proxy:
 ```rust
-// GET /debug/flowbits/{wallet}
-// Returns current flowbit state for wallet
+// GET /debug/flowstate/{wallet}
+// Returns current flowstate state for wallet
 ```
 
 ## Examples
@@ -505,7 +505,7 @@ See `parapet/proxy/rules/presets/` for complete examples:
 Track multiple recipients/mints/programs:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": [
       "transfers_to:{system:sol_recipients[0]}",
       "transfers_to:{system:sol_recipients[1]}"
@@ -514,33 +514,33 @@ Track multiple recipients/mints/programs:
 }
 ```
 
-**Note**: Each array index creates a separate flowbit. Empty array slots are skipped.
+**Note**: Each array index creates a separate flowstate. Empty array slots are skipped.
 
 ### Numeric Field Interpolation
 
-Use numeric fields in flowbit names:
+Use numeric fields in flowstate names:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["tx_size:{basic:instruction_count}"]
   }
 }
 ```
 
-**Result**: Creates flowbits like `tx_size:5`, `tx_size:10`, etc.
+**Result**: Creates flowstate like `tx_size:5`, `tx_size:10`, etc.
 
 ### Boolean Field Interpolation
 
-Use boolean fields in flowbit names:
+Use boolean fields in flowstate names:
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["multisig:{basic:is_multisig}"]
   }
 }
 ```
 
-**Result**: Creates flowbits like `multisig:true`, `multisig:false`
+**Result**: Creates flowstate like `multisig:true`, `multisig:false`
 
 ## Future Enhancements
 
@@ -549,20 +549,20 @@ Use boolean fields in flowbit names:
 Track all elements in an array (planned):
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["transfers_to:{system:sol_recipients[*]}"]
   }
 }
 ```
 
-**Behavior**: Would create flowbit for each recipient in transaction
+**Behavior**: Would create flowstate for each recipient in transaction
 
 ### Nested Field Access
 
 Support nested object fields (planned):
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["event:{simulation:metadata.event_type}"]
   }
 }

@@ -1,11 +1,11 @@
 [package]
-name = "flowbits-perf"
+name = "flowstate-perf"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Criterion benchmarks for parapet_core flowbits (FlowbitStateManager)."
+description = "Criterion benchmarks for parapet_core flowstate (FlowStateManager)."
 
 [dependencies]
 parapet-core = { path = "../../core" }
@@ -15,5 +15,5 @@ solana-sdk = "2.3"
 criterion = "0.5"
 
 [[bench]]
-name = "flowbits_perf"
+name = "flowstate_perf"
 harness = false

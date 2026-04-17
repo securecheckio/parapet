@@ -138,7 +138,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "increment": ["transfers_to:{system:sol_recipients[0]}"],
     "ttl_seconds": 86400
   }
@@ -148,8 +148,8 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 **Behavior**:
 
 - Transaction with 2 recipients: Uses first recipient only
-- Transaction with 0 recipients: Skips flowbit operation
-- Creates unique flowbit per recipient address
+- Transaction with 0 recipients: Skips flowstate operation
+- Creates unique flowstate per recipient address
 
 ### `{system:nonce_account}` - Durable Nonce Account
 
@@ -161,7 +161,7 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "set": ["nonce_advanced:{system:nonce_account}"],
     "ttl_seconds": 1800
@@ -172,8 +172,8 @@ The `SystemProgramAnalyzer` analyzes Solana's built-in System Program instructio
 **Behavior**:
 
 - Only available when `advances_nonce` is true
-- If field not present: Skips flowbit operation
-- Creates unique flowbit per nonce account
+- If field not present: Skips flowstate operation
+- Creates unique flowstate per nonce account
 
 ## Common Use Cases
 
@@ -188,7 +188,7 @@ Detect runaway transaction behavior:
     "operator": "equals",
     "value": true
   },
-  "flowbits": {
+  "flowstate": {
     "increment": ["transaction_count"],
     "ttl_seconds": 600
   }
@@ -206,7 +206,7 @@ Detect CreateAccount loops:
     "operator": "equals",
     "value": true
   },
-  "flowbits": {
+  "flowstate": {
     "increment": ["account_creation_count"],
     "ttl_seconds": 300
   }
@@ -222,10 +222,10 @@ Track repeated transfers to same recipient:
   "conditions": {
     "all": [
       {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-      {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
+      {"field": "flowstate:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
     ]
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["transfers_to:{system:sol_recipients[0]}"],
     "ttl_seconds": 86400
@@ -242,10 +242,10 @@ Detect same recipient receiving from multiple wallets:
   "conditions": {
     "all": [
       {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-      {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
+      {"field": "flowstate_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
     ]
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
     "ttl_seconds": 3600
@@ -265,7 +265,7 @@ Prevent Drift-style attacks with stale nonces:
       "operator": "equals",
       "value": true
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "set": ["nonce_advanced:{system:nonce_account}"],
       "ttl_seconds": 1800
@@ -276,7 +276,7 @@ Prevent Drift-style attacks with stale nonces:
       "all": [
         {"field": "system:uses_durable_nonce", "operator": "equals", "value": true},
         {"field": "system:max_sol_transfer", "operator": "greater_than", "value": 1000000000},
-        {"field": "flowbit_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
+        {"field": "flowstate_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
       ]
     }
   }
@@ -329,7 +329,7 @@ Prevent Drift-style attacks with stale nonces:
 
 ## See Also
 
-- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [FlowState](../RULES_FLOWSTATE.md#flowstate-variable-interpolation)
 - [Rule development hub](../RULES_DEVELOPMENT.md)
 - [Rule JSON format](../RULES_FORMAT.md)
 - [Token Instructions Analyzer](token-instructions.md)

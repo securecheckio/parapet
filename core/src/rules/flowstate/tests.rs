@@ -1,10 +1,10 @@
-use super::state::FlowbitStateManager;
+use super::state::FlowStateManager;
 use solana_sdk::pubkey::Pubkey;
 use std::time::Duration;
 
 #[test]
 fn test_transaction_count_tracking() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Simulate 5 transactions
@@ -17,7 +17,7 @@ fn test_transaction_count_tracking() {
 
 #[test]
 fn test_transaction_velocity_limit() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Simulate 10 transactions (at velocity limit)
@@ -32,7 +32,7 @@ fn test_transaction_velocity_limit() {
 
 #[test]
 fn test_account_creation_spam_detection() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Simulate 5 account creations (at spam threshold)
@@ -51,7 +51,7 @@ fn test_account_creation_spam_detection() {
 
 #[test]
 fn test_blocked_transaction_count() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Simulate 3 blocked transactions
@@ -70,7 +70,7 @@ fn test_blocked_transaction_count() {
 
 #[test]
 fn test_counter_expiration_after_ttl() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Set counter with very short TTL
@@ -90,7 +90,7 @@ fn test_counter_expiration_after_ttl() {
 
 #[test]
 fn test_multiple_wallets_independent_counters() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet1 = Pubkey::new_unique();
     let wallet2 = Pubkey::new_unique();
 
@@ -118,7 +118,7 @@ fn test_multiple_wallets_independent_counters() {
 
 #[test]
 fn test_nonce_tracking() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Track nonce usage
@@ -133,7 +133,7 @@ fn test_nonce_tracking() {
 
 #[test]
 fn test_pass_action_tracker_pattern() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Simulate "pass" action tracker incrementing counter
@@ -151,7 +151,7 @@ fn test_pass_action_tracker_pattern() {
 
 #[test]
 fn test_memory_limit_with_ai_agent() {
-    let mut manager = FlowbitStateManager::new(Some(1)); // Max 1 wallet (AI agent)
+    let mut manager = FlowStateManager::new(Some(1)); // Max 1 wallet (AI agent)
 
     let wallet1 = Pubkey::new_unique();
     let wallet2 = Pubkey::new_unique();
@@ -176,7 +176,7 @@ fn test_memory_limit_with_ai_agent() {
 
 #[test]
 fn test_cleanup_removes_expired_flowbits() {
-    let mut manager = FlowbitStateManager::new(None);
+    let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
     // Set flowbit with short TTL
@@ -192,7 +192,7 @@ fn test_cleanup_removes_expired_flowbits() {
 
 #[test]
 fn test_ai_agent_scenario_runaway_behavior() {
-    let mut manager = FlowbitStateManager::new(Some(1));
+    let mut manager = FlowStateManager::new(Some(1));
     let wallet = Pubkey::new_unique();
 
     // Simulate runaway AI agent sending 15 transactions rapidly
@@ -211,7 +211,7 @@ fn test_ai_agent_scenario_runaway_behavior() {
 
 #[test]
 fn test_ai_agent_scenario_account_spam() {
-    let mut manager = FlowbitStateManager::new(Some(1));
+    let mut manager = FlowStateManager::new(Some(1));
     let wallet = Pubkey::new_unique();
 
     // Simulate AI agent creating accounts in a loop
@@ -234,7 +234,7 @@ fn test_ai_agent_scenario_account_spam() {
 
 #[test]
 fn test_repeated_block_detection() {
-    let mut manager = FlowbitStateManager::new(Some(1));
+    let mut manager = FlowStateManager::new(Some(1));
     let wallet = Pubkey::new_unique();
 
     // Simulate rule engine incrementing on each block

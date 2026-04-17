@@ -337,7 +337,7 @@ fn test_rule_serialization() {
             value: json!(true),
         }),
         message: "Test message".to_string(),
-        flowbits: None,
+        flowstate: None,
     };
 
     let json = serde_json::to_value(&rule).unwrap();
@@ -385,7 +385,7 @@ fn test_rule_definition_full() {
                 value: json!(true),
             }),
             message: "Test".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata,
     };
@@ -416,7 +416,7 @@ fn test_rule_definition_minimal() {
                 value: json!(true),
             }),
             message: "".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: HashMap::new(),
     };

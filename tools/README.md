@@ -20,16 +20,16 @@ cargo run -p rpc-perf --release -- --iterations 500
 
 ---
 
-### `flowbits-perf/`
+### `flowstate-perf/`
 
-Flowbits state manager performance benchmarks.
+FlowState state manager performance benchmarks.
 
-Criterion-based microbenchmarks for stateful detection (flowbits) operations. Tests counter updates, TTL expiration, and cross-transaction state tracking.
+Criterion-based microbenchmarks for stateful detection (flowstate) operations. Tests counter updates, TTL expiration, and cross-transaction state tracking.
 
 **Usage:**
 
 ```bash
-cargo bench -p flowbits-perf
+cargo bench -p flowstate-perf
 ```
 
 ---

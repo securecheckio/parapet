@@ -11,7 +11,7 @@ async fn test_rule_engine_creation() {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
 
-    let engine = RuleEngine::new(registry).with_flowbits(None);
+    let engine = RuleEngine::new(registry).with_flowstate(None);
 
     assert_eq!(engine.rule_count(), 0);
     assert_eq!(engine.enabled_rule_count(), 0);
@@ -23,7 +23,7 @@ async fn test_load_rules_dynamically() {
     registry.register(Arc::new(BasicAnalyzer::new()));
     registry.register(Arc::new(SystemProgramAnalyzer::new()));
 
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
 
     // Load first rule
     let rule1 = RuleDefinition {
@@ -47,7 +47,7 @@ async fn test_load_rules_dynamically() {
             }))
             .unwrap(),
             message: "Many instructions".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     };
@@ -77,7 +77,7 @@ async fn test_load_rules_dynamically() {
             }))
             .unwrap(),
             message: "Single instruction".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     };
@@ -108,7 +108,7 @@ async fn test_load_rules_dynamically() {
             }))
             .unwrap(),
             message: "Few instructions".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     };
@@ -183,7 +183,7 @@ async fn test_rule_priority_handling() {
     let mut registry = AnalyzerRegistry::new();
     registry.register(Arc::new(BasicAnalyzer::new()));
 
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
 
     // Load rules with different actions
     let block_rule = RuleDefinition {
@@ -207,7 +207,7 @@ async fn test_rule_priority_handling() {
             }))
             .unwrap(),
             message: "Blocked".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     };
@@ -233,7 +233,7 @@ async fn test_rule_priority_handling() {
             }))
             .unwrap(),
             message: "Passed".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     };

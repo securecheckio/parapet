@@ -323,6 +323,6 @@ Track trends over time with a dashboard:
 
 ## See Also
 
-- [flowbits-perf-2026-04-15.md](flowbits-perf-2026-04-15.md) - Flowbits system benchmarks
+- [flowstate-perf-2026-04-15.md](flowstate-perf-2026-04-15.md) - FlowState system benchmarks
 - [TEST_COVERAGE.md](../TEST_COVERAGE.md) - Test coverage documentation
 - [rpc-perf README](../../rpc-perf/README.md) - Benchmark tool documentation

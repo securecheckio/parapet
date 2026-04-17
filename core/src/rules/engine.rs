@@ -1,6 +1,6 @@
 use super::analyzer::AnalyzerRegistry;
 use super::dynamic::DynamicRuleStore;
-use super::flowbits::FlowbitStateManager;
+use super::flowstate::FlowStateManager;
 use super::performance::PerformanceTracker;
 use super::types::*;
 use anyhow::{anyhow, Result};
@@ -35,8 +35,8 @@ pub struct RuleEngine {
     enrichment_cache: Arc<tokio::sync::RwLock<HashMap<String, EnrichmentData>>>,
     /// Performance tracker for rule and analyzer timing
     performance_tracker: PerformanceTracker,
-    /// Flowbit state manager (optional, for multi-transaction attack detection)
-    flowbit_state: Option<Arc<Mutex<FlowbitStateManager>>>,
+    /// FlowState manager (optional, for multi-transaction attack detection)
+    flowstate: Option<Arc<Mutex<FlowStateManager>>>,
 }
 
 /// Detect Solana network from RPC URL
@@ -88,36 +88,36 @@ impl RuleEngine {
             #[cfg(feature = "reqwest")]
             enrichment_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             performance_tracker: PerformanceTracker::new(perf_enabled),
-            flowbit_state: None, // DISABLED by default
+            flowstate: None, // DISABLED by default
         };
 
         // Auto-enable from environment variable
-        if std::env::var("PARAPET_FLOWBITS_ENABLED")
+        if std::env::var("PARAPET_FLOWSTATE_ENABLED")
             .map(|v| v == "1" || v.to_lowercase() == "true")
             .unwrap_or(false)
         {
-            let max_wallets = std::env::var("PARAPET_FLOWBITS_MAX_WALLETS")
+            let max_wallets = std::env::var("PARAPET_FLOWSTATE_MAX_WALLETS")
                 .ok()
                 .and_then(|v| v.parse().ok());
-            engine = engine.with_flowbits(max_wallets);
+            engine = engine.with_flowstate(max_wallets);
         }
 
         engine
     }
 
-    /// Enable flowbits for multi-transaction attack detection
-    pub fn with_flowbits(mut self, max_wallets: Option<usize>) -> Self {
-        log::info!("✅ RuleEngine: Flowbits enabled - multi-transaction attack detection active");
+    /// Enable flowstate for multi-transaction attack detection
+    pub fn with_flowstate(mut self, max_wallets: Option<usize>) -> Self {
+        log::info!("✅ RuleEngine: FlowState enabled - multi-transaction attack detection active");
         if let Some(limit) = max_wallets {
             log::info!("   Memory limit: {} wallets max", limit);
         }
-        self.flowbit_state = Some(Arc::new(Mutex::new(FlowbitStateManager::new(max_wallets))));
+        self.flowstate = Some(Arc::new(Mutex::new(FlowStateManager::new(max_wallets))));
         self
     }
 
-    /// Check if flowbits are enabled
-    pub fn has_flowbits(&self) -> bool {
-        self.flowbit_state.is_some()
+    /// Check if flowstate is enabled
+    pub fn has_flowstate(&self) -> bool {
+        self.flowstate.is_some()
     }
 
     /// Enable enrichment service for off-chain data access in rules
@@ -254,7 +254,7 @@ impl RuleEngine {
     pub fn load_rules(&mut self, mut rules: Vec<RuleDefinition>) -> Result<()> {
         log::info!("📜 Loading {} rules", rules.len());
 
-        // Run pass (tracker) rules before block/alert so flowbit counters increment before
+        // Run pass (tracker) rules before block/alert so flowstate counters increment before
         // dependent rules read them. Within each tier, preserve input order via stable sort.
         rules.sort_by(|a, b| {
             let priority_a = match a.rule.action {
@@ -316,20 +316,20 @@ impl RuleEngine {
             log::info!("  ✓ Loaded rule: {} ({})", rule.name, rule.id);
         }
 
-        // Check for flowbit rules and warn if flowbits disabled
-        let mut flowbit_rules_count = 0;
+        // Check for flowstate rules and warn if flowstate disabled
+        let mut flowstate_rules_count = 0;
         for rule in &rules {
-            if rule.enabled && self.rule_uses_flowbits(&rule.rule) {
-                flowbit_rules_count += 1;
+            if rule.enabled && self.rule_uses_flowstate(&rule.rule) {
+                flowstate_rules_count += 1;
             }
         }
 
-        if flowbit_rules_count > 0 && self.flowbit_state.is_none() {
+        if flowstate_rules_count > 0 && self.flowstate.is_none() {
             log::warn!(
-                "⚠️  {} rules use flowbits but flowbits are DISABLED. \
+                "⚠️  {} rules use flowstate but flowstate is DISABLED. \
                 These rules will have reduced effectiveness. \
-                Enable with PARAPET_FLOWBITS_ENABLED=true",
-                flowbit_rules_count
+                Enable with PARAPET_FLOWSTATE_ENABLED=true",
+                flowstate_rules_count
             );
         }
 
@@ -344,28 +344,28 @@ impl RuleEngine {
         Ok(())
     }
 
-    fn rule_uses_flowbits(&self, rule: &Rule) -> bool {
-        rule.flowbits.is_some() || self.condition_uses_flowbits(&rule.conditions)
+    fn rule_uses_flowstate(&self, rule: &Rule) -> bool {
+        rule.flowstate.is_some() || self.condition_uses_flowstate(&rule.conditions)
     }
 
-    fn condition_uses_flowbits(&self, condition: &RuleCondition) -> bool {
+    fn condition_uses_flowstate(&self, condition: &RuleCondition) -> bool {
         match condition {
-            RuleCondition::Flowbit(_) => true,
+            RuleCondition::FlowState(_) => true,
             RuleCondition::Compound(compound) => {
                 compound
                     .all
                     .as_ref()
-                    .map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c)))
+                    .map(|conds| conds.iter().any(|c| self.condition_uses_flowstate(c)))
                     .unwrap_or(false)
                     || compound
                         .any
                         .as_ref()
-                        .map(|conds| conds.iter().any(|c| self.condition_uses_flowbits(c)))
+                        .map(|conds| conds.iter().any(|c| self.condition_uses_flowstate(c)))
                         .unwrap_or(false)
                     || compound
                         .not
                         .as_ref()
-                        .map(|c| self.condition_uses_flowbits(c))
+                        .map(|c| self.condition_uses_flowstate(c))
                         .unwrap_or(false)
             }
             _ => false,
@@ -384,9 +384,9 @@ impl RuleEngine {
     ) -> Result<()> {
         match condition {
             RuleCondition::Simple(simple) => {
-                // Flowbit counter/flag fields are engine-managed, not analyzer outputs
-                if simple.field.starts_with("flowbit:")
-                    || simple.field.starts_with("flowbit_global:")
+                // FlowState counter/flag fields are engine-managed, not analyzer outputs
+                if simple.field.starts_with("flowstate:")
+                    || simple.field.starts_with("flowstate_global:")
                 {
                     self.validate_operator_value_compatibility(&simple.operator, &simple.value)?;
                     return Ok(());
@@ -410,8 +410,8 @@ impl RuleEngine {
 
                 Ok(())
             }
-            RuleCondition::Flowbit(_) => {
-                // Flowbit conditions are always valid (they don't depend on analyzers)
+            RuleCondition::FlowState(_) => {
+                // FlowState conditions are always valid (they don't depend on analyzers)
                 Ok(())
             }
             RuleCondition::Compound(compound) => {
@@ -530,8 +530,8 @@ impl RuleEngine {
             RuleCondition::Simple(simple) => {
                 fields.insert(simple.field.clone());
             }
-            RuleCondition::Flowbit(_) => {
-                // Flowbit conditions don't require analyzer fields
+            RuleCondition::FlowState(_) => {
+                // FlowState conditions don't require analyzer fields
             }
             RuleCondition::Compound(compound) => {
                 if let Some(all_conditions) = &compound.all {
@@ -556,7 +556,7 @@ impl RuleEngine {
         let mut required_analyzers = std::collections::HashSet::new();
 
         for field in &self.required_fields {
-            if field.starts_with("flowbit:") || field.starts_with("flowbit_global:") {
+            if field.starts_with("flowstate:") || field.starts_with("flowstate_global:") {
                 continue;
             }
             // Check if field is prefixed (analyzer:field)
@@ -782,7 +782,7 @@ impl RuleEngine {
         let mut total_risk = 0u8;
         let mut matched_alerts = Vec::new();
 
-        // Extract wallet address for flowbit tracking
+        // Extract wallet address for flowstate tracking
         let wallet = self.extract_wallet_from_fields(&fields);
 
         // Evaluate each static rule in order
@@ -806,9 +806,9 @@ impl RuleEngine {
                 )
                 .await?
             {
-                // Apply flowbit actions if rule matched
-                if let Some(ref flowbits) = rule_def.rule.flowbits {
-                    self.apply_flowbit_actions(&wallet, flowbits, &fields).await;
+                // Apply flowstate actions if rule matched
+                if let Some(ref flowstate) = rule_def.rule.flowstate {
+                    self.apply_flowstate_actions(&wallet, flowstate, &fields).await;
                 }
                 let action = self.apply_action_override(rule_def, rule_def.rule.action);
 
@@ -816,8 +816,8 @@ impl RuleEngine {
                 if action == super::types::RuleAction::Block {
                     log::info!("🚨 Rule '{}' triggered immediate block", rule_def.name);
 
-                    // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
-                    if let Some(state) = &self.flowbit_state {
+                    // Auto-increment blocked_transaction_count flowstate for tracking repeated blocks
+                    if let Some(state) = &self.flowstate {
                         let mut state_lock = state.lock().await;
                         state_lock.increment(
                             &wallet,
@@ -878,8 +878,8 @@ impl RuleEngine {
                             threshold
                         );
 
-                        // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
-                        if let Some(state) = &self.flowbit_state {
+                        // Auto-increment blocked_transaction_count flowstate for tracking repeated blocks
+                        if let Some(state) = &self.flowstate {
                             let mut state_lock = state.lock().await;
                             state_lock.increment(
                                 &wallet,
@@ -906,8 +906,8 @@ impl RuleEngine {
         }
         // Determine final action based on accumulated risk
         let (final_action, message) = if total_risk >= threshold {
-            // Auto-increment blocked_transaction_count flowbit for tracking repeated blocks
-            if let Some(state) = &self.flowbit_state {
+            // Auto-increment blocked_transaction_count flowstate for tracking repeated blocks
+            if let Some(state) = &self.flowstate {
                 let mut state_lock = state.lock().await;
                 state_lock.increment(
                     &wallet,
@@ -1059,9 +1059,9 @@ impl RuleEngine {
         Box::pin(async move {
             match condition {
                 RuleCondition::Simple(simple) => Ok(self
-                    .evaluate_simple_with_flowbits(simple, fields, missing_field_override, wallet)
+                    .evaluate_simple_with_flowstate(simple, fields, missing_field_override, wallet)
                     .await?),
-                RuleCondition::Flowbit(flowbit) => self.evaluate_flowbit(flowbit, wallet).await,
+                RuleCondition::FlowState(flowstate) => self.evaluate_flowstate(flowstate, wallet).await,
                 RuleCondition::Compound(compound) => {
                     self.evaluate_compound_with_override(
                         compound,
@@ -1075,13 +1075,13 @@ impl RuleEngine {
         })
     }
 
-    async fn evaluate_flowbit(
+    async fn evaluate_flowstate(
         &self,
-        condition: &FlowbitCondition,
+        condition: &FlowStateCondition,
         wallet: &solana_sdk::pubkey::Pubkey,
     ) -> Result<bool> {
-        // GRACEFUL DEGRADATION: Return false if flowbits disabled
-        if let Some(state) = &self.flowbit_state {
+        // GRACEFUL DEGRADATION: Return false if flowstate disabled
+        if let Some(state) = &self.flowstate {
             let state_lock = state.lock().await;
 
             if let (Some(op_str), Some(val)) = (&condition.count_operator, condition.count_value) {
@@ -1093,51 +1093,51 @@ impl RuleEngine {
                     "less_than" | "<" => ComparisonOperator::LessThan,
                     "greater_than_or_equal" | ">=" => ComparisonOperator::GreaterThanOrEqual,
                     "less_than_or_equal" | "<=" => ComparisonOperator::LessThanOrEqual,
-                    _ => return Err(anyhow!("Invalid flowbit counter operator: {}", op_str)),
+                    _ => return Err(anyhow!("Invalid flowstate counter operator: {}", op_str)),
                 };
 
-                let count = state_lock.get_counter(wallet, &condition.flowbit);
+                let count = state_lock.get_counter(wallet, &condition.flowstate);
                 self.compare(&Value::from(count), &operator, &Value::from(val))
             } else if let Some(within_secs) = condition.within_seconds {
                 // Boolean check with time window
-                Ok(state_lock.is_set_within(wallet, &condition.flowbit, within_secs))
+                Ok(state_lock.is_set_within(wallet, &condition.flowstate, within_secs))
             } else {
                 // Boolean check (atomic - checks expiration only)
-                Ok(state_lock.is_set(wallet, &condition.flowbit))
+                Ok(state_lock.is_set(wallet, &condition.flowstate))
             }
         } else {
             log::debug!(
-                "Flowbit condition '{}' skipped (flowbits disabled)",
-                condition.flowbit
+                "FlowState condition '{}' skipped (flowstate disabled)",
+                condition.flowstate
             );
             Ok(false)
         }
     }
 
-    async fn evaluate_simple_with_flowbits(
+    async fn evaluate_simple_with_flowstate(
         &self,
         condition: &SimpleCondition,
         fields: &HashMap<String, Value>,
         missing_field_override: Option<&str>,
         wallet: &solana_sdk::pubkey::Pubkey,
     ) -> Result<bool> {
-        if condition.field.starts_with("flowbit:") {
-            let rest = &condition.field["flowbit:".len()..];
+        if condition.field.starts_with("flowstate:") {
+            let rest = &condition.field["flowstate:".len()..];
             return self
-                .evaluate_flowbit_counter_field(false, rest, condition, fields, wallet)
+                .evaluate_flowstate_counter_field(false, rest, condition, fields, wallet)
                 .await;
         }
-        if condition.field.starts_with("flowbit_global:") {
-            let rest = &condition.field["flowbit_global:".len()..];
+        if condition.field.starts_with("flowstate_global:") {
+            let rest = &condition.field["flowstate_global:".len()..];
             return self
-                .evaluate_flowbit_counter_field(true, rest, condition, fields, wallet)
+                .evaluate_flowstate_counter_field(true, rest, condition, fields, wallet)
                 .await;
         }
         self.evaluate_simple(condition, fields, missing_field_override)
     }
 
-    /// Resolve `flowbit:` / `flowbit_global:` simple fields against flowbit state (counters and flags).
-    async fn evaluate_flowbit_counter_field(
+    /// Resolve `flowstate:` / `flowstate_global:` simple fields against flowstate (counters and flags).
+    async fn evaluate_flowstate_counter_field(
         &self,
         global: bool,
         name_template: &str,
@@ -1146,10 +1146,10 @@ impl RuleEngine {
         wallet: &solana_sdk::pubkey::Pubkey,
     ) -> Result<bool> {
         if condition.operator == ComparisonOperator::IsNotSet {
-            let Some(state) = &self.flowbit_state else {
+            let Some(state) = &self.flowstate else {
                 return Ok(true);
             };
-            let name = match self.interpolate_flowbit_name(name_template, fields) {
+            let name = match self.interpolate_flowstate_name(name_template, fields) {
                 Ok(Some(n)) => n,
                 _ => return Ok(true),
             };
@@ -1162,12 +1162,12 @@ impl RuleEngine {
             return Ok(!is_set);
         }
 
-        let Some(state) = &self.flowbit_state else {
+        let Some(state) = &self.flowstate else {
             let v = Value::from(0u64);
             return self.compare(&v, &condition.operator, &condition.value);
         };
 
-        let name = match self.interpolate_flowbit_name(name_template, fields) {
+        let name = match self.interpolate_flowstate_name(name_template, fields) {
             Ok(Some(n)) => n,
             _ => {
                 let v = Value::Null;
@@ -1767,7 +1767,7 @@ impl RuleEngine {
         solana_sdk::pubkey::Pubkey::default()
     }
 
-    /// Interpolate variables in flowbit names
+    /// Interpolate variables in flowstate names
     /// Example: "transfers_to:{system:sol_recipients[0]}" + fields["system:sol_recipients"][0] -> "transfers_to:7xK...9mP"
     ///
     /// Format: {analyzer:field_name} or {analyzer:field_name[index]}
@@ -1775,7 +1775,7 @@ impl RuleEngine {
     /// - {token_instructions:mints[0]} -> first token mint
     /// - {basic:fee_payer} -> transaction fee payer
     /// - {basic:instruction_count} -> number of instructions (numeric fields converted to string)
-    fn interpolate_flowbit_name(
+    fn interpolate_flowstate_name(
         &self,
         template: &str,
         fields: &HashMap<String, Value>,
@@ -1815,7 +1815,7 @@ impl RuleEngine {
                 match field_value {
                     Value::Array(arr) => {
                         if arr.is_empty() {
-                            // Array is empty - skip this flowbit operation
+                            // Array is empty - skip this flowstate operation
                             return Ok(None);
                         }
                         // Use specified index or default to 0
@@ -1854,42 +1854,42 @@ impl RuleEngine {
         Ok(Some(result))
     }
 
-    /// Apply flowbit actions after a rule matches
-    async fn apply_flowbit_actions(
+    /// Apply flowstate actions after a rule matches
+    async fn apply_flowstate_actions(
         &self,
         wallet: &solana_sdk::pubkey::Pubkey,
-        flowbits: &FlowbitActions,
+        flowstate: &FlowStateActions,
         fields: &HashMap<String, Value>,
     ) {
-        if let Some(state) = &self.flowbit_state {
+        if let Some(state) = &self.flowstate {
             let mut state_lock = state.lock().await;
 
             // Convert ttl_seconds to Duration
-            let ttl = flowbits.ttl_seconds.map(Duration::from_secs);
+            let ttl = flowstate.ttl_seconds.map(Duration::from_secs);
 
-            for name_template in &flowbits.set {
-                if let Ok(Some(name)) = self.interpolate_flowbit_name(name_template, fields) {
-                    match flowbits.scope {
-                        FlowbitScope::PerWallet => state_lock.set(wallet, &name, ttl),
-                        FlowbitScope::Global => state_lock.set_global(&name, ttl),
+            for name_template in &flowstate.set {
+                if let Ok(Some(name)) = self.interpolate_flowstate_name(name_template, fields) {
+                    match flowstate.scope {
+                        FlowStateScope::PerWallet => state_lock.set(wallet, &name, ttl),
+                        FlowStateScope::Global => state_lock.set_global(&name, ttl),
                     }
                 }
             }
 
-            for name_template in &flowbits.increment {
-                if let Ok(Some(name)) = self.interpolate_flowbit_name(name_template, fields) {
-                    match flowbits.scope {
-                        FlowbitScope::PerWallet => state_lock.increment(wallet, &name, ttl),
-                        FlowbitScope::Global => state_lock.increment_global(&name, ttl),
+            for name_template in &flowstate.increment {
+                if let Ok(Some(name)) = self.interpolate_flowstate_name(name_template, fields) {
+                    match flowstate.scope {
+                        FlowStateScope::PerWallet => state_lock.increment(wallet, &name, ttl),
+                        FlowStateScope::Global => state_lock.increment_global(&name, ttl),
                     }
                 }
             }
 
-            for name_template in &flowbits.unset {
-                if let Ok(Some(name)) = self.interpolate_flowbit_name(name_template, fields) {
-                    match flowbits.scope {
-                        FlowbitScope::PerWallet => state_lock.unset(wallet, &name),
-                        FlowbitScope::Global => state_lock.unset_global(&name),
+            for name_template in &flowstate.unset {
+                if let Ok(Some(name)) = self.interpolate_flowstate_name(name_template, fields) {
+                    match flowstate.scope {
+                        FlowStateScope::PerWallet => state_lock.unset(wallet, &name),
+                        FlowStateScope::Global => state_lock.unset_global(&name),
                     }
                 }
             }

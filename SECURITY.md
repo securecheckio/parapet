@@ -97,9 +97,9 @@ We follow coordinated disclosure practices:
 
 Transaction simulation uses upstream RPC providers. Simulation results should be treated as advisory, not authoritative. Always validate critical transactions.
 
-### Flowbits State
+### FlowState State
 
-Flowbits use in-memory or Redis state. In high-availability deployments, ensure Redis is properly secured and replicated.
+FlowState use in-memory or Redis state. In high-availability deployments, ensure Redis is properly secured and replicated.
 
 ### Third-Party Analyzers
 

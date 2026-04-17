@@ -23,7 +23,7 @@ async fn test_ai_agent_velocity_limit() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -66,7 +66,7 @@ async fn test_ai_agent_account_spam() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -128,7 +128,7 @@ async fn test_enterprise_lateral_movement() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
     engine.load_rules(rules).unwrap();
 
     // Simulate 3 different wallets sending to same recipient
@@ -187,7 +187,7 @@ async fn test_ai_agent_gradual_exfiltration() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();
@@ -233,7 +233,7 @@ async fn test_repeated_block_detection() {
     let rules: Vec<RuleDefinition> = serde_json::from_str(rules_json).unwrap();
 
     let registry = create_test_registry();
-    let mut engine = RuleEngine::new(registry).with_flowbits(None);
+    let mut engine = RuleEngine::new(registry).with_flowstate(None);
     engine.load_rules(rules).unwrap();
 
     let agent_keypair = Keypair::new();

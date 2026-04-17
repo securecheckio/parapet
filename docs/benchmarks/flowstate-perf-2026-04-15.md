@@ -1,8 +1,8 @@
-# Flowbits Performance Results
+# FlowState Performance Results
 
 ## Overview
 
-Performance benchmarks for Parapet's flowbits system, measuring latency and scalability for both per-wallet and global flowbit operations.
+Performance benchmarks for Parapet's flowstate system, measuring latency and scalability for both per-wallet and global flowstate operations.
 
 **Test Environment**:
 - CPU: (benchmark system)
@@ -87,13 +87,13 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 | Enterprise Lateral Movement | 448 | format + increment_global + get_counter_global + compare | Track cross-wallet recipient |
 | AI Agent Exfiltration | 570 | format + increment + get_counter + compare | Track per-recipient transfers |
 
-**Analysis**: Real-world scenarios complete in <600ns, well below 1ms target. The exfiltration scenario is slowest due to string formatting for dynamic flowbit names.
+**Analysis**: Real-world scenarios complete in <600ns, well below 1ms target. The exfiltration scenario is slowest due to string formatting for dynamic flowstate names.
 
 ## Memory Usage
 
 ### Per-Wallet State
 
-- **Per wallet**: ~1KB (includes HashMap overhead + flowbit entries)
+- **Per wallet**: ~1KB (includes HashMap overhead + flowstate entries)
 - **1000 wallets**: ~1MB
 - **10000 wallets**: ~10MB
 
@@ -122,7 +122,7 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 | Component | Time (ns) | % of Total |
 |-----------|-----------|------------|
 | Extract wallet from fields | 50 | 16% |
-| Increment flowbit | 85 | 28% |
+| Increment flowstate | 85 | 28% |
 | Get counter | 82 | 27% |
 | Compare threshold | 10 | 3% |
 | Other (condition eval) | 79 | 26% |
@@ -133,13 +133,13 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 | Component | Time (ns) | % of Total |
 |-----------|-----------|------------|
 | Extract wallet from fields | 50 | 11% |
-| Format flowbit name | 163 | 36% |
-| Increment global flowbit | 114 | 25% |
+| Format flowstate name | 163 | 36% |
+| Increment global flowstate | 114 | 25% |
 | Get global counter | 113 | 25% |
 | Compare threshold | 10 | 2% |
 | **Total** | **448** | **100%** |
 
-**Key Insight**: Variable interpolation (formatting) is the most expensive operation for dynamic flowbit names, but still completes in <200ns.
+**Key Insight**: Variable interpolation (formatting) is the most expensive operation for dynamic flowstate names, but still completes in <200ns.
 
 ## Performance Recommendations
 
@@ -159,7 +159,7 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 ### General
 
 1. **Cleanup Interval**: Default 60s is optimal for most scenarios
-2. **Variable Interpolation**: Limit to 1-2 variables per flowbit name for best performance
+2. **Variable Interpolation**: Limit to 1-2 variables per flowstate name for best performance
 3. **Scope Selection**: Use `perwallet` for single-wallet scenarios, `global` only when cross-wallet detection is needed
 
 ## Comparison to Targets
@@ -172,17 +172,17 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 | Scaling to 1000 wallets | <10% degradation | 11.9% | ⚠️ Acceptable |
 | Scaling to 10000 global keys | <20% degradation | 1.0% | ✅ 20x better |
 
-**Conclusion**: Flowbits performance exceeds all targets by significant margins. The system is production-ready with negligible performance impact.
+**Conclusion**: FlowState performance exceeds all targets by significant margins. The system is production-ready with negligible performance impact.
 
 ## Bottleneck Analysis
 
 ### Current Bottlenecks (in order of impact)
 
-1. **Variable Interpolation (163ns per variable)**: String replacement for dynamic flowbit names
+1. **Variable Interpolation (163ns per variable)**: String replacement for dynamic flowstate names
    - **Impact**: Low (still <500ns for typical rules)
    - **Mitigation**: Cache interpolated names per transaction (future optimization)
 
-2. **Global State Contention (114ns)**: Single shared HashMap for global flowbits
+2. **Global State Contention (114ns)**: Single shared HashMap for global flowstate
    - **Impact**: Very Low (no observable contention in benchmarks)
    - **Mitigation**: Sharded global state (future optimization if needed)
 
@@ -192,7 +192,7 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 
 ### Non-Bottlenecks
 
-- **Memory allocation**: Flowbits reuse existing HashMap entries
+- **Memory allocation**: FlowState reuse existing HashMap entries
 - **Lock contention**: `Arc<Mutex>` shows no contention in benchmarks
 - **Cleanup**: Runs in background, no impact on transaction latency
 
@@ -200,7 +200,7 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 
 ### Phase 1 (If Needed)
 
-1. **Interpolation Caching**: Cache interpolated flowbit names per transaction
+1. **Interpolation Caching**: Cache interpolated flowstate names per transaction
    - **Expected Gain**: 50% reduction in interpolation overhead (163ns → 80ns)
    - **Complexity**: Low
 
@@ -210,11 +210,11 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 
 ### Phase 2 (Nice to Have)
 
-1. **Bloom Filters**: Pre-filter non-existent flowbits
+1. **Bloom Filters**: Pre-filter non-existent flowstate
    - **Expected Gain**: 20% reduction for `isnotset` checks
    - **Complexity**: Medium
 
-2. **Custom Allocator**: Pool allocator for flowbit entries
+2. **Custom Allocator**: Pool allocator for flowstate entries
    - **Expected Gain**: 10% reduction in allocation overhead
    - **Complexity**: High
 
@@ -222,7 +222,7 @@ Performance benchmarks for Parapet's flowbits system, measuring latency and scal
 
 ## Conclusion
 
-Flowbits add **<1μs latency** per transaction with **<10MB memory** usage for large deployments. Performance is 3000x better than target, making flowbits suitable for production use without any concerns about performance impact.
+FlowState add **<1μs latency** per transaction with **<10MB memory** usage for large deployments. Performance is 3000x better than target, making flowstate suitable for production use without any concerns about performance impact.
 
 The system scales linearly with minimal degradation up to 1000 wallets and 10000 global keys, covering all realistic deployment scenarios.
 

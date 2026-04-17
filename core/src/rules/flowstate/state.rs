@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
 #[derive(Debug, Clone)]
-pub enum FlowbitValue {
+pub enum FlowStateValue {
     Boolean {
         value: bool,
         set_at: SystemTime,
@@ -21,9 +21,9 @@ pub enum FlowbitValue {
     },
 }
 
-pub struct FlowbitStateManager {
-    wallet_states: HashMap<Pubkey, HashMap<String, FlowbitValue>>,
-    global_state: HashMap<String, FlowbitValue>,
+pub struct FlowStateManager {
+    wallet_states: HashMap<Pubkey, HashMap<String, FlowStateValue>>,
+    global_state: HashMap<String, FlowStateValue>,
     last_cleanup: SystemTime,
 
     // Configuration
@@ -32,16 +32,16 @@ pub struct FlowbitStateManager {
     default_ttl: Duration,
 }
 
-impl FlowbitStateManager {
+impl FlowStateManager {
     pub fn new(max_wallets: Option<usize>) -> Self {
         // Read env var ONCE at construction (not on every call)
-        let default_ttl = std::env::var("PARAPET_FLOWBITS_DEFAULT_TTL")
+        let default_ttl = std::env::var("PARAPET_FLOWSTATE_DEFAULT_TTL")
             .ok()
             .and_then(|s| s.parse::<u64>().ok())
             .map(Duration::from_secs)
             .unwrap_or(Duration::from_secs(300)); // 5 min hardcoded fallback
 
-        log::info!("Flowbits default TTL: {:?}", default_ttl);
+        log::info!("FlowState default TTL: {:?}", default_ttl);
 
         Self {
             wallet_states: HashMap::new(),
@@ -63,7 +63,7 @@ impl FlowbitStateManager {
         if let Some(max) = self.max_wallets {
             if self.wallet_states.len() >= max && !self.wallet_states.contains_key(wallet) {
                 log::warn!(
-                    "Flowbit memory limit reached ({} wallets), evicting oldest",
+                    "FlowState memory limit reached ({} wallets), evicting oldest",
                     max
                 );
                 self.evict_oldest();
@@ -77,7 +77,7 @@ impl FlowbitStateManager {
         let state = self.wallet_states.entry(*wallet).or_default();
         state.insert(
             name.to_string(),
-            FlowbitValue::Boolean {
+            FlowStateValue::Boolean {
                 value: true,
                 set_at: now,
                 expires_at,
@@ -85,7 +85,7 @@ impl FlowbitStateManager {
         );
     }
 
-    /// Check if flowbit is set AND not expired (atomic check)
+    /// Check if flowstate is set AND not expired (atomic check)
     pub fn is_set(&self, wallet: &Pubkey, name: &str) -> bool {
         if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(value) = state.get(name) {
@@ -95,7 +95,7 @@ impl FlowbitStateManager {
         false
     }
 
-    /// Check if flowbit is set AND was set within the specified time window (atomic check)
+    /// Check if flowstate is set AND was set within the specified time window (atomic check)
     pub fn is_set_within(&self, wallet: &Pubkey, name: &str, within_seconds: u64) -> bool {
         if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(value) = state.get(name) {
@@ -105,9 +105,9 @@ impl FlowbitStateManager {
 
                 // Check if set_at is within the time window
                 let set_at = match value {
-                    FlowbitValue::Boolean { set_at, .. } => set_at,
-                    FlowbitValue::Counter { set_at, .. } => set_at,
-                    FlowbitValue::Timestamp { set_at, .. } => set_at,
+                    FlowStateValue::Boolean { set_at, .. } => set_at,
+                    FlowStateValue::Counter { set_at, .. } => set_at,
+                    FlowStateValue::Timestamp { set_at, .. } => set_at,
                 };
 
                 let now = SystemTime::now();
@@ -123,7 +123,7 @@ impl FlowbitStateManager {
         // Check memory limit
         if let Some(max) = self.max_wallets {
             if self.wallet_states.len() >= max && !self.wallet_states.contains_key(wallet) {
-                log::warn!("Flowbit memory limit reached, evicting oldest");
+                log::warn!("FlowState memory limit reached, evicting oldest");
                 self.evict_oldest();
             }
         }
@@ -134,7 +134,7 @@ impl FlowbitStateManager {
         let new_value = if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(existing) = state.get(name) {
                 match existing {
-                    FlowbitValue::Counter { value, .. } if !self.is_expired(existing) => value + 1,
+                    FlowStateValue::Counter { value, .. } if !self.is_expired(existing) => value + 1,
                     _ => 1,
                 }
             } else {
@@ -151,7 +151,7 @@ impl FlowbitStateManager {
         let state = self.wallet_states.entry(*wallet).or_default();
         state.insert(
             name.to_string(),
-            FlowbitValue::Counter {
+            FlowStateValue::Counter {
                 value: new_value,
                 set_at: now,
                 expires_at,
@@ -162,7 +162,7 @@ impl FlowbitStateManager {
     pub fn get_counter(&self, wallet: &Pubkey, name: &str) -> u64 {
         if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(value) = state.get(name) {
-                if let FlowbitValue::Counter { value: count, .. } = value {
+                if let FlowStateValue::Counter { value: count, .. } = value {
                     if !self.is_expired(value) {
                         return *count;
                     }
@@ -178,7 +178,7 @@ impl FlowbitStateManager {
         }
     }
 
-    // ===== GLOBAL FLOWBIT OPERATIONS =====
+    // ===== GLOBAL FLOWSTATE OPERATIONS =====
 
     pub fn set_global(&mut self, name: &str, ttl: Option<Duration>) {
         let now = SystemTime::now();
@@ -187,7 +187,7 @@ impl FlowbitStateManager {
 
         self.global_state.insert(
             name.to_string(),
-            FlowbitValue::Boolean {
+            FlowStateValue::Boolean {
                 value: true,
                 set_at: now,
                 expires_at,
@@ -209,9 +209,9 @@ impl FlowbitStateManager {
             }
 
             let set_at = match value {
-                FlowbitValue::Boolean { set_at, .. } => set_at,
-                FlowbitValue::Counter { set_at, .. } => set_at,
-                FlowbitValue::Timestamp { set_at, .. } => set_at,
+                FlowStateValue::Boolean { set_at, .. } => set_at,
+                FlowStateValue::Counter { set_at, .. } => set_at,
+                FlowStateValue::Timestamp { set_at, .. } => set_at,
             };
 
             let now = SystemTime::now();
@@ -228,7 +228,7 @@ impl FlowbitStateManager {
         // Check if counter exists and is not expired first
         let new_value = if let Some(existing) = self.global_state.get(name) {
             match existing {
-                FlowbitValue::Counter { value, .. } if !self.is_expired(existing) => value + 1,
+                FlowStateValue::Counter { value, .. } if !self.is_expired(existing) => value + 1,
                 _ => 1,
             }
         } else {
@@ -241,7 +241,7 @@ impl FlowbitStateManager {
 
         self.global_state.insert(
             name.to_string(),
-            FlowbitValue::Counter {
+            FlowStateValue::Counter {
                 value: new_value,
                 set_at: now,
                 expires_at,
@@ -251,7 +251,7 @@ impl FlowbitStateManager {
 
     pub fn get_counter_global(&self, name: &str) -> u64 {
         if let Some(value) = self.global_state.get(name) {
-            if let FlowbitValue::Counter { value: count, .. } = value {
+            if let FlowStateValue::Counter { value: count, .. } = value {
                 if !self.is_expired(value) {
                     return *count;
                 }
@@ -264,11 +264,11 @@ impl FlowbitStateManager {
         self.global_state.remove(name);
     }
 
-    fn is_expired(&self, value: &FlowbitValue) -> bool {
+    fn is_expired(&self, value: &FlowStateValue) -> bool {
         let expires_at = match value {
-            FlowbitValue::Boolean { expires_at, .. } => expires_at,
-            FlowbitValue::Counter { expires_at, .. } => expires_at,
-            FlowbitValue::Timestamp { expires_at, .. } => expires_at,
+            FlowStateValue::Boolean { expires_at, .. } => expires_at,
+            FlowStateValue::Counter { expires_at, .. } => expires_at,
+            FlowStateValue::Timestamp { expires_at, .. } => expires_at,
         };
 
         if let Some(exp) = expires_at {
@@ -278,7 +278,7 @@ impl FlowbitStateManager {
         }
     }
 
-    /// Lazy cleanup: Remove expired flowbits for a specific wallet
+    /// Lazy cleanup: Remove expired flowstate entries for a specific wallet
     #[allow(dead_code)]
     fn cleanup_wallet(&mut self, wallet: &Pubkey) {
         // First, collect expired keys
@@ -370,18 +370,18 @@ impl FlowbitStateManager {
         self.last_cleanup = now;
 
         log::debug!(
-            "Flowbits cleanup: {} wallets remaining",
+            "FlowState cleanup: {} wallets remaining",
             self.wallet_states.len()
         );
     }
 
     fn evict_oldest(&mut self) {
-        // Find wallet with oldest flowbit
+        // Find wallet with oldest flowstate entry
         let mut oldest: Option<(Pubkey, SystemTime)> = None;
 
         for (wallet, state) in &self.wallet_states {
-            for flowbit in state.values() {
-                if let Some(exp) = self.get_expiration(flowbit) {
+            for flowstate in state.values() {
+                if let Some(exp) = self.get_expiration(flowstate) {
                     if oldest.is_none() || Some(exp) < oldest.map(|(_, t)| t) {
                         oldest = Some((*wallet, exp));
                     }
@@ -395,19 +395,19 @@ impl FlowbitStateManager {
         }
     }
 
-    fn get_expiration(&self, value: &FlowbitValue) -> Option<SystemTime> {
+    fn get_expiration(&self, value: &FlowStateValue) -> Option<SystemTime> {
         match value {
-            FlowbitValue::Boolean { expires_at, .. } => *expires_at,
-            FlowbitValue::Counter { expires_at, .. } => *expires_at,
-            FlowbitValue::Timestamp { expires_at, .. } => *expires_at,
+            FlowStateValue::Boolean { expires_at, .. } => *expires_at,
+            FlowStateValue::Counter { expires_at, .. } => *expires_at,
+            FlowStateValue::Timestamp { expires_at, .. } => *expires_at,
         }
     }
 
     pub fn memory_usage(&self) -> usize {
         let wallet_count = self.wallet_states.len();
-        let avg_flowbits_per_wallet = 3;
-        let bytes_per_flowbit = 128;
-        wallet_count * avg_flowbits_per_wallet * bytes_per_flowbit
+        let avg_flowstate_per_wallet = 3;
+        let bytes_per_flowstate = 128;
+        wallet_count * avg_flowstate_per_wallet * bytes_per_flowstate
     }
 }
 
@@ -416,26 +416,26 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_flowbit_set_and_check() {
-        let mut manager = FlowbitStateManager::new(None);
+    fn test_flowstate_set_and_check() {
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit
+        // Set flowstate
         manager.set(&wallet, "test_flag", Some(Duration::from_secs(60)));
 
         // Check it's set
         assert!(manager.is_set(&wallet, "test_flag"));
 
-        // Check non-existent flowbit
+        // Check non-existent flowstate
         assert!(!manager.is_set(&wallet, "nonexistent"));
     }
 
     #[test]
-    fn test_flowbit_expiration() {
-        let mut manager = FlowbitStateManager::new(None);
+    fn test_flowstate_expiration() {
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit with very short TTL
+        // Set flowstate with very short TTL
         manager.set(&wallet, "short_lived", Some(Duration::from_millis(10)));
 
         // Should be set immediately
@@ -450,7 +450,7 @@ mod tests {
 
     #[test]
     fn test_counter_increment() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
         // Increment counter
@@ -468,7 +468,7 @@ mod tests {
 
     #[test]
     fn test_memory_limit() {
-        let mut manager = FlowbitStateManager::new(Some(2)); // Max 2 wallets
+        let mut manager = FlowStateManager::new(Some(2)); // Max 2 wallets
 
         let wallet1 = Pubkey::new_unique();
         let wallet2 = Pubkey::new_unique();
@@ -492,10 +492,10 @@ mod tests {
 
     #[test]
     fn test_cleanup_expired() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit with short TTL
+        // Set flowstate with short TTL
         manager.set(&wallet, "short", Some(Duration::from_millis(10)));
 
         // Wait for expiration
@@ -505,16 +505,16 @@ mod tests {
         manager.last_cleanup = SystemTime::now() - Duration::from_secs(120); // Force cleanup
         manager.cleanup_expired();
 
-        // Wallet should be removed (no flowbits left)
+        // Wallet should be removed (no flowstate entries left)
         assert_eq!(manager.wallet_states.len(), 0);
     }
 
     #[test]
     fn test_unset() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit
+        // Set flowstate
         manager.set(&wallet, "flag", Some(Duration::from_secs(60)));
         assert!(manager.is_set(&wallet, "flag"));
 
@@ -525,7 +525,7 @@ mod tests {
 
     #[test]
     fn test_default_ttl() {
-        let manager = FlowbitStateManager::new(None);
+        let manager = FlowStateManager::new(None);
 
         // Should use default TTL (5 minutes)
         assert_eq!(manager.default_ttl, Duration::from_secs(300));
@@ -533,10 +533,10 @@ mod tests {
 
     #[test]
     fn test_within_seconds() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit
+        // Set flowstate
         manager.set(&wallet, "recent", Some(Duration::from_secs(60)));
 
         // Should be set within 5 seconds
@@ -554,10 +554,10 @@ mod tests {
 
     #[test]
     fn test_within_seconds_expired() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
-        // Set flowbit with very short TTL
+        // Set flowstate with very short TTL
         manager.set(&wallet, "short", Some(Duration::from_millis(10)));
 
         // Wait for expiration
@@ -567,25 +567,25 @@ mod tests {
         assert!(!manager.is_set_within(&wallet, "short", 100));
     }
 
-    // ===== GLOBAL FLOWBIT TESTS =====
+    // ===== GLOBAL FLOWSTATE TESTS =====
 
     #[test]
     fn test_global_set_and_check() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
-        // Set global flowbit
+        // Set global flowstate
         manager.set_global("global_flag", Some(Duration::from_secs(60)));
 
         // Check it's set
         assert!(manager.is_set_global("global_flag"));
 
-        // Check non-existent flowbit
+        // Check non-existent flowstate
         assert!(!manager.is_set_global("nonexistent"));
     }
 
     #[test]
     fn test_global_increment() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
         // Increment global counter
         manager.increment_global("global_counter", Some(Duration::from_secs(60)));
@@ -602,7 +602,7 @@ mod tests {
 
     #[test]
     fn test_global_vs_per_wallet_independence() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
 
         // Set per-wallet counter
@@ -625,9 +625,9 @@ mod tests {
 
     #[test]
     fn test_global_expiration() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
-        // Set global flowbit with short TTL
+        // Set global flowstate with short TTL
         manager.set_global("short_lived", Some(Duration::from_millis(10)));
         assert!(manager.is_set_global("short_lived"));
 
@@ -640,9 +640,9 @@ mod tests {
 
     #[test]
     fn test_global_within_seconds() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
-        // Set global flowbit
+        // Set global flowstate
         manager.set_global("recent", Some(Duration::from_secs(60)));
 
         // Should be set within 5 seconds
@@ -660,9 +660,9 @@ mod tests {
 
     #[test]
     fn test_global_unset() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
-        // Set global flowbit
+        // Set global flowstate
         manager.set_global("flag", Some(Duration::from_secs(60)));
         assert!(manager.is_set_global("flag"));
 
@@ -673,7 +673,7 @@ mod tests {
 
     #[test]
     fn test_lateral_movement_scenario() {
-        let mut manager = FlowbitStateManager::new(None);
+        let mut manager = FlowStateManager::new(None);
 
         let recipient = "7xK...9mP";
 

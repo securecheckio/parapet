@@ -317,7 +317,7 @@ mod tests {
                         value: serde_json::json!("test"),
                     }),
                     message: "Test".to_string(),
-                    flowbits: None,
+                    flowstate: None,
                 },
                 metadata: HashMap::new(),
             },

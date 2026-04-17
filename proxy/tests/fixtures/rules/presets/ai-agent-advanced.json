@@ -13,7 +13,7 @@
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true}
         ]
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "perwallet",
         "increment": ["transfers_to:{system:sol_recipients[0]}"],
         "ttl_seconds": 86400
@@ -36,7 +36,7 @@
       "conditions": {
         "all": [
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-          {"field": "flowbit:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
+          {"field": "flowstate:transfers_to:{system:sol_recipients[0]}", "operator": "greater_than", "value": 3}
         ]
       },
       "message": "🚨 AI Agent: Repeated transfers to same recipient (4+ in 24h) - possible gradual exfiltration"
@@ -69,10 +69,10 @@
             "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
             "So11111111111111111111111111111111111111112"
           ]},
-          {"field": "flowbit:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
+          {"field": "flowstate:program_interaction:{basic:program_ids[0]}", "operator": "greater_than", "value": 2}
         ]
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "perwallet",
         "increment": ["program_interaction:{basic:program_ids[0]}"],
         "ttl_seconds": 604800

@@ -144,7 +144,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
     "ttl_seconds": 900
@@ -155,8 +155,8 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 **Behavior**:
 
 - Transaction with multiple mints: Uses first mint only
-- Transaction with no mints: Skips flowbit operation
-- Creates unique flowbit per token mint address
+- Transaction with no mints: Skips flowstate operation
+- Creates unique flowstate per token mint address
 
 ### `{token_instructions:delegates[0]}` - Approved Delegate Address
 
@@ -168,7 +168,7 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 
 ```json
 {
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["delegate_approvals:{token_instructions:delegates[0]}"],
     "ttl_seconds": 86400
@@ -179,8 +179,8 @@ The `TokenInstructionAnalyzer` analyzes SPL Token Program instructions, includin
 **Behavior**:
 
 - Transaction with multiple approvals: Uses first delegate only
-- Transaction with no approvals: Skips flowbit operation
-- Creates unique flowbit per delegate address
+- Transaction with no approvals: Skips flowstate operation
+- Creates unique flowstate per delegate address
 
 ## Common Use Cases
 
@@ -193,10 +193,10 @@ Detect mass token transfers across wallets:
   "conditions": {
     "all": [
       {"field": "token_instructions:has_transfer", "operator": "equals", "value": true},
-      {"field": "flowbit_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
+      {"field": "flowstate_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
     ]
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
     "ttl_seconds": 900
@@ -215,10 +215,10 @@ Track suspicious delegate approvals:
     "all": [
       {"field": "token_instructions:has_approve", "operator": "equals", "value": true},
       {"field": "token_instructions:delegates", "operator": "not_in", "value": ["<known_dex_programs>"]},
-      {"field": "flowbit:delegate_approvals:{token_instructions:delegates[0]}", "operator": "greater_than", "value": 0}
+      {"field": "flowstate:delegate_approvals:{token_instructions:delegates[0]}", "operator": "greater_than", "value": 0}
     ]
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "perwallet",
     "increment": ["delegate_approvals:{token_instructions:delegates[0]}"],
     "ttl_seconds": 86400
@@ -238,7 +238,7 @@ Track minting patterns:
     "operator": "equals",
     "value": true
   },
-  "flowbits": {
+  "flowstate": {
     "scope": "global",
     "increment": ["mint_activity:{token_instructions:mints[0]}"],
     "ttl_seconds": 3600
@@ -349,7 +349,7 @@ Maintain allowlists for:
 
 ## See Also
 
-- [Flowbits](../RULES_FLOWBITS.md#flowbits-variable-interpolation)
+- [FlowState](../RULES_FLOWSTATE.md#flowstate-variable-interpolation)
 - [Rule development hub](../RULES_DEVELOPMENT.md)
 - [Rule JSON format](../RULES_FORMAT.md)
 - [System Program Analyzer](system-program.md)

@@ -1911,7 +1911,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "flowbits-perf"
+name = "flowstate-perf"
 version = "0.1.0"
 dependencies = [
  "criterion",

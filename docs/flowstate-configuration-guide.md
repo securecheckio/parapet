@@ -1,8 +1,8 @@
-# Flowbits Configuration Guide
+# FlowState Configuration Guide
 
 ## Overview
 
-This guide explains how to configure Parapet's flowbits system for different deployment scenarios: AI agent protection and enterprise RPC protection.
+This guide explains how to configure Parapet's flowstate system for different deployment scenarios: AI agent protection and enterprise RPC protection.
 
 ## Table of Contents
 
@@ -15,10 +15,10 @@ This guide explains how to configure Parapet's flowbits system for different dep
 
 ## Environment Variables
 
-### Core Flowbits Settings
+### Core FlowState Settings
 
 ```bash
-# Enable/disable flowbits (default: enabled if not set)
+# Enable/disable flowstate (default: enabled if not set)
 SOLSHIELD_FLOWBITS_ENABLED=true
 
 # Maximum number of wallets to track (default: unlimited)
@@ -26,11 +26,11 @@ SOLSHIELD_FLOWBITS_ENABLED=true
 # For enterprise: Set based on number of internal wallets (e.g., 100, 1000)
 SOLSHIELD_FLOWBITS_MAX_WALLETS=unlimited
 
-# Default TTL for flowbits in seconds (default: 3600 = 1 hour)
+# Default TTL for flowstate in seconds (default: 3600 = 1 hour)
 # Can be overridden per-rule
 SOLSHIELD_FLOWBITS_DEFAULT_TTL=3600
 
-# Maximum global flowbit keys (default: 10000)
+# Maximum global flowstate keys (default: 10000)
 # For enterprise cross-wallet detection
 SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=10000
 ```
@@ -94,11 +94,11 @@ Edit `ai-agent-protection.json`:
   "id": "ai-agent-velocity-limit",
   "rule": {
     "conditions": {
-      "field": "flowbit:transaction_count",
+      "field": "flowstate:transaction_count",
       "operator": "greater_than_or_equal",
       "value": 50  // Increased from 10
     },
-    "flowbits": {
+    "flowstate": {
       "ttl_seconds": 600  // 10 minutes instead of 10 minutes
     }
   }
@@ -169,10 +169,10 @@ Create a custom rule that skips lateral movement detection for known recipients:
           "ExchangeHotWallet1111111111111111111111",
           "PayrollWallet11111111111111111111111111"
         ]},
-        {"field": "flowbit_global:suspicious_recipient:{recipient}", "operator": "greater_than", "value": 2}
+        {"field": "flowstate_global:suspicious_recipient:{recipient}", "operator": "greater_than", "value": 2}
       ]
     },
-    "flowbits": {
+    "flowstate": {
       "scope": "global",
       "increment": ["suspicious_recipient:{recipient}"],
       "ttl_seconds": 3600
@@ -189,7 +189,7 @@ If your organization uses multisigs with longer approval times:
 {
   "id": "track-nonce-advancement",
   "rule": {
-    "flowbits": {
+    "flowstate": {
       "ttl_seconds": 7200  // 2 hours instead of 30 minutes
     }
   }
@@ -223,9 +223,9 @@ parapet-proxy \
 
 ### Memory Usage
 
-Flowbits memory usage scales with:
+FlowState memory usage scales with:
 - Number of tracked wallets (`SOLSHIELD_FLOWBITS_MAX_WALLETS`)
-- Number of global flowbit keys (`SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS`)
+- Number of global flowstate keys (`SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS`)
 - Number of unique recipients/mints/programs tracked
 
 **Estimated Memory Usage**:
@@ -235,7 +235,7 @@ Flowbits memory usage scales with:
 
 ### Latency Impact
 
-Flowbits add minimal latency:
+FlowState add minimal latency:
 - Per-wallet lookup: <0.1ms
 - Global lookup: <0.2ms
 - Variable interpolation: <0.5ms
@@ -243,7 +243,7 @@ Flowbits add minimal latency:
 
 ### Cleanup Intervals
 
-Flowbits automatically clean up expired entries every 60 seconds. To adjust:
+FlowState automatically clean up expired entries every 60 seconds. To adjust:
 
 ```rust
 // In FlowbitStateManager::new()
@@ -252,20 +252,20 @@ self.cleanup_interval = Duration::from_secs(120); // 2 minutes
 
 ## Troubleshooting
 
-### Issue: Flowbits not working
+### Issue: FlowState not working
 
-**Symptoms**: Rules with flowbits don't trigger
+**Symptoms**: Rules with flowstate don't trigger
 **Causes**:
-1. Flowbits disabled: Check `SOLSHIELD_FLOWBITS_ENABLED=true`
-2. Rule loading warning: Check logs for "flowbit-dependent rules loaded but flowbits disabled"
+1. FlowState disabled: Check `SOLSHIELD_FLOWBITS_ENABLED=true`
+2. Rule loading warning: Check logs for "flowstate-dependent rules loaded but flowstate disabled"
 
 **Solution**:
 ```bash
-# Verify flowbits are enabled
-grep "Flowbits enabled" logs/parapet.log
+# Verify flowstate are enabled
+grep "FlowState enabled" logs/parapet.log
 
 # Check rule loading
-grep "flowbit" logs/parapet.log
+grep "flowstate" logs/parapet.log
 ```
 
 ### Issue: False positives

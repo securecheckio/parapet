@@ -4,7 +4,7 @@ pub mod analyzers;
 pub mod dynamic;
 pub mod engine;
 pub mod feed_updater;
-pub mod flowbits;
+pub mod flowstate;
 pub mod performance;
 pub mod types;
 pub mod wasm_analyzer;
@@ -26,7 +26,7 @@ pub use engine::RuleEngine;
 pub use feed_updater::{
     FeedConfig, FeedSource, FeedUpdater, FetchResult, MergedRuleFeed, RuleFeed,
 };
-pub use flowbits::{FlowbitStateManager, FlowbitValue};
+pub use flowstate::{FlowStateManager, FlowStateValue};
 pub use performance::{
     AnalyzerPerformanceMetrics, EnginePerformanceMetrics, PerformanceTracker,
     RulePerformanceMetrics,

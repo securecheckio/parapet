@@ -7,7 +7,7 @@ members = [
     "api",
     "mcp",
     "tools/rpc-perf",
-    "tools/flowbits-perf",
+    "tools/flowstate-perf",
 ]
 exclude = [
     "core/tests/wasm_mock",

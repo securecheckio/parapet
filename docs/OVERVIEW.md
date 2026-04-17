@@ -10,7 +10,7 @@
 
 ## Executive summary
 
-Parapet is documented here as a full-stack, Rust-first security platform: a shared detection engine, an RPC perimeter proxy (IDS/IPS-style), wallet scanning, headless APIs for automation and escalations, a local MCP server, and an optional multi-tenant platform layer. The design is **systematic**—risk taxonomy, rule format documentation, flowbits, optional ecosystem analyzers, and deployment paths—so the product story is a **coherent security program** with clear perimeter control and a path to monetize **premium rules and threat intelligence** (not metered public API pricing on the open-source core).
+Parapet is documented here as a full-stack, Rust-first security platform: a shared detection engine, an RPC perimeter proxy (IDS/IPS-style), wallet scanning, headless APIs for automation and escalations, a local MCP server, and an optional multi-tenant platform layer. The design is **systematic**—risk taxonomy, rule format documentation, flowstate, optional ecosystem analyzers, and deployment paths—so the product story is a **coherent security program** with clear perimeter control and a path to monetize **premium rules and threat intelligence** (not metered public API pricing on the open-source core).
 
 ---
 
@@ -19,13 +19,13 @@ Parapet is documented here as a full-stack, Rust-first security platform: a shar
 
 | Area                 | Deliverable                                                                                                                            |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| **Core engine**      | `parapet-core`: JSON rules, pluggable analyzers, flowbits, risk scoring                                                                |
+| **Core engine**      | `parapet-core`: JSON rules, pluggable analyzers, flowstate, risk scoring                                                                |
 | **Perimeter**        | `parapet-proxy`: JSON-RPC proxy, rules, thresholds, optional Redis, deployment examples                                                |
 | **Scanner**          | `parapet-scanner`: CLI wallet analysis; output **human** / **json** / **brief**; optional Rugcheck, Jupiter, Helius, OtterSec features |
 | **Automation API**   | `parapet-api`: MCP HTTP, dynamic rules (Redis), **escalations** (approve/reject), WebSocket events, API keys                      |
 | **Platform**         | `parapet-platform`: Extends core API with PostgreSQL, dashboard, payments, analytics, push, learning                                   |
 | **Developer UX**     | `parapet-mcp`: stdio MCP for Cursor/Claude-style workflows                                                                             |
-| **Quality & perf**   | `rpc-perf`, `flowbits-perf`; workspace tests and coverage discipline (`docs/TEST_COVERAGE.md`)                                         |
+| **Quality & perf**   | `rpc-perf`, `flowstate-perf`; workspace tests and coverage discipline (`docs/TEST_COVERAGE.md`)                                         |
 | **Risk methodology** | `tools/risk-register`: risk categories CSV + README; alignment with rules repo for mappings                                            |
 
 
@@ -45,7 +45,7 @@ Parapet is documented here as a full-stack, Rust-first security platform: a shar
 ## Scope and maturity indicators
 
 - **Workspace scope:** Core + proxy + scanner + api + api-platform + MCP + perf tools + risk-register tooling (see root `Cargo.toml` members).
-- **Documentation surface:** User, developer, operations, rules format, flowbits, test coverage—suitable for onboarding operators and contributors.
+- **Documentation surface:** User, developer, operations, rules format, flowstate, test coverage—suitable for onboarding operators and contributors.
 - **End-to-end design:** From **local MCP** → **headless API** → **perimeter proxy** → **optional SaaS platform**.
 
 ---
@@ -66,10 +66,10 @@ Parapet is documented here as a full-stack, Rust-first security platform: a shar
 
 Verified against the codebase and docs:
 
-- **Workspace members** include `core`, `proxy`, `scanner`, `api`, `mcp`, `tools/rpc-perf`, `tools/flowbits-perf` (see workspace `Cargo.toml`).
+- **Workspace members** include `core`, `proxy`, `scanner`, `api`, `mcp`, `tools/rpc-perf`, `tools/flowstate-perf` (see workspace `Cargo.toml`).
 - **Scanner CLI** documents output formats **human**, **json**, and **brief** (not PDF/CSV in-tree); JSON supports automation and downstream reporting pipelines.
 - **api** documents **escalation** endpoints and **WebSocket** for escalation events.
-- **Flowbits** and **rule format** are documented under `docs/` (`RULES_FLOWBITS.md`, `RULES_FORMAT.md`).
+- **FlowState** and **rule format** are documented under `docs/` (`RULES_FLOWSTATE.md`, `RULES_FORMAT.md`).
 - **Third-party analyzers** (Helius, Jupiter, Rugcheck, OtterSec) are implemented as optional features in `parapet-core` and referenced in scanner/MCP docs.
 - **Risk register** tooling lives under `tools/risk-register/` (categories CSV + README); detailed rule-to-risk mappings reference the external `parapet-rules` repository.
 

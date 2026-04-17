@@ -24,7 +24,7 @@ fn create_test_state() -> Arc<AppState> {
     registry.register(Arc::new(TokenInstructionAnalyzer::new()));
     registry.register(Arc::new(SystemProgramAnalyzer::new()));
 
-    let engine = RuleEngine::new(registry).with_flowbits(None);
+    let engine = RuleEngine::new(registry).with_flowstate(None);
 
     // Create simulation registry
     let mut sim_registry =
@@ -183,7 +183,7 @@ async fn test_sendTransaction_blocks_high_risk() {
             }))
             .unwrap(),
             message: "Transaction blocked for testing".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     }];
@@ -342,7 +342,7 @@ async fn test_rule_engine_decision_flow() {
             }))
             .unwrap(),
             message: "Transaction passed for testing".to_string(),
-            flowbits: None,
+            flowstate: None,
         },
         metadata: Default::default(),
     }];

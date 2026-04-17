@@ -13,7 +13,7 @@
         "operator": "greater_than_or_equal",
         "value": 0
       },
-      "flowbits": {
+      "flowstate": {
         "increment": ["transaction_count"],
         "ttl_seconds": 600
       },
@@ -33,7 +33,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "flowbit:transaction_count",
+        "field": "flowstate:transaction_count",
         "operator": "greater_than_or_equal",
         "value": 10
       },
@@ -59,7 +59,7 @@
         "operator": "equals",
         "value": true
       },
-      "flowbits": {
+      "flowstate": {
         "increment": ["account_creation_count"],
         "ttl_seconds": 300
       },
@@ -81,7 +81,7 @@
       "conditions": {
         "all": [
           {"field": "system:creates_accounts", "operator": "equals", "value": true},
-          {"field": "flowbit:account_creation_count", "operator": "greater_than_or_equal", "value": 5}
+          {"field": "flowstate:account_creation_count", "operator": "greater_than_or_equal", "value": 5}
         ]
       },
       "message": "🚨 AI Agent: Account creation spike (5+ in 5 min) - possible loop or compromise"
@@ -102,11 +102,11 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "flowbit:blocked_transaction_count",
+        "field": "flowstate:blocked_transaction_count",
         "operator": "greater_than_or_equal",
         "value": 3
       },
-      "flowbits": {
+      "flowstate": {
         "ttl_seconds": 3600
       },
       "message": "⚠️ AI Agent: Repeatedly attempting blocked transactions (3+ in 1h) - investigate for compromise or misconfiguration"

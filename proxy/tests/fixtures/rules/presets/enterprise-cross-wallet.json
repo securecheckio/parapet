@@ -13,7 +13,7 @@
         "operator": "equals",
         "value": true
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "global",
         "increment": ["suspicious_recipient:{system:sol_recipients[0]}"],
         "ttl_seconds": 3600
@@ -36,7 +36,7 @@
       "conditions": {
         "all": [
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-          {"field": "flowbit_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
+          {"field": "flowstate_global:suspicious_recipient:{system:sol_recipients[0]}", "operator": "greater_than", "value": 2}
         ]
       },
       "message": "🚨 Enterprise: Lateral movement detected - recipient received from 3+ wallets in 1h - possible coordinated breach"
@@ -63,10 +63,10 @@
       "conditions": {
         "all": [
           {"field": "token_instructions:has_transfer", "operator": "equals", "value": true},
-          {"field": "flowbit_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
+          {"field": "flowstate_global:token_transfer_count:{token_instructions:mints[0]}", "operator": "greater_than", "value": 10}
         ]
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "global",
         "increment": ["token_transfer_count:{token_instructions:mints[0]}"],
         "ttl_seconds": 900
@@ -96,7 +96,7 @@
         "operator": "equals",
         "value": true
       },
-      "flowbits": {
+      "flowstate": {
         "scope": "global",
         "set": ["nonce_advanced:{system:nonce_account}"],
         "ttl_seconds": 1800
@@ -104,7 +104,7 @@
       "message": ""
     },
     "metadata": {
-      "note": "Tracker rule - sets flowbit with 30-min TTL for nonce staleness detection",
+      "note": "Tracker rule - sets flowstate with 30-min TTL for nonce staleness detection",
       "phase": "2"
     }
   },
@@ -121,7 +121,7 @@
         "all": [
           {"field": "system:uses_durable_nonce", "operator": "equals", "value": true},
           {"field": "system:max_sol_transfer", "operator": "greater_than", "value": 1000000000},
-          {"field": "flowbit_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
+          {"field": "flowstate_global:nonce_advanced:{system:nonce_account}", "operator": "isnotset"}
         ]
       },
       "message": "🚨 Enterprise: Stale nonce detected (30+ min old or never tracked) on high-value transfer - DRIFT PROTOCOL ATTACK PATTERN"
@@ -138,7 +138,7 @@
         "amount": "$270M",
         "description": "Attackers used pre-signed durable nonces with authority change instructions",
         "existing_mitigation": "drift-exploit-protection.json already blocks core Drift patterns (fingerprint-based, pattern-based, log-based)",
-        "flowbits_enhancement": "This rule adds time-based defense-in-depth by blocking stale nonces (>30 min old) on high-value transfers"
+        "flowstate_enhancement": "This rule adds time-based defense-in-depth by blocking stale nonces (>30 min old) on high-value transfers"
       }
     }
   }

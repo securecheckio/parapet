@@ -1,6 +1,6 @@
 # Parapet rules — JSON format
 
-Structure of rule bundles, condition trees, operators, and how **analyzers** expose fields. For **flowbits** (state + interpolation), see [Rule development — hub](RULES_DEVELOPMENT.md) → [RULES_FLOWBITS.md](RULES_FLOWBITS.md).
+Structure of rule bundles, condition trees, operators, and how **analyzers** expose fields. For **flowstate** (state + interpolation), see [Rule development — hub](RULES_DEVELOPMENT.md) → [RULES_FLOWSTATE.md](RULES_FLOWSTATE.md).
 
 ## Rule bundle file
 
@@ -23,7 +23,7 @@ Each element is one `**RuleDefinition`** (see below).
 | `author`      | no       | Who wrote the rule.                                                             |
 | `enabled`     | yes      | If `false`, the rule is skipped.                                                |
 | `tags`        | no       | String array (e.g. categorization).                                             |
-| `rule`        | yes      | The `**Rule`** payload (action, conditions, message, optional flowbits).        |
+| `rule`        | yes      | The `**Rule`** payload (action, conditions, message, optional flowstate).        |
 | `metadata`    | no       | Arbitrary JSON object (e.g. `weight`, `missing_field_behavior`, network hints). |
 
 
@@ -35,7 +35,7 @@ Each element is one `**RuleDefinition`** (see below).
 | `action`     | yes      | `"block"`, `"alert"`, or `"pass"` (lowercase).                              |
 | `conditions` | yes      | A **condition tree** (see below).                                           |
 | `message`    | yes      | Message attached when the rule matches.                                     |
-| `flowbits`   | no       | Optional `set` / `unset` / `increment` actions and `scope` / `ttl_seconds`. |
+| `flowstate`   | no       | Optional `set` / `unset` / `increment` actions and `scope` / `ttl_seconds`. |
 
 
 ## Conditions (`conditions`)
@@ -58,23 +58,23 @@ An object with `**field`**, `**operator`**, and `**value**`:
 - `**operator**`: snake-case string; see [Comparison operators](#comparison-operators).
 - `**value**`: any JSON value appropriate to the operator (number, string, boolean, array for `in` / `not_in`, etc.).
 
-### 2. Flowbit condition (flowbit state)
+### 2. Flowbit condition (flowstate state)
 
-An object with a `**flowbit**` string (the flowbit **name**, after any interpolation used when the flowbit was set/incremented), plus optional modifiers:
+An object with a `**flowstate**` string (the flowstate **name**, after any interpolation used when the flowstate was set/incremented), plus optional modifiers:
 
-- **Presence / expiry**: omit `count_operator` and `within_seconds` → engine checks whether the flowbit is set (and not expired) for the current wallet.
-- **Time window**: `"within_seconds": <seconds>` → true if the flowbit was set within that window.
+- **Presence / expiry**: omit `count_operator` and `within_seconds` → engine checks whether the flowstate is set (and not expired) for the current wallet.
+- **Time window**: `"within_seconds": <seconds>` → true if the flowstate was set within that window.
 - **Counter**: `"count_operator": "<op>"`, `"count_value": <n>` → compares the counter using the same operator names as simple conditions (`equals`, `greater_than`, …).
 
 ```json
 {
-  "flowbit": "transfers_to:7xKXtg2C...",
+  "flowstate": "transfers_to:7xKXtg2C...",
   "count_operator": "greater_than",
   "count_value": 3
 }
 ```
 
-Use this when the condition depends **only** on Parapet flowbit state, not on a raw analyzer field. Naming and interpolation for flowbits are covered in [RULES_FLOWBITS.md](RULES_FLOWBITS.md).
+Use this when the condition depends **only** on Parapet flowstate state, not on a raw analyzer field. Naming and interpolation for flowstate are covered in [RULES_FLOWSTATE.md](RULES_FLOWSTATE.md).
 
 ### 3. Compound condition
 
