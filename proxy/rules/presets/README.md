@@ -20,10 +20,10 @@ See [../examples/demo-basic-rules.json](../examples/demo-basic-rules.json) for a
 **[Parapet Rules Repository](https://github.com/securecheckio/parapet-rules)**
 
 **Community Rules:**
-- `parapet-rules/feeds/community-base.json` - 7 universal security rules
+- `parapet-rules/community/*.json` - published community category feeds (see `parapet-rules/README.md`)
 - Blocks malicious addresses, unlimited delegations, suspicious tokens, active rug pulls
 - Good baseline for most use cases
-- Additional presets available in `parapet-rules/presets/`
+- Additional community feed JSON: `parapet-rules/community/` (separate repo)
 
 **📖 Auto-Update Guide:** [Rule Feeds Documentation](../../../docs/RULE_FEEDS.md) - Learn how to automatically update rules without redeployment.
 

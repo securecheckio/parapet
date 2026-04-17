@@ -107,7 +107,7 @@ enabled = true
 poll_interval = 3600  # Check for updates every hour
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community-base.json"
+url = "https://rules.parapet.security/community/core-protection.json"
 priority = 1
 ```
 
@@ -128,7 +128,7 @@ priority = 1
 
 **Community Rules:**
 
-- `parapet-rules/feeds/community-base.json` (7 universal rules)
+- `parapet-rules/community/core-protection.json` (built-in patterns) + optional `community/helius-protection.json` / `community/jupiter-protection.json` when API keys are configured
 - See [github.com/securecheckio/parapet-rules](https://github.com/securecheckio/parapet-rules)
 
 ## Common Tasks

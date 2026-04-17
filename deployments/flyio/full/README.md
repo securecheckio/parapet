@@ -72,7 +72,7 @@ The full deployment supports three rule management approaches:
 
 1. **HTTP Rule Feeds** (Recommended): Auto-update rules from URLs
   - Set `RULES_FEED_ENABLED=true` and configure feed URLs
-  - See [Rule Feeds Documentation](../../../../parapet-rules/feeds/README.md)
+  - See [parapet-rules README](../../../../parapet-rules/README.md)
 2. **Dynamic Rules via API**: Manage rules at runtime via authenticated API
   - Requires Redis + API + authorized Solana wallet
   - Create/update/delete rules without redeployment
@@ -108,7 +108,7 @@ enabled = true
 poll_interval = 3600  # Check every hour
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community-base.json"
+url = "https://rules.parapet.security/community/core-protection.json"
 priority = 1
 ```
 
