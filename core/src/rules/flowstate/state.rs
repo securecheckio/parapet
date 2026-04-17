@@ -134,7 +134,9 @@ impl FlowStateManager {
         let new_value = if let Some(state) = self.wallet_states.get(wallet) {
             if let Some(existing) = state.get(name) {
                 match existing {
-                    FlowStateValue::Counter { value, .. } if !self.is_expired(existing) => value + 1,
+                    FlowStateValue::Counter { value, .. } if !self.is_expired(existing) => {
+                        value + 1
+                    }
                     _ => 1,
                 }
             } else {

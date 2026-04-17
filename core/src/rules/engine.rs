@@ -808,7 +808,8 @@ impl RuleEngine {
             {
                 // Apply flowstate actions if rule matched
                 if let Some(ref flowstate) = rule_def.rule.flowstate {
-                    self.apply_flowstate_actions(&wallet, flowstate, &fields).await;
+                    self.apply_flowstate_actions(&wallet, flowstate, &fields)
+                        .await;
                 }
                 let action = self.apply_action_override(rule_def, rule_def.rule.action);
 
@@ -1061,7 +1062,9 @@ impl RuleEngine {
                 RuleCondition::Simple(simple) => Ok(self
                     .evaluate_simple_with_flowstate(simple, fields, missing_field_override, wallet)
                     .await?),
-                RuleCondition::FlowState(flowstate) => self.evaluate_flowstate(flowstate, wallet).await,
+                RuleCondition::FlowState(flowstate) => {
+                    self.evaluate_flowstate(flowstate, wallet).await
+                }
                 RuleCondition::Compound(compound) => {
                     self.evaluate_compound_with_override(
                         compound,
