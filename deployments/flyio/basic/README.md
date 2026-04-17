@@ -107,7 +107,7 @@ enabled = true
 poll_interval = 3600  # Check for updates every hour
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 priority = 1
 ```
 

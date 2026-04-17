@@ -353,7 +353,7 @@ mod tests {
         let config = FeedConfig {
             feed_sources: vec![
                 FeedSource {
-                    url: "https://raw.githubusercontent.com/securecheckio/parapet-rules/main/community-feed.json".to_string(),
+                    url: "https://parapet-rules.securecheck.io/community/core-protection.json".to_string(),
                     name: Some("SecureCheck Community".to_string()),
                     priority: 0,
                     min_request_interval: 60,

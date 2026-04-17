@@ -25,7 +25,7 @@ enabled = true
 poll_interval = 3600  # Check every hour
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 name = "community"
 priority = 1
 ```
@@ -34,15 +34,15 @@ That's it! Rules will now auto-update every hour.
 
 ### Community feed URLs (category-based)
 
-Published from [`securecheckio/parapet-rules`](https://github.com/securecheckio/parapet-rules) (GitHub Pages at `rules.parapet.security`, or `raw.githubusercontent.com` while DNS is pending); see that repo’s `LICENSE`.
+Published from [`securecheckio/parapet-rules`](https://github.com/securecheckio/parapet-rules) (GitHub Pages at `https://parapet-rules.securecheck.io/`; raw files also at `raw.githubusercontent.com`); see that repo’s `LICENSE`.
 
-- `https://rules.parapet.security/community/core-protection.json` — built-in analyzers only (no third-party API keys)
-- `https://rules.parapet.security/community/helius-protection.json` — requires `HELIUS_API_KEY`
-- `https://rules.parapet.security/community/jupiter-protection.json` — requires `JUPITER_API_KEY`
-- `https://rules.parapet.security/community/rugcheck-protection.json` — requires `RUGCHECK_API_KEY`
-- `https://rules.parapet.security/community/ai-agent-protection.json` — AI-agent / flowbits patterns (no API keys)
-- `https://rules.parapet.security/community/advanced-patterns.json` — CPI + instruction-padding patterns (no API keys)
-- `https://rules.parapet.security/community/trading-bot-alerts.json` — alert-first trading-oriented patterns
+- `https://parapet-rules.securecheck.io/community/core-protection.json` — built-in analyzers only (no third-party API keys)
+- `https://parapet-rules.securecheck.io/community/helius-protection.json` — requires `HELIUS_API_KEY`
+- `https://parapet-rules.securecheck.io/community/jupiter-protection.json` — requires `JUPITER_API_KEY`
+- `https://parapet-rules.securecheck.io/community/rugcheck-protection.json` — requires `RUGCHECK_API_KEY`
+- `https://parapet-rules.securecheck.io/community/ai-agent-protection.json` — AI-agent / flowbits patterns (no API keys)
+- `https://parapet-rules.securecheck.io/community/advanced-patterns.json` — CPI + instruction-padding patterns (no API keys)
+- `https://parapet-rules.securecheck.io/community/trading-bot-alerts.json` — alert-first trading-oriented patterns
 
 There is **no** single-file “all rules” URL: repeating every rule in one JSON would duplicate the same definitions already published in the category feeds. List each feed you want under separate `[[rule_feeds.sources]]` entries.
 
@@ -56,7 +56,7 @@ enabled = true           # Enable auto-updates
 poll_interval = 3600     # Check feeds every 3600 seconds (1 hour)
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 name = "community"       # Human-readable name for logs
 priority = 1             # Lower number = higher priority (0 is highest)
 min_interval = 300       # Min 300s (5 min) between requests to this URL
@@ -71,7 +71,7 @@ poll_interval = 3600
 
 # Community base rules (priority 1)
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 name = "community"
 priority = 1
 min_interval = 300
@@ -118,7 +118,7 @@ Minimum seconds between requests to a specific feed URL (rate limiting).
 **Example:**
 ```toml
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 min_interval = 300  # Don't hit this URL more than once per 5 min
 ```
 
@@ -152,7 +152,7 @@ When the same rule ID appears in multiple feeds, **lower priority number wins**.
 
 ```toml
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 priority = 1  # Community defaults
 
 [[rule_feeds.sources]]
@@ -191,7 +191,7 @@ enabled = true
 poll_interval = 3600
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 priority = 1
 ```
 
@@ -203,7 +203,7 @@ enabled = true
 poll_interval = 3600
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 priority = 1
 
 [[rule_feeds.sources]]
@@ -219,11 +219,11 @@ enabled = true
 poll_interval = 600  # Check every 10 min (high-security)
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/core-protection.json"
+url = "https://parapet-rules.securecheck.io/community/core-protection.json"
 priority = 2
 
 [[rule_feeds.sources]]
-url = "https://rules.parapet.security/community/trading-bot-alerts.json"
+url = "https://parapet-rules.securecheck.io/community/trading-bot-alerts.json"
 priority = 1
 
 [[rule_feeds.sources]]
@@ -241,10 +241,10 @@ For simple setups, use environment variables instead of `config.toml`:
 RULES_FEED_ENABLED=true
 
 # Single feed URL
-RULES_FEED_URL_1=https://rules.parapet.security/community/core-protection.json
+RULES_FEED_URL_1=https://parapet-rules.securecheck.io/community/core-protection.json
 
 # Multiple feeds (higher number = lower priority)
-RULES_FEED_URL_1=https://rules.parapet.security/community/core-protection.json
+RULES_FEED_URL_1=https://parapet-rules.securecheck.io/community/core-protection.json
 RULES_FEED_URL_2=https://my-company.com/custom-rules.json
 ```
 
