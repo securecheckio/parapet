@@ -26,7 +26,6 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
      --name parapet-proxy \
      -p 8899:8899 \
      -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
-     -e RULES_FEED_ENABLED=true \
      -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
      --restart unless-stopped \
      ghcr.io/securecheckio/parapet-proxy:latest
@@ -49,8 +48,7 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `UPSTREAM_RPC_URL` | Yes | - | Your Solana RPC endpoint |
-| `RULES_FEED_ENABLED` | No | `false` | Enable auto-updating rule feeds |
-| `RULES_FEED_URLS` | No | - | Comma-separated list of rule feed URLs |
+| `RULES_FEED_URLS` | No | - | Comma-separated list of rule feed URLs (auto-enables feeds) |
 | `HELIUS_API_KEY` | No | - | Enable Helius-powered rules |
 | `JUPITER_API_KEY` | No | - | Enable Jupiter-powered rules |
 | `RUST_LOG` | No | `info` | Log level (debug, info, warn, error) |
@@ -92,11 +90,16 @@ environment:
 
 For advanced threat detection, add your API keys:
 
-```yaml
-environment:
-  - HELIUS_API_KEY=your_key_here
-  - JUPITER_API_KEY=your_key_here
-  - RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json,https://parapet-rules.securecheck.io/community/helius-protection.json,https://parapet-rules.securecheck.io/community/jupiter-protection.json
+```bash
+docker run -d \
+  --name parapet-proxy \
+  -p 8899:8899 \
+  -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
+  -e HELIUS_API_KEY=your_key_here \
+  -e JUPITER_API_KEY=your_key_here \
+  -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json,https://parapet-rules.securecheck.io/community/helius-protection.json,https://parapet-rules.securecheck.io/community/jupiter-protection.json \
+  --restart unless-stopped \
+  ghcr.io/securecheckio/parapet-proxy:latest
 ```
 
 ## Production Deployment

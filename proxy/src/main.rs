@@ -60,6 +60,9 @@ async fn main() -> anyhow::Result<()> {
         None
     };
 
+    // Auto-enable feeds if sources are provided (even if RULES_FEED_ENABLED not explicitly set)
+    let rules_feed_enabled = config.rule_feeds.enabled || rules_feed_sources.is_some();
+
     // Create server configuration
     let server_config = server::ServerConfig {
         port: config.server.port,
@@ -95,7 +98,7 @@ async fn main() -> anyhow::Result<()> {
         upstream_circuit_breaker_timeout_secs: Some(config.upstream.circuit_breaker_timeout_secs),
         default_blocking_threshold: config.security.default_blocking_threshold,
         enable_escalations: config.escalations.enabled,
-        rules_feed_enabled: config.rule_feeds.enabled,
+        rules_feed_enabled,
         rules_feed_sources,
         rules_feed_poll_interval: config.rule_feeds.poll_interval,
         enable_activity_feed: config.activity_feed.enabled,

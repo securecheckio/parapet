@@ -454,7 +454,7 @@ impl Config {
                     .ok()
                     .and_then(|v| v.parse().ok())
                     .unwrap_or(300),
-                sources: Vec::new(), // Parsed separately in main.rs
+                sources: parse_feed_sources_from_env(),
             },
             activity_feed: ActivityFeedConfig {
                 enabled: std::env::var("ENABLE_ACTIVITY_FEED")
@@ -478,4 +478,30 @@ impl Config {
 
         Ok(config)
     }
+}
+
+/// Parse rule feed sources from RULES_FEED_URLS environment variable
+/// Format: comma-separated URLs
+/// Example: RULES_FEED_URLS=https://example.com/feed1.json,https://example.com/feed2.json
+fn parse_feed_sources_from_env() -> Vec<FeedSourceConfig> {
+    std::env::var("RULES_FEED_URLS")
+        .ok()
+        .map(|urls| {
+            urls.split(',')
+                .enumerate()
+                .filter_map(|(idx, url)| {
+                    let url = url.trim();
+                    if url.is_empty() {
+                        return None;
+                    }
+                    Some(FeedSourceConfig {
+                        url: url.to_string(),
+                        name: Some(format!("feed-{}", idx + 1)),
+                        priority: 0,
+                        min_interval: None,
+                    })
+                })
+                .collect()
+        })
+        .unwrap_or_default()
 }
