@@ -1,0 +1,21 @@
+#!/bin/sh
+# Pre-commit hook to automatically format Rust code with cargo fmt
+#
+# To install: cp .githooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# Or run: git config core.hooksPath .githooks
+
+echo "🔧 Running cargo fmt --all..."
+
+# Run cargo fmt on all packages
+cargo fmt --all
+
+# Check if any files were modified by cargo fmt
+if git diff --name-only | grep -q '\.rs$'; then
+    echo "✅ Code formatted - adding changes to commit"
+    # Add the formatted files
+    git add $(git diff --name-only | grep '\.rs$')
+else
+    echo "✅ Code already formatted"
+fi
+
+exit 0
