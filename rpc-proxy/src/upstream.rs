@@ -1,5 +1,6 @@
 use crate::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use anyhow::Result;
+use base64::Engine;
 use reqwest::Client;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
@@ -15,6 +16,7 @@ pub enum CircuitState {
 }
 
 /// Circuit breaker for upstream RPC
+#[derive(Clone)]
 struct CircuitBreaker {
     state: Arc<Mutex<CircuitState>>,
     failure_count: Arc<AtomicUsize>,
@@ -106,6 +108,7 @@ impl CircuitBreaker {
     }
 }
 
+#[derive(Clone)]
 pub struct UpstreamClient {
     client: Client,
     pub upstream_url: String,
@@ -287,6 +290,119 @@ impl UpstreamClient {
     /// Get circuit breaker state for monitoring
     pub async fn get_circuit_state(&self) -> CircuitState {
         self.circuit_breaker.get_state().await
+    }
+
+    /// Fetch account data from upstream RPC (for ALT resolution)
+    pub async fn get_account(&self, pubkey: &str) -> Result<Option<Vec<u8>>> {
+        use serde_json::json;
+
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: serde_json::Value::Number(1.into()),
+            method: "getAccountInfo".to_string(),
+            params: vec![
+                serde_json::Value::String(pubkey.to_string()),
+                json!({
+                    "encoding": "base64"
+                }),
+            ],
+        };
+
+        let response = self.forward(&request).await?;
+
+        if let Some(error) = response.error {
+            return Err(anyhow::anyhow!(
+                "RPC error fetching account: {}",
+                error.message
+            ));
+        }
+
+        // Parse the account data from the response
+        if let Some(result) = response.result {
+            if result.is_null() {
+                return Ok(None);
+            }
+
+            let data = result
+                .get("value")
+                .and_then(|v| v.get("data"))
+                .and_then(|d| d.get(0))
+                .and_then(|s| s.as_str())
+                .ok_or_else(|| anyhow::anyhow!("Invalid account data format"))?;
+
+            let decoded = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .map_err(|e| anyhow::anyhow!("Failed to decode account data: {}", e))?;
+
+            Ok(Some(decoded))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Fetch multiple accounts in parallel (for ALT resolution)
+    pub async fn get_multiple_accounts(&self, pubkeys: &[String]) -> Result<Vec<Option<Vec<u8>>>> {
+        use serde_json::json;
+
+        if pubkeys.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let request = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: serde_json::Value::Number(1.into()),
+            method: "getMultipleAccounts".to_string(),
+            params: vec![
+                serde_json::Value::Array(
+                    pubkeys
+                        .iter()
+                        .map(|pk| serde_json::Value::String(pk.clone()))
+                        .collect(),
+                ),
+                json!({
+                    "encoding": "base64"
+                }),
+            ],
+        };
+
+        let response = self.forward(&request).await?;
+
+        if let Some(error) = response.error {
+            return Err(anyhow::anyhow!(
+                "RPC error fetching accounts: {}",
+                error.message
+            ));
+        }
+
+        let result = response
+            .result
+            .ok_or_else(|| anyhow::anyhow!("No result in response"))?;
+        let values = result
+            .get("value")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| anyhow::anyhow!("Invalid response format"))?;
+
+        let mut accounts = Vec::new();
+        for value in values {
+            if value.is_null() {
+                accounts.push(None);
+                continue;
+            }
+
+            let data = value
+                .get("data")
+                .and_then(|d| d.get(0))
+                .and_then(|s| s.as_str())
+                .ok_or_else(|| anyhow::anyhow!("Invalid account data format"))?;
+
+            let decoded = base64::engine::general_purpose::STANDARD
+                .decode(data)
+                .map_err(|e| anyhow::anyhow!("Failed to decode account data: {}", e))?;
+
+            accounts.push(Some(decoded));
+        }
+
+        Ok(accounts)
     }
 }
 

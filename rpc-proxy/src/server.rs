@@ -80,6 +80,11 @@ pub struct ServerConfig {
     pub activity_feed_max_events_per_wallet: usize,
     pub activity_feed_ttl_seconds: u64,
     pub network: String,
+
+    /// Address Lookup Tables to pre-fetch on startup
+    pub prefetch_alts: Vec<String>,
+    /// ALT cache TTL in seconds
+    pub alt_cache_ttl_secs: u64,
 }
 
 /// Feed source configuration from environment
@@ -127,6 +132,8 @@ impl Default for ServerConfig {
             activity_feed_min_risk_score: 40,
             activity_feed_max_events_per_wallet: 100,
             activity_feed_ttl_seconds: 86400,
+            prefetch_alts: Vec::new(),
+            alt_cache_ttl_secs: 3600,
         }
     }
 }
@@ -250,6 +257,66 @@ async fn build_app_router_internal(
     let upstream_client =
         upstream::UpstreamClient::new_with_config(config.upstream_url.clone(), upstream_config);
     log::info!("✅ Upstream client initialized");
+
+    // Configure ALT resolution for v0 transactions (with caching and batch fetching)
+    {
+        let upstream_for_alt = upstream_client.clone();
+
+        // Create batch fetcher (uses getMultipleAccounts)
+        let batch_fetcher: rules::alt_resolver::BatchAccountFetcher =
+            Box::new(move |pubkeys: &[String]| {
+                let upstream = upstream_for_alt.clone();
+                let pubkeys = pubkeys.to_vec();
+                Box::pin(async move { upstream.get_multiple_accounts(&pubkeys).await })
+            });
+
+        // Create ALT cache (TTL from config)
+        let alt_cache = Arc::new(rules::alt_cache::AltCache::new(config.alt_cache_ttl_secs));
+
+        // Pre-fetch configured ALTs on startup
+        if !config.prefetch_alts.is_empty() {
+            log::info!(
+                "📋 Pre-fetching {} ALTs from config",
+                config.prefetch_alts.len()
+            );
+            match upstream_client
+                .get_multiple_accounts(&config.prefetch_alts)
+                .await
+            {
+                Ok(accounts) => {
+                    let mut cache_entries = Vec::new();
+                    for (pubkey, account_data) in config.prefetch_alts.iter().zip(accounts.iter()) {
+                        if let Some(data) = account_data {
+                            cache_entries.push((pubkey.clone(), data.clone()));
+                        } else {
+                            log::warn!("⚠️  ALT not found: {}", pubkey);
+                        }
+                    }
+                    if !cache_entries.is_empty() {
+                        alt_cache.set_multiple(cache_entries).await;
+                        log::info!(
+                            "✅ Pre-fetched {} ALTs successfully",
+                            config.prefetch_alts.len()
+                        );
+                    }
+                }
+                Err(e) => {
+                    log::error!("❌ Failed to pre-fetch ALTs: {}", e);
+                }
+            }
+        }
+
+        // Create resolver with cache and batch fetcher
+        let resolver = Arc::new(rules::alt_resolver::AltResolver::new(
+            alt_cache,
+            Arc::new(batch_fetcher),
+        ));
+
+        // Set the resolver on the engine
+        let mut engine = rule_engine.write().await;
+        engine.set_alt_resolver(resolver);
+        log::info!("✅ ALT resolution configured (cached, batch fetching)");
+    }
 
     // Initialize usage tracker if enabled
     let usage_tracker = if config.enable_usage_tracking {

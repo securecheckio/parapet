@@ -37,6 +37,8 @@ pub struct RuleEngine {
     performance_tracker: PerformanceTracker,
     /// FlowState manager (optional, for multi-transaction attack detection)
     flowstate: Option<Arc<Mutex<FlowStateManager>>>,
+    /// ALT resolver for v0 transactions (optional, with caching and batch fetching)
+    alt_resolver: Option<Arc<super::alt_resolver::AltResolver>>,
 }
 
 /// Detect Solana network from RPC URL
@@ -89,6 +91,7 @@ impl RuleEngine {
             enrichment_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             performance_tracker: PerformanceTracker::new(perf_enabled),
             flowstate: None, // DISABLED by default
+            alt_resolver: None,
         };
 
         // Auto-enable from environment variable
@@ -151,6 +154,18 @@ impl RuleEngine {
         self
     }
 
+    /// Set ALT resolver for v0 transaction support (with caching and batch fetching)
+    pub fn with_alt_resolver(mut self, resolver: Arc<super::alt_resolver::AltResolver>) -> Self {
+        self.alt_resolver = Some(resolver);
+        log::info!("✅ ALT resolution enabled (with caching)");
+        self
+    }
+
+    /// Set ALT resolver after construction (for when engine is already in Arc<RwLock>)
+    pub fn set_alt_resolver(&mut self, resolver: Arc<super::alt_resolver::AltResolver>) {
+        self.alt_resolver = Some(resolver);
+    }
+
     /// Get dynamic rules store (if enabled)
     pub fn dynamic_rules(&self) -> Option<Arc<DynamicRuleStore>> {
         self.dynamic_rules.clone()
@@ -206,19 +221,9 @@ impl RuleEngine {
 
             applicable
         } else {
-            // No network restriction - defaults to mainnet-only for safety
-            // Rules without network metadata are assumed to be mainnet rules
-            let is_mainnet =
-                self.current_network == "mainnet-beta" || self.current_network == "mainnet";
-
-            if !is_mainnet {
-                log::debug!(
-                    "  ⏭️  Skipping rule '{}': no network specified, defaulting to mainnet-only",
-                    rule.name
-                );
-            }
-
-            is_mainnet
+            // No network restriction - apply to ALL networks by default
+            // If you want mainnet-only, explicitly set "networks": ["mainnet-beta"]
+            true
         }
     }
 
@@ -986,8 +991,22 @@ impl RuleEngine {
             return self.evaluate_with_threshold(&legacy_tx, threshold).await;
         }
 
-        // For v0 transactions, we have limited analysis capability
-        // For now, just pass them through with a warning in the logs
+        // For v0 transactions, try to resolve ALTs if we have a resolver
+        if let Some(resolver) = &self.alt_resolver {
+            log::info!("🔍 Resolving ALTs for v0 transaction");
+            match resolver.resolve_v0_transaction(tx).await {
+                Ok(resolved_tx) => {
+                    log::info!("✅ ALTs resolved successfully, evaluating transaction");
+                    return self.evaluate_with_threshold(&resolved_tx, threshold).await;
+                }
+                Err(e) => {
+                    log::error!("❌ Failed to resolve ALTs: {}", e);
+                    // Fall through to warning below
+                }
+            }
+        }
+
+        // No account fetcher or resolution failed
         log::warn!("⚠️  Limited rule evaluation for v0 transaction (ALTs not resolved)");
         Ok(RuleDecision::no_match())
     }

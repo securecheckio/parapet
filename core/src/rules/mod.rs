@@ -1,3 +1,5 @@
+pub mod alt_cache;
+pub mod alt_resolver;
 pub mod analyzer;
 pub mod analyzer_config;
 pub mod analyzers;

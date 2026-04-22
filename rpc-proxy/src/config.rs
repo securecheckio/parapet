@@ -59,6 +59,12 @@ pub struct UpstreamConfig {
 pub struct NetworkConfig {
     #[serde(default = "default_network")]
     pub network: String,
+    /// Address Lookup Tables to pre-fetch on startup (improves v0 transaction performance)
+    #[serde(default)]
+    pub prefetch_alts: Vec<String>,
+    /// ALT cache TTL in seconds (default: 3600 = 1 hour)
+    #[serde(default = "default_alt_cache_ttl")]
+    pub alt_cache_ttl_secs: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -180,6 +186,9 @@ fn default_circuit_breaker_timeout_secs() -> u64 {
 fn default_network() -> String {
     "mainnet-beta".to_string()
 }
+fn default_alt_cache_ttl() -> u64 {
+    3600 // 1 hour
+}
 fn default_blocking_threshold() -> u8 {
     70
 }
@@ -233,6 +242,8 @@ impl Default for NetworkConfig {
     fn default() -> Self {
         Self {
             network: default_network(),
+            prefetch_alts: Vec::new(), // Empty by default
+            alt_cache_ttl_secs: default_alt_cache_ttl(),
         }
     }
 }
@@ -397,6 +408,8 @@ impl Config {
             network: NetworkConfig {
                 network: std::env::var("SOLANA_NETWORK")
                     .unwrap_or_else(|_| "mainnet-beta".to_string()),
+                prefetch_alts: Vec::new(),
+                alt_cache_ttl_secs: default_alt_cache_ttl(),
             },
             security: SecurityConfig {
                 default_blocking_threshold: std::env::var("DEFAULT_BLOCKING_THRESHOLD")

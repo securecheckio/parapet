@@ -26,6 +26,17 @@ circuit_breaker_timeout_secs = 60
 [network]
 network = "mainnet-beta"
 
+# Address Lookup Tables (ALTs) to pre-fetch on startup
+# Improves v0 transaction performance by caching common ALTs
+# Example: Jupiter, Raydium, Phoenix ALTs
+# prefetch_alts = [
+#   "JUPALTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+#   "RAYALTxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# ]
+
+# ALT cache TTL in seconds (default: 3600 = 1 hour)
+# alt_cache_ttl_secs = 3600
+
 [security]
 default_blocking_threshold = 70
 rules_path = "./rules/presets/default-protection.json"

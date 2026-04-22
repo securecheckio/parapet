@@ -106,6 +106,8 @@ async fn main() -> anyhow::Result<()> {
         activity_feed_max_events_per_wallet: config.activity_feed.max_events_per_wallet,
         activity_feed_ttl_seconds: config.activity_feed.ttl_seconds,
         network: config.network.network,
+        prefetch_alts: config.network.prefetch_alts,
+        alt_cache_ttl_secs: config.network.alt_cache_ttl_secs,
     };
 
     // Store config path for reloading
