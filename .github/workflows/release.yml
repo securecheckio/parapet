@@ -58,21 +58,21 @@ jobs:
 
     - name: Strip binary (Linux)
       if: matrix.os == 'ubuntu-latest'
-      run: strip target/release/parapet
+      run: strip target/release/wallet-scanner
 
     - name: Strip binary (macOS)
       if: matrix.os == 'macos-latest'
-      run: strip target/release/parapet
+      run: strip target/release/wallet-scanner
 
-    - name: Generate attestation for parapet binary
+    - name: Generate attestation for wallet-scanner binary
       uses: actions/attest-build-provenance@v1
       with:
-        subject-path: target/release/parapet
+        subject-path: target/release/wallet-scanner
 
     - name: Create tarball
       run: |
         cd target/release
-        tar -czf ${{ matrix.artifact-name }}.tar.gz parapet
+        tar -czf ${{ matrix.artifact-name }}.tar.gz wallet-scanner
         sha256sum ${{ matrix.artifact-name }}.tar.gz > ${{ matrix.artifact-name }}.tar.gz.sha256
 
     - name: Upload artifact
@@ -169,7 +169,7 @@ jobs:
           tar -xzf parapet-*.tar.gz
           
           # Verify with GitHub CLI
-          gh attestation verify parapet --owner securecheckio
+          gh attestation verify wallet-scanner --owner securecheckio
           ```
           
           ### Platform-Specific Downloads
