@@ -34,5 +34,5 @@ Optional analyzer keys:
 
 ## Notes
 
-- Rules are mounted from `proxy/rules` into `/app/rules`.
+- Rules are mounted from `rpc-proxy/rules` into `/app/rules`.
 - No default rules are enforced unless you set a valid `RULES_PATH` or rule feed configuration.

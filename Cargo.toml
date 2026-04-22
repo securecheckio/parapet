@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "core",
-    "proxy",
+    "rpc-proxy",
     "scanner",
     "api",
     "mcp",

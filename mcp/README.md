@@ -260,6 +260,6 @@ Parapet provides **two MCP implementations**:
 
 - [Parapet Core](../core) - Rule engine and analyzers
 - [Parapet Scanner](../scanner) - Wallet and program scanning library
-- [Parapet Proxy](../proxy) - RPC proxy with transaction filtering
+- [Parapet RPC Proxy](../rpc-proxy) - RPC proxy with transaction filtering
 - [Parapet API](../api) - HTTP REST API with MCP-over-HTTP
 

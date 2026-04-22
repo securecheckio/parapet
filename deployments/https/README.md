@@ -31,7 +31,7 @@ rpc.yourdomain.com {
 
 ```bash
 # Start main Parapet stack first
-cd ../proxy/docker
+cd ../proxy-only/docker
 docker-compose up -d
 
 # Start Caddy reverse proxy

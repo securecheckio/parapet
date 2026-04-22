@@ -9,14 +9,14 @@ WORKDIR /build
 # Multi-stage build means only the final binary ends up in runtime image
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
-COPY proxy ./proxy
+COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api
 COPY mcp ./mcp
 COPY tools ./tools
 
 # Build release binaries for proxy and utilities
-RUN cargo build --release -p parapet-proxy --bin parapet-proxy && \
+RUN cargo build --release -p parapet-rpc-proxy --bin parapet-rpc-proxy && \
     cargo build --release -p parapet-scanner --bin parapet-scanner
 
 FROM debian:trixie-slim
@@ -27,9 +27,9 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-COPY --from=builder /build/target/release/parapet-proxy /usr/local/bin/parapet-proxy
+COPY --from=builder /build/target/release/parapet-rpc-proxy /usr/local/bin/parapet-rpc-proxy
 COPY --from=builder /build/target/release/parapet-scanner /usr/local/bin/parapet-scanner
-COPY proxy/rules /app/rules
+COPY rpc-proxy/rules /app/rules
 
 # No config.toml in image - use environment variables
 # Users can volume-mount their own config.toml if needed
@@ -43,4 +43,4 @@ RUN useradd -m -u 1000 parapet && \
     chown -R parapet:parapet /app
 USER parapet
 
-CMD ["parapet-proxy"]
+CMD ["parapet-rpc-proxy"]

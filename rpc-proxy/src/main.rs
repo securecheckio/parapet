@@ -1,5 +1,5 @@
 use parapet_core::rules::analyzers::BlockedHash;
-use parapet_proxy::{config, server};
+use parapet_rpc_proxy::{config, server};
 use std::sync::Arc;
 
 #[tokio::main]
@@ -10,8 +10,8 @@ async fn main() -> anyhow::Result<()> {
     // Determine config file path
     let config_path = if std::path::Path::new("config.toml").exists() {
         "config.toml"
-    } else if std::path::Path::new("proxy/config.toml").exists() {
-        "proxy/config.toml"
+    } else if std::path::Path::new("rpc-proxy/config.toml").exists() {
+        "rpc-proxy/config.toml"
     } else {
         ""
     };

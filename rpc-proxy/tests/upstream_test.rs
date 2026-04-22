@@ -1,6 +1,6 @@
-use parapet_proxy::rpc_handler::JsonRpcRequest;
-/// Upstream client tests for parapet-proxy
-use parapet_proxy::upstream::{UpstreamClient, UpstreamConfig};
+use parapet_rpc_proxy::rpc_handler::JsonRpcRequest;
+/// Upstream client tests for parapet-rpc-proxy
+use parapet_rpc_proxy::upstream::{UpstreamClient, UpstreamConfig};
 use serde_json::json;
 
 #[tokio::test]

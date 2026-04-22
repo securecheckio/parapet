@@ -256,10 +256,10 @@ Check logs for feed activity:
 
 ```bash
 # Fly.io
-fly logs -a parapet-proxy | grep "feed"
+fly logs -a parapet-rpc-proxy | grep "feed"
 
 # Docker
-docker logs parapet-proxy | grep "feed"
+docker logs parapet-rpc-proxy | grep "feed"
 ```
 
 **Example logs:**

@@ -8,8 +8,8 @@ set -e
 if [ -z "$HELIUS_API_KEY" ]; then
     # Check common locations for .env files
     ENV_LOCATIONS=(
-        "../../proxy/.env"
-        "../proxy/.env"
+        "../../rpc-proxy/.env"
+        "../rpc-proxy/.env"
         "../../saas/.env.local"
         "../saas/.env.local"
         ".env"

@@ -151,7 +151,7 @@ docker run -d \
   -e REDIS_URL=redis://prod-redis:6379 \
   -e ENABLE_ESCALATIONS=true \
   -p 8899:8899 \
-  parapet-proxy --rules-preset strict
+  parapet-rpc-proxy --rules-preset strict
 ```
 
 **Key Features Used:**

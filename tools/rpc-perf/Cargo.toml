@@ -5,7 +5,7 @@ edition.workspace = true
 authors.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Lower-bound latency: JSON-RPC sendRawTransaction through parapet-proxy + rule engine with a local mock upstream (upstream_delay_ms=0). No real Solana network. Default rules: fixtures/minimal-rules.json (structural only); use mix-rules.json for pass/alert/block splits. Not simulation/enrichment."
+description = "Lower-bound latency: JSON-RPC sendRawTransaction through parapet-rpc-proxy + rule engine with a local mock upstream (upstream_delay_ms=0). No real Solana network. Default rules: fixtures/minimal-rules.json (structural only); use mix-rules.json for pass/alert/block splits. Not simulation/enrichment."
 default-run = "rpc-perf"
 
 [lib]
@@ -17,7 +17,7 @@ name = "rpc-perf"
 path = "src/main.rs"
 
 [dependencies]
-parapet-proxy = { path = "../../proxy" }
+parapet-rpc-proxy = { path = "../../rpc-proxy" }
 axum = { workspace = true }
 tokio = { workspace = true }
 serde = { workspace = true }

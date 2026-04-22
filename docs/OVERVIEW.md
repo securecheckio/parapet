@@ -20,7 +20,7 @@ Parapet is documented here as a full-stack, Rust-first security platform: a shar
 | Area                 | Deliverable                                                                                                                            |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | **Core engine**      | `parapet-core`: JSON rules, pluggable analyzers, flowstate, risk scoring                                                                |
-| **Perimeter**        | `parapet-proxy`: JSON-RPC proxy, rules, thresholds, optional Redis, deployment examples                                                |
+| **Perimeter**        | `parapet-rpc-proxy`: JSON-RPC proxy, rules, thresholds, optional Redis, deployment examples                                                |
 | **Scanner**          | `parapet-scanner`: CLI wallet analysis; output **human** / **json** / **brief**; optional Rugcheck, Jupiter, Helius, OtterSec features |
 | **Automation API**   | `parapet-api`: MCP HTTP, dynamic rules (Redis), **escalations** (approve/reject), WebSocket events, API keys                      |
 | **Platform**         | `parapet-platform`: Extends core API with PostgreSQL, dashboard, payments, analytics, push, learning                                   |

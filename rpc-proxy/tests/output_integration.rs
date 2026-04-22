@@ -22,7 +22,7 @@ async fn test_output_event_emission() -> Result<()> {
     println!("Test output path: {}", path_str);
 
     // Load output manager
-    let output_manager = parapet_proxy::output::load_from_env()?;
+    let output_manager = parapet_rpc_proxy::output::load_from_env()?;
 
     println!("Pipeline count: {}", output_manager.pipeline_count());
     assert_eq!(
@@ -32,7 +32,7 @@ async fn test_output_event_emission() -> Result<()> {
     );
 
     // Create a test event
-    let event = parapet_proxy::output::EventBuilder::new(
+    let event = parapet_rpc_proxy::output::EventBuilder::new(
         "7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU".to_string(),
         "sendTransaction".to_string(),
     )
@@ -105,7 +105,7 @@ async fn test_blocked_transaction_event() -> Result<()> {
     std::env::set_var("JSON_LS_SINK", "file");
     std::env::set_var("JSON_LS_PATH", output_path.to_str().unwrap());
 
-    let output_manager = parapet_proxy::output::load_from_env()?;
+    let output_manager = parapet_rpc_proxy::output::load_from_env()?;
 
     // Create a blocked transaction event
     let decision = parapet_core::rules::types::RuleDecision {
@@ -121,7 +121,7 @@ async fn test_blocked_transaction_event() -> Result<()> {
         is_simulation: false,
     };
 
-    let event = parapet_proxy::output::EventBuilder::new(
+    let event = parapet_rpc_proxy::output::EventBuilder::new(
         "test_wallet".to_string(),
         "sendTransaction".to_string(),
     )

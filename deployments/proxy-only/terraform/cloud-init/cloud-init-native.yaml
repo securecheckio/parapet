@@ -51,12 +51,12 @@ runcmd:
   
   # Install binary
   - chmod +x /tmp/parapet-rpc-proxy
-  - mv /tmp/parapet-rpc-proxy /opt/parapet/parapet-proxy
-  - chown solshield:solshield /opt/parapet/parapet-proxy
+  - mv /tmp/parapet-rpc-proxy /opt/parapet/parapet-rpc-proxy
+  - chown solshield:solshield /opt/parapet/parapet-rpc-proxy
   
   # Verify binary
-  - file /opt/parapet/parapet-proxy
-  - /opt/parapet/parapet-proxy --version || echo "Binary installed successfully"
+  - file /opt/parapet/parapet-rpc-proxy
+  - /opt/parapet/parapet-rpc-proxy --version || echo "Binary installed successfully"
   
   # Create environment file
   - |
@@ -89,7 +89,7 @@ runcmd:
     EnvironmentFile=/opt/parapet/.env
     
     # Execute binary
-    ExecStart=/opt/parapet/parapet-proxy
+    ExecStart=/opt/parapet/parapet-rpc-proxy
     
     # Automatic restart on failure
     Restart=always

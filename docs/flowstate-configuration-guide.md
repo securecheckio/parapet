@@ -66,9 +66,9 @@ SOLSHIELD_FLOWBITS_DEFAULT_TTL=3600  # 1 hour default
 
 ```bash
 # Load AI agent protection rules
-parapet-proxy \
-  --rules proxy/rules/presets/ai-agent-protection.json \
-  --rules proxy/rules/presets/ai-agent-advanced.json \
+parapet-rpc-proxy \
+  --rules rpc-proxy/rules/presets/ai-agent-protection.json \
+  --rules rpc-proxy/rules/presets/ai-agent-advanced.json \
   --rpc-url https://api.mainnet-beta.solana.com
 ```
 
@@ -136,9 +136,9 @@ SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=50000  # For cross-wallet tracking
 
 ```bash
 # Load enterprise protection rules
-parapet-proxy \
-  --rules proxy/rules/presets/enterprise-basic-protection.json \
-  --rules proxy/rules/presets/enterprise-cross-wallet.json \
+parapet-rpc-proxy \
+  --rules rpc-proxy/rules/presets/enterprise-basic-protection.json \
+  --rules rpc-proxy/rules/presets/enterprise-cross-wallet.json \
   --rpc-url https://internal-rpc.company.com
 ```
 
@@ -213,10 +213,10 @@ You can load multiple presets simultaneously:
 
 ```bash
 # AI Agent + Enterprise (for organizations with AI agents)
-parapet-proxy \
-  --rules proxy/rules/presets/ai-agent-protection.json \
-  --rules proxy/rules/presets/ai-agent-advanced.json \
-  --rules proxy/rules/presets/enterprise-cross-wallet.json
+parapet-rpc-proxy \
+  --rules rpc-proxy/rules/presets/ai-agent-protection.json \
+  --rules rpc-proxy/rules/presets/ai-agent-advanced.json \
+  --rules rpc-proxy/rules/presets/enterprise-cross-wallet.json
 ```
 
 ## Performance Tuning
@@ -296,7 +296,7 @@ SOLSHIELD_FLOWBITS_MAX_WALLETS=1000
 SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=10000
 
 # Monitor memory usage
-ps aux | grep parapet-proxy
+ps aux | grep parapet-rpc-proxy
 ```
 
 ### Issue: Variable interpolation not working

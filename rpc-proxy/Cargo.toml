@@ -1,5 +1,5 @@
 [package]
-name = "parapet-proxy"
+name = "parapet-rpc-proxy"
 version = "0.1.0"
 edition = "2021"
 authors = ["SecureCheck Team"]
@@ -8,11 +8,11 @@ license = "MIT"
 repository = "https://github.com/securecheckio/parapet"
 
 [lib]
-name = "parapet_proxy"
+name = "parapet_rpc_proxy"
 crate-type = ["rlib"]
 
 [[bin]]
-name = "parapet-proxy"
+name = "parapet-rpc-proxy"
 path = "src/main.rs"
 
 [[bin]]

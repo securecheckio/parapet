@@ -84,7 +84,9 @@ async fn fetch_rules_from_feed_cached(
         .timeout(Duration::from_secs(10))
         .build()?;
 
-    let mut request = client.get(url).header("User-Agent", "parapet-proxy/1.0");
+    let mut request = client
+        .get(url)
+        .header("User-Agent", "parapet-rpc-proxy/1.0");
 
     // Add caching headers if we have cache
     if let Some(cache) = cache_entry {

@@ -5,7 +5,7 @@ services:
     build:
       context: ../../..
       dockerfile: deployments/proxy-only/docker/Dockerfile
-    container_name: parapet-proxy
+    container_name: parapet-rpc-proxy
     ports:
       - "8899:8899"
     environment:
@@ -14,9 +14,9 @@ services:
       - DEFAULT_BLOCK_THRESHOLD=${DEFAULT_BLOCK_THRESHOLD:-70}
       - RULES_PATH=${RULES_PATH:-/app/rules/presets/default-protection.json}
       - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-false}
-      - RUST_LOG=${RUST_LOG:-info,parapet_proxy=debug}
+      - RUST_LOG=${RUST_LOG:-info,parapet_rpc_proxy=debug}
     volumes:
-      - ../../../proxy/rules:/app/rules:ro
+      - ../../../rpc-proxy/rules:/app/rules:ro
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8899/health"]

@@ -17,7 +17,7 @@ flowchart TB
   end
 
   subgraph parapet [Parapet workspace]
-    PXY[parapet-proxy]
+    PXY[parapet-rpc-proxy]
     CORE[parapet-core]
     SCAN[parapet-scanner]
     API[parapet-api]
@@ -56,7 +56,7 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-  C[Client] -->|JSON-RPC| PXY[parapet-proxy]
+  C[Client] -->|JSON-RPC| PXY[parapet-rpc-proxy]
   PXY --> CORE[parapet-core rules and analyzers]
   CORE -->|risk score + decision| PXY
   PXY -->|forward if allowed| UP[Upstream RPC]
@@ -69,16 +69,16 @@ flowchart LR
 
 ## 3. Dual deployment mental model
 
-Same engine and rules; placement of **parapet-proxy** changes the trust boundary (client path vs server/gateway path).
+Same engine and rules; placement of **parapet-rpc-proxy** changes the trust boundary (client path vs server/gateway path).
 
 ```mermaid
 flowchart TB
   subgraph clientSide [Client-side deployment]
-    W[Wallet / Trading stack] --> P1[parapet-proxy]
+    W[Wallet / Trading stack] --> P1[parapet-rpc-proxy]
     P1 --> S[Solana network]
   end
   subgraph serverSide [Server-side deployment]
-    APP[Backend / Gateway] --> P2[parapet-proxy]
+    APP[Backend / Gateway] --> P2[parapet-rpc-proxy]
     P2 --> S
   end
 ```

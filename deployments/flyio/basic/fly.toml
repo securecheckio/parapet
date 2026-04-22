@@ -1,12 +1,12 @@
 # Parapet RPC Proxy - Fly.io Configuration
 # https://fly.io/docs/reference/configuration/
 
-app = "parapet-proxy"
+app = "parapet-rpc-proxy"
 primary_region = "iad"  # Change to your preferred region
 
 # Build configuration
 [build]
-  dockerfile = "proxy/Dockerfile"
+  dockerfile = "Dockerfile"
 
 # Environment variables (non-sensitive)
 [env]
@@ -33,9 +33,9 @@ primary_region = "iad"  # Change to your preferred region
   ACTIVITY_FEED_MIN_RISK = "30"
   
   # Logging
-  RUST_LOG = "info,parapet_proxy=debug"
+  RUST_LOG = "info,parapet_rpc_proxy=debug"
 
-# Secrets (set with: fly secrets set KEY=value -a parapet-proxy)
+# Secrets (set with: fly secrets set KEY=value -a parapet-rpc-proxy)
 # All optional:
 #   - REDIS_URL (for caching, auto-set by: fly redis connect)
 #   - HELIUS_API_KEY

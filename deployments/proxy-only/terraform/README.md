@@ -285,7 +285,7 @@ docker stats parapet-rpc-proxy
 ```bash
 # Verify binary
 ls -la /opt/parapet/
-file /opt/parapet/parapet-proxy
+file /opt/parapet/parapet-rpc-proxy
 
 # Check user
 id solshield

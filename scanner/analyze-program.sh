@@ -16,7 +16,7 @@ NC='\033[0m' # No Color
 
 # Load Helius API key from common locations if not already set
 if [ -z "$HELIUS_API_KEY" ]; then
-    for env_file in "../proxy/.env" "../../proxy/.env" ".env"; do
+    for env_file in "../rpc-proxy/.env" "../../rpc-proxy/.env" ".env"; do
         if [ -f "$env_file" ] && grep -q "HELIUS_API_KEY" "$env_file"; then
             export HELIUS_API_KEY=$(grep HELIUS_API_KEY "$env_file" | cut -d'=' -f2 | tr -d ' "')
             echo -e "${GREEN}✅ Loaded Helius API key from $env_file${NC}"

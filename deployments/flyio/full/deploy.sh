@@ -39,7 +39,7 @@ else
 fi
 
 # Set default app names
-FLY_PROXY_APP=${FLY_PROXY_APP:-parapet-proxy}
+FLY_PROXY_APP=${FLY_PROXY_APP:-parapet-rpc-proxy}
 FLY_API_APP=${FLY_API_APP:-parapet-api}
 FLY_DASHBOARD_APP=${FLY_DASHBOARD_APP:-parapet-dashboard}
 

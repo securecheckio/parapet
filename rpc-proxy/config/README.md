@@ -88,7 +88,7 @@ RUST_LOG=info ./scan-wallet.sh WALLET --safe-programs-file my-list.json
 
 Look for log lines:
 ```
-[INFO] ✅ Loaded known-safe programs from: proxy/config/known-safe-programs.json
+[INFO] ✅ Loaded known-safe programs from: rpc-proxy/config/known-safe-programs.json
 [INFO] 📋 Loaded 18 known-safe programs from: my-list.json
 [INFO] ✅ Merged custom safe programs: 18 original + 5 new = 23 total
 ```
@@ -171,7 +171,7 @@ See `custom-safe-programs-example.json` for a complete example with multiple DeF
 ### "Could not load known-safe-programs.json"
 The scanner will use a minimal fallback list. Check:
 - Are you running from the correct directory?
-- Does `proxy/config/known-safe-programs.json` exist?
+- Does `rpc-proxy/config/known-safe-programs.json` exist?
 
 ### "Failed to load custom safe programs"
 Check:
@@ -187,5 +187,5 @@ Check:
 ## Related Documentation
 
 - **Deep Scanning Guide**: `../scanner/DEEP_SCANNING.md`
-- **Rule Engine**: `../proxy/rules/README.md`
-- **CPI Detection Rules**: `../proxy/rules/presets/deep-cpi-scan.json`
+- **Rule Engine**: `../rules/README.md`
+- **CPI Detection Rules**: `../rules/presets/deep-cpi-scan.json`

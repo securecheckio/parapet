@@ -22,7 +22,7 @@ fly launch --config fly.toml --dockerfile Dockerfile --no-deploy
 fly deploy
 
 # Get your URL
-fly info -a parapet-proxy
+fly info -a parapet-rpc-proxy
 
 # Verify
 curl https://YOUR-APP.fly.dev/health
@@ -33,9 +33,9 @@ curl https://YOUR-APP.fly.dev/health
 ### Optional API Keys
 
 ```bash
-fly secrets set HELIUS_API_KEY=key -a parapet-proxy
-fly secrets set JUPITER_API_KEY=key -a parapet-proxy
-fly secrets set OTTERSEC_API_KEY=key -a parapet-proxy
+fly secrets set HELIUS_API_KEY=key -a parapet-rpc-proxy
+fly secrets set JUPITER_API_KEY=key -a parapet-rpc-proxy
+fly secrets set OTTERSEC_API_KEY=key -a parapet-rpc-proxy
 ```
 
 ### Configure Rules (REQUIRED)
@@ -44,21 +44,21 @@ fly secrets set OTTERSEC_API_KEY=key -a parapet-proxy
 
 **Rule Sources:**
 
-- `parapet/proxy/rules/` → Your custom rules (baked into your deployment)
+- `parapet/rpc-proxy/rules/` → Your custom rules (baked into your deployment)
 - `parapet-rules/` → Community rules (separate repo, use via HTTP feeds)
 
 #### Option A: Static Rules (Baked into Image)
 
-**For your own custom rules** - add them to `proxy/rules/` before deploying:
+**For your own custom rules** - add them to `rpc-proxy/rules/` before deploying:
 
 1. **Create your custom rules file:**
 
 ```bash
 # In parapet/ directory - create or edit your rules file
-vim proxy/rules/my-custom-rules.json
+vim rpc-proxy/rules/my-custom-rules.json
 ```
 
-Example (see `proxy/rules/custom-example.json` for template):
+Example (see `rpc-proxy/rules/custom-example.json` for template):
 
 ```json
 {
@@ -93,7 +93,7 @@ Example (see `proxy/rules/custom-example.json` for template):
 fly deploy
 ```
 
-The Dockerfile copies `proxy/rules/` to `/app/rules/` during build. To update rules, edit the file and redeploy.
+The Dockerfile copies `rpc-proxy/rules/` to `/app/rules/` during build. To update rules, edit the file and redeploy.
 
 **Note:** This is for YOUR custom rules. Community rules from `parapet-rules/` are better used via Option B (Rule Feeds).
 
@@ -133,9 +133,9 @@ priority = 1
 
 ## Common Tasks
 
-**View logs**: `fly logs -a parapet-proxy`
-**Scale**: `fly autoscale set min=1 max=10 -a parapet-proxy`
-**Add regions**: `fly regions add iad ord lhr -a parapet-proxy`
+**View logs**: `fly logs -a parapet-rpc-proxy`
+**Scale**: `fly autoscale set min=1 max=10 -a parapet-rpc-proxy`
+**Add regions**: `fly regions add iad ord lhr -a parapet-rpc-proxy`
 **Update**: `fly deploy`
 **Change rules**: Edit `RULES_PATH` in fly.toml, then `fly deploy`
 
@@ -144,7 +144,7 @@ priority = 1
 ```typescript
 import { Connection } from '@solana/web3.js';
 
-// Use your proxy URL from `fly info -a parapet-proxy`
+// Use your proxy URL from `fly info -a parapet-rpc-proxy`
 const connection = new Connection('https://YOUR-APP.fly.dev');
 ```
 

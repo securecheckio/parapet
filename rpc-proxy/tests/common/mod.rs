@@ -1,4 +1,4 @@
-use parapet_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
+use parapet_rpc_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use serde_json::Value;
 
 pub fn sample_request(method: &str) -> JsonRpcRequest {

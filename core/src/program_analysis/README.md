@@ -189,7 +189,7 @@ Key exposed fields:
 - `program_analysis:token_2022_related`
 
 Hash blocklists can be provided locally and via remote feed polling:
-- `blocked_hashes` in `proxy/config.toml`
+- `blocked_hashes` in `rpc-proxy/config.toml`
 - `blocked_program_feeds` with `feed_poll_interval_secs`
 
 ## Future Enhancements

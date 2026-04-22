@@ -472,7 +472,7 @@ Each unique interpolated flowstate name consumes:
 ### Enable Debug Logging
 
 ```bash
-RUST_LOG=sol_shield_core::rules::engine=debug parapet-proxy
+RUST_LOG=sol_shield_core::rules::engine=debug parapet-rpc-proxy
 ```
 
 ### Check Interpolation
@@ -494,7 +494,7 @@ Add a debug endpoint to your proxy:
 
 ## Examples
 
-See `parapet/proxy/rules/presets/` for complete examples:
+See `parapet/rpc-proxy/rules/presets/` for complete examples:
 - `ai-agent-advanced.json` - Per-wallet variable interpolation
 - `enterprise-cross-wallet.json` - Global variable interpolation
 

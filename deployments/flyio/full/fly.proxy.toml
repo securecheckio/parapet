@@ -1,6 +1,6 @@
 # Parapet Proxy - Fly.io Configuration (Full Stack)
 
-app = "parapet-proxy"
+app = "parapet-rpc-proxy"
 primary_region = "iad"
 
 [build]
@@ -22,7 +22,7 @@ primary_region = "iad"
   OTTERSEC_RATE_LIMIT = "30/60"
   ACTIVITY_FEED_ENABLED = "true"
   ACTIVITY_FEED_MIN_RISK = "30"
-  RUST_LOG = "info,parapet_proxy=debug"
+  RUST_LOG = "info,parapet_rpc_proxy=debug"
 
 # Secrets: REDIS_URL (auto-set), HELIUS_API_KEY, JUPITER_API_KEY, OTTERSEC_API_KEY
 

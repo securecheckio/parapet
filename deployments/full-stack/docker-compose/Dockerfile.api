@@ -10,7 +10,7 @@ WORKDIR /build
 # Copy all workspace members
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
-COPY proxy ./proxy
+COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api
 COPY mcp ./mcp
@@ -37,7 +37,7 @@ COPY --from=builder /build/target/release/parapet-api /usr/local/bin/parapet-api
 
 # Copy configuration and rules
 COPY api/config.toml ./config.toml
-COPY proxy/rules ./rules
+COPY rpc-proxy/rules ./rules
 
 # Expose API port
 EXPOSE 3001

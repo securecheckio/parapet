@@ -79,10 +79,10 @@ impl InnerInstructionAnalyzer {
     pub fn with_default_config() -> Self {
         // Try to load from default location
         let default_paths = vec![
-            "parapet/proxy/config/known-safe-programs.json",
-            "../proxy/config/known-safe-programs.json",
-            "../../proxy/config/known-safe-programs.json",
-            "proxy/config/known-safe-programs.json",
+            "parapet/rpc-proxy/config/known-safe-programs.json",
+            "../rpc-proxy/config/known-safe-programs.json",
+            "../../rpc-proxy/config/known-safe-programs.json",
+            "rpc-proxy/config/known-safe-programs.json",
         ];
 
         for path in default_paths {

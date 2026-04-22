@@ -8,7 +8,7 @@ use std::path::PathBuf;
 #[command(name = "update-safe-lists")]
 #[command(about = "Update known-safe programs and owners from remote feeds", long_about = None)]
 struct Args {
-    /// Directory containing config files (default: proxy/config)
+    /// Directory containing config files (default: rpc-proxy/config)
     #[arg(short, long)]
     config_dir: Option<PathBuf>,
 
@@ -42,18 +42,18 @@ fn main() -> Result<()> {
 
     // Determine config directory
     let config_dir = args.config_dir.unwrap_or_else(|| {
-        // Try to find proxy/config relative to current directory
+        // Try to find rpc-proxy/config relative to current directory
         let candidates = vec![
-            PathBuf::from("proxy/config"),
-            PathBuf::from("../proxy/config"),
-            PathBuf::from("../../proxy/config"),
-            PathBuf::from("parapet/proxy/config"),
+            PathBuf::from("rpc-proxy/config"),
+            PathBuf::from("../rpc-proxy/config"),
+            PathBuf::from("../../rpc-proxy/config"),
+            PathBuf::from("parapet/rpc-proxy/config"),
         ];
 
         candidates
             .into_iter()
             .find(|p| p.exists())
-            .unwrap_or_else(|| PathBuf::from("proxy/config"))
+            .unwrap_or_else(|| PathBuf::from("rpc-proxy/config"))
     });
 
     println!("📂 Config directory: {}", config_dir.display());

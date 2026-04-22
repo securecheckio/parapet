@@ -596,18 +596,29 @@ impl RuleEngine {
         let content = std::fs::read_to_string(path)?;
 
         // Try to parse as single rule first
-        if let Ok(rule) = serde_json::from_str::<RuleDefinition>(&content) {
-            self.rules.push(rule);
-            return Ok(());
-        }
+        let single_err = match serde_json::from_str::<RuleDefinition>(&content) {
+            Ok(rule) => {
+                self.rules.push(rule);
+                return Ok(());
+            }
+            Err(e) => e,
+        };
 
         // Try to parse as array of rules
-        if let Ok(rules) = serde_json::from_str::<Vec<RuleDefinition>>(&content) {
-            self.load_rules(rules)?;
-            return Ok(());
-        }
+        let array_err = match serde_json::from_str::<Vec<RuleDefinition>>(&content) {
+            Ok(rules) => {
+                self.load_rules(rules)?;
+                return Ok(());
+            }
+            Err(e) => e,
+        };
 
-        Err(anyhow!("Failed to parse rules from file: {}", path))
+        Err(anyhow!(
+            "Failed to parse rules from file: {}\n  → As single rule: {}\n  → As array: {}",
+            path,
+            single_err,
+            array_err
+        ))
     }
 
     pub fn load_rules_from_dir(&mut self, dir_path: &str) -> Result<()> {

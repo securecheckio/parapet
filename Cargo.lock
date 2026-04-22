@@ -3496,7 +3496,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "parapet-proxy"
+name = "parapet-rpc-proxy"
 version = "0.1.0"
 dependencies = [
  "anyhow",
@@ -4228,7 +4228,7 @@ dependencies = [
  "base64 0.21.7",
  "bincode",
  "clap",
- "parapet-proxy",
+ "parapet-rpc-proxy",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "reqwest",

@@ -210,13 +210,13 @@ cargo build --release
 
 # Build specific component
 cargo build -p parapet-core --release
-cargo build -p parapet-proxy --release
+cargo build -p parapet-rpc-proxy --release
 
 # Run tests
 cargo test
 
 # Run with logging
-RUST_LOG=debug cargo run -p parapet-proxy
+RUST_LOG=debug cargo run -p parapet-rpc-proxy
 ```
 
 ## Project Structure
@@ -224,7 +224,7 @@ RUST_LOG=debug cargo run -p parapet-proxy
 ```
 parapet/
 ├── core/           # Rule engine and analyzers (library)
-├── proxy/          # RPC proxy server
+├── rpc-proxy/      # RPC proxy server
 ├── scanner/        # Transaction scanner tool
 ├── api/            # REST API server
 ├── dashboard/      # Web dashboard
@@ -241,6 +241,6 @@ parapet/
 ## Resources
 
 - Core library: `core/README.md`
-- Proxy / rules: `proxy/README.md`
+- Proxy / rules: `rpc-proxy/README.md`
 - Analyzer examples: `core/src/rules/analyzers/`
 

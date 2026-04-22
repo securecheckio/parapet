@@ -122,7 +122,7 @@ export PARAPET_API_URL=http://localhost:3000
 
 ### Proxy Configuration
 
-Create `proxy/config.toml`:
+Create `rpc-proxy/config.toml`:
 
 ```toml
 [server]
@@ -137,7 +137,7 @@ timeout_secs = 30
 current = "mainnet-beta"
 
 [rules]
-path = "./proxy/rules/presets/balanced.json"
+path = "./rpc-proxy/rules/presets/balanced.json"
 
 [escalations]
 enabled = true
@@ -213,13 +213,13 @@ export REDIS_URL=redis://production-redis:6379          # Override Redis
 
 ```bash
 # Strict - Block anything suspicious
-export RULES_PATH=./proxy/rules/presets/strict.json
+export RULES_PATH=./rpc-proxy/rules/presets/strict.json
 
 # Balanced - Good defaults (recommended)
-export RULES_PATH=./proxy/rules/presets/balanced.json
+export RULES_PATH=./rpc-proxy/rules/presets/balanced.json
 
 # Permissive - Only critical threats
-export RULES_PATH=./proxy/rules/presets/permissive.json
+export RULES_PATH=./rpc-proxy/rules/presets/permissive.json
 ```
 
 ### What Gets Blocked
@@ -471,7 +471,7 @@ echo $SOLANA_RPC_URL
 **Check rules configuration:**
 ```bash
 # Use more permissive rules
-export RULES_PATH=./proxy/rules/presets/permissive.json
+export RULES_PATH=./rpc-proxy/rules/presets/permissive.json
 ```
 
 **Check upstream RPC:**
@@ -491,7 +491,7 @@ redis-cli ping
 
 **Check escalations enabled:**
 ```bash
-grep "enabled = true" proxy/config.toml
+grep "enabled = true" rpc-proxy/config.toml
 # Or
 echo $ENABLE_ESCALATIONS
 ```
@@ -634,7 +634,7 @@ fi
 # Build Parapet
 echo "Building Parapet..."
 cd "$(dirname "$0")"
-cargo build --release -p parapet-proxy -p parapet-api
+cargo build --release -p parapet-rpc-proxy -p parapet-api
 
 # Create config directory
 mkdir -p logs config
@@ -648,7 +648,7 @@ port = 8899
 url = "https://api.mainnet-beta.solana.com"
 
 [rules]
-path = "./proxy/rules/presets/balanced.json"
+path = "./rpc-proxy/rules/presets/balanced.json"
 
 [escalations]
 enabled = true

@@ -1,7 +1,7 @@
 use anyhow::{ensure, Context, Result};
 use axum::{routing::post, Json, Router};
 use base64::Engine;
-use parapet_proxy::{build_app_router, AuthMode, ServerConfig};
+use parapet_rpc_proxy::{build_app_router, AuthMode, ServerConfig};
 use rand::seq::SliceRandom;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;

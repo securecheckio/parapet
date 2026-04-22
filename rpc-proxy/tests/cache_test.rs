@@ -1,5 +1,5 @@
-/// Cache tests for parapet-proxy
-use parapet_proxy::cache::Cache;
+/// Cache tests for parapet-rpc-proxy
+use parapet_rpc_proxy::cache::Cache;
 use solana_sdk::pubkey::Pubkey;
 
 #[tokio::test]

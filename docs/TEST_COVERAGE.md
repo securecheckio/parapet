@@ -87,7 +87,7 @@ make -f Makefile.coverage coverage-core
 ### RPC Proxy
 
 ```bash
-./coverage.sh --package parapet-proxy --html
+./coverage.sh --package parapet-rpc-proxy --html
 ```
 
 Or:
@@ -121,13 +121,13 @@ Current thresholds:
 - `core/src/rules/engine.rs` - Rule evaluation engine
 - `core/src/rules/analyzers/core/` - Core security analyzers
 - `core/src/rules/analyzers/core/instruction_padding.rs` - Padding detection
-- `proxy/src/rpc_handler.rs` - RPC request handling
+- `rpc-proxy/src/rpc_handler.rs` - RPC request handling
 
 ### Important Components (Target: 80%+)
 
 - `core/src/rules/analyzer.rs` - Analyzer registry
 - `core/src/rules/types.rs` - Rule types
-- `proxy/src/server.rs` - Server initialization
+- `rpc-proxy/src/server.rs` - Server initialization
 - `scanner/src/lib.rs` - Scanner core
 
 ### Supporting Components (Target: 70%+)
@@ -398,7 +398,7 @@ Codecov provides:
 | Dynamic Rules       | TBD     | 75%    | Medium   |
 
 
-### RPC Proxy (`parapet-proxy`)
+### RPC Proxy (`parapet-rpc-proxy`)
 
 
 | Component   | Current | Target | Priority |

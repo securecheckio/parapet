@@ -46,7 +46,7 @@ services:
     
     volumes:
       # Mount rules directory
-      - ../../../proxy/rules:/app/rules:ro
+      - ../../../rpc-proxy/rules:/app/rules:ro
     
     depends_on:
       - redis

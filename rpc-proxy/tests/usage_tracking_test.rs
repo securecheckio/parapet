@@ -1,5 +1,5 @@
-/// Usage tracking tests for parapet-proxy
-use parapet_proxy::usage_tracker::UsageTracker;
+/// Usage tracking tests for parapet-rpc-proxy
+use parapet_rpc_proxy::usage_tracker::UsageTracker;
 
 #[tokio::test]
 async fn test_usage_tracker_creation() {

@@ -52,7 +52,7 @@ Contact: [SecureCheck Team](https://securecheck.io)
 Automatically update rules without redeployment:
 
 ```toml
-# proxy/config.toml
+# rpc-proxy/config.toml
 [rules.feed]
 enabled = true
 

@@ -131,7 +131,7 @@ export PARAPET_API_URL=http://localhost:3001
 
 **For Docker deployments**, use `.env` files (Docker Compose standard).
 
-**Note:** For native/local development, prefer TOML config files (see [proxy/README.md](../../../proxy/README.md)).
+**Note:** For native/local development, prefer TOML config files (see [rpc-proxy/README.md](../../../rpc-proxy/README.md)).
 
 See `.env.example` for complete list. Key settings:
 
@@ -366,7 +366,7 @@ For optimizations:
 ```dockerfile
 # Dockerfile.proxy.custom
 FROM your-base-image
-COPY --from=builder /build/target/release/parapet-proxy .
+COPY --from=builder /build/target/release/parapet-rpc-proxy .
 # Add custom config
 ```
 
@@ -388,7 +388,7 @@ docker-compose restart redis
 
 ```bash
 # Backup .env and custom rules
-tar -czf parapet-backup.tar.gz .env proxy/rules/custom/
+tar -czf parapet-backup.tar.gz .env rpc-proxy/rules/custom/
 ```
 
 ## Security Considerations

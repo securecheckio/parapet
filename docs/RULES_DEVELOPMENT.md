@@ -28,4 +28,4 @@ Use `program_analysis` fields to detect bytecode-level vulnerability patterns wi
 - `program_analysis:spl_token_related`
 - `program_analysis:token_2022_related`
 
-Reference bundle: `proxy/rules/policies/program-vulnerabilities.json`
+Reference bundle: `rpc-proxy/rules/policies/program-vulnerabilities.json`

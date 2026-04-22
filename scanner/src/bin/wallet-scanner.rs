@@ -279,16 +279,16 @@ fn initialize_analyzers_and_rules(
     let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
         // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
         let enhanced_candidates = vec![
-            "../../proxy/rules/presets/wallet-scan-enhanced.json",
-            "../proxy/rules/presets/wallet-scan-enhanced.json",
+            "../../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
+            "../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
             "./rules/presets/wallet-scan-enhanced.json",
             "rules/presets/wallet-scan-enhanced.json",
         ];
 
         // Fallback to bot-essentials if enhanced not found
         let fallback_candidates = vec![
-            "../../proxy/rules/presets/bot-essentials.json",
-            "../proxy/rules/presets/bot-essentials.json",
+            "../../rpc-proxy/rules/presets/bot-essentials.json",
+            "../rpc-proxy/rules/presets/bot-essentials.json",
             "./rules/presets/bot-essentials.json",
             "rules/presets/bot-essentials.json",
         ];

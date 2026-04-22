@@ -11,7 +11,7 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
 
 1. **Pull the latest image:**
    ```bash
-   docker pull ghcr.io/securecheckio/parapet-proxy:latest
+   docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
    ```
 
 2. **Run with docker-compose:**
@@ -23,12 +23,12 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
 3. **Or run directly with docker:**
    ```bash
    docker run -d \
-     --name parapet-proxy \
+     --name parapet-rpc-proxy \
      -p 8899:8899 \
      -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
      -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
      --restart unless-stopped \
-     ghcr.io/securecheckio/parapet-proxy:latest
+     ghcr.io/securecheckio/parapet-rpc-proxy:latest
    ```
 
 4. **Test your proxy:**
@@ -92,14 +92,14 @@ For advanced threat detection, add your API keys:
 
 ```bash
 docker run -d \
-  --name parapet-proxy \
+  --name parapet-rpc-proxy \
   -p 8899:8899 \
   -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
   -e HELIUS_API_KEY=your_key_here \
   -e JUPITER_API_KEY=your_key_here \
   -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json,https://parapet-rules.securecheck.io/community/helius-protection.json,https://parapet-rules.securecheck.io/community/jupiter-protection.json \
   --restart unless-stopped \
-  ghcr.io/securecheckio/parapet-proxy:latest
+  ghcr.io/securecheckio/parapet-rpc-proxy:latest
 ```
 
 ## Production Deployment
@@ -118,7 +118,7 @@ curl http://localhost:8899/health
 
 View logs:
 ```bash
-docker logs -f parapet-proxy
+docker logs -f parapet-rpc-proxy
 ```
 
 Check active rules:

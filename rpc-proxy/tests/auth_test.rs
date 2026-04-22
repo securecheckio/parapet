@@ -1,12 +1,12 @@
-/// Authentication tests for parapet-proxy
+/// Authentication tests for parapet-rpc-proxy
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
-use parapet_proxy::auth::{AuthContext, AuthProvider, AuthResult};
-use parapet_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
-use parapet_proxy::types::AppState;
-use parapet_proxy::upstream;
+use parapet_rpc_proxy::auth::{AuthContext, AuthProvider, AuthResult};
+use parapet_rpc_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
+use parapet_rpc_proxy::types::AppState;
+use parapet_rpc_proxy::upstream;
 use serde_json::json;
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -137,7 +137,7 @@ fn create_state_with_wallet_allowlist(allowed: Vec<String>) -> Arc<AppState> {
 #[tokio::test]
 async fn test_api_key_auth_success() {
     let state = create_state_with_api_key_auth(vec!["valid-key-123".to_string()]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -163,7 +163,7 @@ async fn test_api_key_auth_success() {
 #[tokio::test]
 async fn test_api_key_auth_failure() {
     let state = create_state_with_api_key_auth(vec!["valid-key-123".to_string()]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -201,7 +201,7 @@ async fn test_api_key_auth_failure() {
 #[tokio::test]
 async fn test_api_key_missing() {
     let state = create_state_with_api_key_auth(vec!["valid-key-123".to_string()]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -226,7 +226,7 @@ async fn test_api_key_missing() {
 #[tokio::test]
 async fn test_query_param_auth() {
     let state = create_state_with_api_key_auth(vec!["query-key-456".to_string()]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/?api-key=query-key-456")
@@ -251,7 +251,7 @@ async fn test_query_param_auth() {
 #[tokio::test]
 async fn test_authorization_header() {
     let state = create_state_with_api_key_auth(vec!["bearer-token".to_string()]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -278,7 +278,7 @@ async fn test_authorization_header() {
 async fn test_wallet_allowlist_not_configured() {
     // No allowlist = all requests allowed
     let state = create_state_with_wallet_allowlist(vec![]);
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")

@@ -25,10 +25,10 @@ Get a free API key at [dashboard.helius.dev](https://dashboard.helius.dev)
 
 ```bash
 # Use the emerging-threats preset
-export RULES_PATH=parapet/proxy/rules/presets/emerging-threats.json
+export RULES_PATH=parapet/rpc-proxy/rules/presets/emerging-threats.json
 
 # Or combine with other presets
-export RULES_PATH=parapet/proxy/rules/presets/
+export RULES_PATH=parapet/rpc-proxy/rules/presets/
 ```
 
 ### 3. Run Proxy or Scanner
@@ -264,4 +264,4 @@ The analyzers gracefully degrade and return empty fields.
 - [HeliusTransferAnalyzer Documentation](../core/src/rules/analyzers/third_party/helius_transfer.md)
 - [HeliusFundingAnalyzer Documentation](../core/src/rules/analyzers/third_party/helius_funding.md)
 - [HeliusIdentityAnalyzer Documentation](../core/src/rules/analyzers/third_party/helius_identity.md)
-- [Emerging Threats Rules](../proxy/rules/presets/emerging-threats.json)
+- [Emerging Threats Rules](../rpc-proxy/rules/presets/emerging-threats.json)

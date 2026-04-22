@@ -70,6 +70,6 @@ sbom.json
 !README.md
 !QUICKSTART.md
 !docs/**/*.md
-!proxy/README.md
-!proxy/rules/README.md
+!rpc-proxy/README.md
+!rpc-proxy/rules/README.md
 !mcp/resources/*.md

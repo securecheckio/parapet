@@ -25,7 +25,7 @@ network = "mainnet-beta"
 [security]
 # Path to security rules JSON file (auto-discovers if not set)
 # Searches for wallet-scan-enhanced.json or bot-essentials.json
-# rules_path = "./proxy/rules/presets/wallet-scan-enhanced.json"
+# rules_path = "./rpc-proxy/rules/presets/wallet-scan-enhanced.json"
 
 # Path to custom known-safe programs JSON file
 # Merges with built-in safe list

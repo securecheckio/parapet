@@ -36,7 +36,7 @@ Open-source security for Solana with:
 ## Components
 
 - **parapet-core** - Security analysis library (embeddable)
-- **parapet-proxy** - RPC proxy with rule engine
+- **parapet-rpc-proxy** - RPC proxy with rule engine
 - **parapet-scanner** - Wallet security scanner
 - **parapet-api** - Rule management API & MCP server
 - **parapet-mcp** - Model Context Protocol integration for AI agents
@@ -74,8 +74,8 @@ Open-source security for Solana with:
 
 ```bash
 # 1. Configure using TOML files (recommended for local dev)
-cp proxy/config.toml.example proxy/config.toml
-nano proxy/config.toml
+cp rpc-proxy/config.toml.example rpc-proxy/config.toml
+nano rpc-proxy/config.toml
 
 # 2. Set secrets via environment
 export HELIUS_API_KEY=your_key
@@ -93,7 +93,7 @@ Pull and run from GitHub Container Registry with community security rules:
 docker run -d -p 8899:8899 \
   -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
   -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
-  ghcr.io/securecheckio/parapet-proxy:latest
+  ghcr.io/securecheckio/parapet-rpc-proxy:latest
 ```
 
 Or use docker-compose:
@@ -152,8 +152,8 @@ Parapet uses **JSON-based declarative rules** with condition trees, pluggable an
 
 ```bash
 # Proxy
-cp proxy/config.toml.example proxy/config.toml
-nano proxy/config.toml
+cp rpc-proxy/config.toml.example rpc-proxy/config.toml
+nano rpc-proxy/config.toml
 
 # API
 cp api/config.example.toml api/config.toml

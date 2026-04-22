@@ -31,7 +31,7 @@ Examples:\n\
     --rules ./rules/presets/default-protection.json\n\
 \n\
   tx-check 4BKBmAJn6TdsENij7... \\\n\
-    --rules ../proxy/tests/fixtures/rules/presets/drift-exploit-protection.json \\\n\
+    --rules ../rpc-proxy/tests/fixtures/rules/presets/drift-exploit-protection.json \\\n\
     --rpc-url https://api.mainnet-beta.solana.com")]
 struct Args {
     /// Transaction signature (base58)

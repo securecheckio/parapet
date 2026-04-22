@@ -56,7 +56,7 @@ fly deploy --config fly.api.toml
 
 # Deploy Proxy
 fly launch --config fly.proxy.toml --dockerfile Dockerfile.proxy --no-deploy
-fly redis connect parapet-redis -a parapet-proxy
+fly redis connect parapet-redis -a parapet-rpc-proxy
 fly deploy --config fly.proxy.toml
 
 # Deploy Dashboard
@@ -89,8 +89,8 @@ fly secrets set AUTHORIZED_WALLETS=YourWallet -a parapet-api
 ### Optional Secrets
 
 ```bash
-fly secrets set HELIUS_API_KEY=key -a parapet-proxy
-fly secrets set JUPITER_API_KEY=key -a parapet-proxy
+fly secrets set HELIUS_API_KEY=key -a parapet-rpc-proxy
+fly secrets set JUPITER_API_KEY=key -a parapet-rpc-proxy
 fly secrets set HELIUS_API_KEY=key -a parapet-api
 fly secrets set JUPITER_API_KEY=key -a parapet-api
 fly secrets set MCP_API_KEYS=key -a parapet-api
@@ -123,7 +123,7 @@ Get community rules at [github.com/securecheckio/parapet-rules](https://github.c
 Get your URLs after deployment:
 
 ```bash
-fly info -a parapet-proxy     # Proxy URL
+fly info -a parapet-rpc-proxy     # Proxy URL
 fly info -a parapet-api       # API URL
 fly info -a parapet-dashboard # Dashboard URL
 ```
@@ -135,7 +135,7 @@ Example output: `https://your-app-name.fly.dev`
 ```typescript
 import { Connection } from '@solana/web3.js';
 
-// Use your proxy URL from `fly info -a parapet-proxy`
+// Use your proxy URL from `fly info -a parapet-rpc-proxy`
 const connection = new Connection('https://YOUR-PROXY-URL.fly.dev');
 ```
 
@@ -144,8 +144,8 @@ const connection = new Connection('https://YOUR-PROXY-URL.fly.dev');
 
 ## Common Tasks
 
-**View logs**: `fly logs -a parapet-proxy` / `fly logs -a parapet-api`
-**Scale proxy**: `fly autoscale set min=1 max=10 -a parapet-proxy`
+**View logs**: `fly logs -a parapet-rpc-proxy` / `fly logs -a parapet-api`
+**Scale proxy**: `fly autoscale set min=1 max=10 -a parapet-rpc-proxy`
 **Scale API**: `fly scale count 2 -a parapet-api`
 **Update proxy**: `fly deploy --config fly.proxy.toml`
 **Update API**: `fly deploy --config fly.api.toml`

@@ -546,7 +546,7 @@ fn load_analyzers_config() -> rules::AnalyzersConfig {
         }
     }
 
-    for p in ["analyzers.toml", "proxy/analyzers.toml"] {
+    for p in ["analyzers.toml", "rpc-proxy/analyzers.toml"] {
         if Path::new(p).exists() {
             match AnalyzersConfig::from_file(p) {
                 Ok(c) => {

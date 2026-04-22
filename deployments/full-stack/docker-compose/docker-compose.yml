@@ -24,7 +24,7 @@ services:
     build:
       context: ../../..
       dockerfile: deployments/full-stack/docker-compose/Dockerfile
-    container_name: parapet-proxy
+    container_name: parapet-rpc-proxy
     ports:
       - "8899:8899"
     environment:
@@ -58,10 +58,10 @@ services:
       - RULES_PATH=${RULES_PATH:-/app/rules/presets/default-protection.json}
       
       # Logging
-      - RUST_LOG=${RUST_LOG:-info,sol_shield_proxy=debug}
+      - RUST_LOG=${RUST_LOG:-info,parapet_rpc_proxy=debug}
     
     volumes:
-      - ../../../proxy/rules:/app/rules:ro
+      - ../../../rpc-proxy/rules:/app/rules:ro
     
     depends_on:
       redis:
@@ -117,7 +117,7 @@ services:
       - RUST_LOG=${RUST_LOG:-info,sol_shield_api=debug}
     
     volumes:
-      - ../../../proxy/rules:/app/rules:ro
+      - ../../../rpc-proxy/rules:/app/rules:ro
       - ../../../dashboard:/app/dashboard:ro
     
     depends_on:

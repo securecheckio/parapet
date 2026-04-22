@@ -11,11 +11,11 @@ WORKDIR /build
 # Copy workspace files
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
-COPY proxy ./proxy
+COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 
 # Build optimized release binary
-RUN cargo build --release -p parapet-proxy --bin parapet-proxy
+RUN cargo build --release -p parapet-rpc-proxy --bin parapet-rpc-proxy
 
 # ============================================
 # Runtime Stage: Minimal Debian image
@@ -30,10 +30,10 @@ RUN apt-get update && \
 WORKDIR /app
 
 # Copy compiled binary from builder
-COPY --from=builder /build/target/release/parapet-proxy /usr/local/bin/parapet-proxy
+COPY --from=builder /build/target/release/parapet-rpc-proxy /usr/local/bin/parapet-rpc-proxy
 
 # Copy rules directory (baked into image)
-COPY proxy/rules /app/rules
+COPY rpc-proxy/rules /app/rules
 
 # Expose RPC port
 EXPOSE 8899
@@ -50,4 +50,4 @@ USER parapet
 # Set working directory where config.toml would be (if used)
 WORKDIR /app
 
-CMD ["parapet-proxy"]
+CMD ["parapet-rpc-proxy"]

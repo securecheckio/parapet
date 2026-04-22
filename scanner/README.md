@@ -45,7 +45,7 @@ wallet-scanner WALLET_ADDRESS [OPTIONS]
 
 **Environment:**
 
-- `RULES_PATH` - Custom rule file path (default: auto-discovered from `proxy/rules/presets/`)
+- `RULES_PATH` - Custom rule file path (default: auto-discovered from `rpc-proxy/rules/presets/`)
 
 ## Third-Party Analyzers (Optional)
 
@@ -65,7 +65,7 @@ export OTTERSEC_API_KEY="your_key"
 cargo run --release -p parapet-scanner --bin wallet-scanner -- WALLET_ADDRESS
 ```
 
-**Rule presets:** Auto-loads from `proxy/rules/presets/` (`wallet-scan-enhanced.json` → `bot-essentials.json` → `default-protection.json`).
+**Rule presets:** Auto-loads from `rpc-proxy/rules/presets/` (`wallet-scan-enhanced.json` → `bot-essentials.json` → `default-protection.json`).
 
 ## Output Formats
 

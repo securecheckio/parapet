@@ -1,12 +1,12 @@
-/// End-to-end correctness tests for parapet-proxy
+/// End-to-end correctness tests for parapet-rpc-proxy
 /// Tests the complete HTTP request/response cycle
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
 use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
-use parapet_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
-use parapet_proxy::types::AppState;
-use parapet_proxy::upstream;
+use parapet_rpc_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
+use parapet_rpc_proxy::types::AppState;
+use parapet_rpc_proxy::upstream;
 use serde_json::{json, Value};
 use solana_sdk::{
     message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
@@ -86,7 +86,7 @@ fn create_test_transaction() -> (Transaction, String) {
 #[tokio::test]
 async fn test_getHealth_returns_success() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -114,7 +114,7 @@ async fn test_getHealth_returns_success() {
 #[tokio::test]
 async fn test_simulateTransaction_enriches_with_risk_score() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let (_tx, tx_b58) = create_test_transaction();
 
@@ -193,7 +193,7 @@ async fn test_sendTransaction_blocks_high_risk() {
         engine.load_rules(rules).unwrap();
     }
 
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let (_tx, tx_b58) = create_test_transaction();
 
@@ -232,7 +232,7 @@ async fn test_sendTransaction_blocks_high_risk() {
 #[tokio::test]
 async fn test_passthrough_for_non_transaction_methods() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     // Test a read-only method that should pass through
     let request = Request::builder()
@@ -267,7 +267,7 @@ async fn test_passthrough_for_non_transaction_methods() {
 #[tokio::test]
 async fn test_malformed_json_returns_error() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")
@@ -289,7 +289,7 @@ async fn test_malformed_json_returns_error() {
 #[tokio::test]
 async fn test_batch_requests_handled() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let batch = vec![
         create_rpc_request("getHealth", vec![]),
@@ -352,7 +352,7 @@ async fn test_rule_engine_decision_flow() {
         engine.load_rules(rules).unwrap();
     }
 
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let (_tx, tx_b58) = create_test_transaction();
 
@@ -381,7 +381,7 @@ async fn test_rule_engine_decision_flow() {
 #[tokio::test]
 async fn test_cors_headers_present() {
     let state = create_test_state();
-    let app = parapet_proxy::server::create_router_with_state(state);
+    let app = parapet_rpc_proxy::server::create_router_with_state(state);
 
     let request = Request::builder()
         .uri("/")

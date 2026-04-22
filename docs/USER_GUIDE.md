@@ -51,13 +51,13 @@ Run the RPC proxy to protect transactions in real-time:
 
 ```bash
 # Start proxy
-cargo run -p parapet-proxy -- \
+cargo run -p parapet-rpc-proxy -- \
   --upstream-rpc https://api.mainnet-beta.solana.com \
   --port 8899
 
 # Or use environment variables
 export UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
-cargo run -p parapet-proxy
+cargo run -p parapet-rpc-proxy
 ```
 
 Then point your Solana client to `http://localhost:8899`.
@@ -83,10 +83,10 @@ Customize which security rules are active:
 
 ```bash
 # Use preset (specify path to preset file)
-cargo run -p parapet-proxy -- --rules proxy/rules/presets/default-protection.json
+cargo run -p parapet-rpc-proxy -- --rules rpc-proxy/rules/presets/default-protection.json
 
 # Or custom rules file
-cargo run -p parapet-proxy -- --rules proxy/rules/custom-rules.json
+cargo run -p parapet-rpc-proxy -- --rules rpc-proxy/rules/custom-rules.json
 ```
 
 **Available Presets:**
@@ -99,9 +99,9 @@ cargo run -p parapet-proxy -- --rules proxy/rules/custom-rules.json
 Copy and edit a preset:
 
 ```bash
-cp proxy/rules/presets/default-protection.json proxy/rules/my-rules.json
+cp rpc-proxy/rules/presets/default-protection.json rpc-proxy/rules/my-rules.json
 # Edit my-rules.json to adjust weights and thresholds
-cargo run -p parapet-proxy -- --rules proxy/rules/my-rules.json
+cargo run -p parapet-rpc-proxy -- --rules rpc-proxy/rules/my-rules.json
 ```
 
 ## Understanding Risk Scores
@@ -121,7 +121,7 @@ Transactions are blocked when `risk_score >= threshold` (default: 70).
 # Run proxy with bot-essentials rules
 export UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
 export DEFAULT_BLOCK_THRESHOLD=60  # Block more aggressively
-cargo run -p parapet-proxy -- --rules proxy/rules/presets/bot-essentials.json
+cargo run -p parapet-rpc-proxy -- --rules rpc-proxy/rules/presets/bot-essentials.json
 
 # Configure bot to use http://localhost:8899
 ```
@@ -149,13 +149,13 @@ cargo run -p parapet-scanner -- \
 
 ```bash
 # View proxy logs
-RUST_LOG=info cargo run -p parapet-proxy
+RUST_LOG=info cargo run -p parapet-rpc-proxy
 
 # Debug mode (verbose)
-RUST_LOG=debug cargo run -p parapet-proxy
+RUST_LOG=debug cargo run -p parapet-rpc-proxy
 
 # Save logs to file
-cargo run -p parapet-proxy 2>&1 | tee parapet.log
+cargo run -p parapet-rpc-proxy 2>&1 | tee parapet.log
 ```
 
 **Look for:**
@@ -180,5 +180,5 @@ cargo run -p parapet-proxy 2>&1 | tee parapet.log
 ## Getting Help
 
 - Check logs with `RUST_LOG=debug`
-- See `proxy/README.md` for more proxy options
+- See `rpc-proxy/README.md` for more proxy options
 - See `scanner/README.md` for more scanner options
