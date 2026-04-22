@@ -35,12 +35,11 @@ Open-source security for Solana with:
 
 ## Components
 
-- **parapet-core** - Security analysis library (embeddable)
-- **parapet-rpc-proxy** - RPC proxy with rule engine
-- **parapet-scanner** - Wallet security scanner
-- **parapet-api** - Rule management API & MCP server
-- **parapet-mcp** - Model Context Protocol integration for AI agents
-- **parapet** - Unified CLI for all commands
+- **[parapet-core](core/)** - Security analysis library (embeddable)
+- **[parapet-rpc-proxy](rpc-proxy/)** - RPC proxy with rule engine
+- **[parapet-scanner](scanner/)** - Wallet security scanner CLI
+- **[parapet-api](api/)** - HTTP API with rule management and MCP-over-HTTP
+- **[parapet-mcp](mcp/)** - STDIO MCP server for local AI assistants (Cursor, Claude)
 
 ### Unique Features
 
