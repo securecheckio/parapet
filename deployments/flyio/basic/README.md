@@ -13,13 +13,14 @@
 ## Deploy
 
 ```bash
-cd deployments/flyio/basic
+# IMPORTANT: Deploy from the parapet root directory (not from deployments/flyio/basic)
+cd /path/to/parapet
 
 # Launch (creates app)
-fly launch --config fly.toml --dockerfile Dockerfile --no-deploy
+fly launch --config deployments/flyio/basic/fly.toml --dockerfile deployments/flyio/basic/Dockerfile --no-deploy
 
 # Deploy
-fly deploy
+fly deploy --config deployments/flyio/basic/fly.toml --dockerfile deployments/flyio/basic/Dockerfile -a parapet-rpc-proxy
 
 # Get your URL
 fly info -a parapet-rpc-proxy
@@ -27,6 +28,8 @@ fly info -a parapet-rpc-proxy
 # Verify
 curl https://YOUR-APP.fly.dev/health
 ```
+
+**Why deploy from root?** The Dockerfile references workspace files (core, rpc-proxy, scanner, api, mcp, tools) that are in the parapet root directory.
 
 ## Configuration
 
@@ -101,14 +104,19 @@ The Dockerfile copies `rpc-proxy/rules/` to `/app/rules/` during build. To updat
 
 **⚡ Rules update automatically from HTTP URLs without redeployment!**
 
-```toml
-[rule_feeds]
-enabled = true
-poll_interval = 3600  # Check for updates every hour
+Configure in `fly.toml`:
 
-[[rule_feeds.sources]]
-url = "https://parapet-rules.securecheck.io/community/core-protection.json"
-priority = 1
+```toml
+[env]
+  RULES_FEED_ENABLED = 'true'
+  RULES_FEED_POLL_INTERVAL = '3600'  # Check every hour (seconds)
+  RULES_FEED_URLS = 'https://parapet-rules.securecheck.io/community/core-protection.json'
+```
+
+For multiple feeds, use comma-separated URLs:
+```toml
+[env]
+  RULES_FEED_URLS = 'https://example.com/feed1.json,https://example.com/feed2.json'
 ```
 
 **Key benefits:**
@@ -147,4 +155,50 @@ import { Connection } from '@solana/web3.js';
 // Use your proxy URL from `fly info -a parapet-rpc-proxy`
 const connection = new Connection('https://YOUR-APP.fly.dev');
 ```
+
+## Troubleshooting
+
+### GLIBC Version Error
+
+If you see `GLIBC_2.39' not found` errors:
+
+**Problem:** Rust nightly requires GLIBC 2.39+, but older Debian versions have 2.36.
+
+**Solution:** The Dockerfile uses `debian:trixie-slim` which includes GLIBC 2.39+. If you modify the Dockerfile, ensure you use Debian Trixie or newer.
+
+### Build Context Issues
+
+If the build fails with "file not found" errors for workspace members:
+
+**Problem:** The Dockerfile expects to be built from the parapet root directory with access to all workspace crates (core, api, mcp, tools, etc.).
+
+**Solution:** Always run `fly deploy` from the parapet root directory and specify the full path to the config and Dockerfile:
+
+```bash
+cd /path/to/parapet
+fly deploy --config deployments/flyio/basic/fly.toml --dockerfile deployments/flyio/basic/Dockerfile -a parapet-rpc-proxy
+```
+
+### Rules Not Loading
+
+If you see "Loading 0 rules" in logs:
+
+**Problem:** Rules feed URL is incorrect or RULES_PATH points to non-existent file.
+
+**Solution:** 
+- Verify the feed URL is accessible: `curl https://parapet-rules.securecheck.io/community/core-protection.json`
+- Check fly.toml has `RULES_FEED_ENABLED = 'true'` and correct `RULES_FEED_URLS`
+- For static rules, ensure RULES_PATH points to a file that exists in the Docker image at `/app/rules/`
+
+### Machine Restarting Frequently
+
+Check logs for errors:
+```bash
+fly logs -a parapet-rpc-proxy -n | tail -50
+```
+
+Common causes:
+- Invalid rules causing startup failure (check rule validation errors in logs)
+- Missing environment variables
+- GLIBC version mismatch (see above)
 

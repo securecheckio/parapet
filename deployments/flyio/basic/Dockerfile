@@ -9,18 +9,26 @@ FROM rustlang/rust:nightly as builder
 WORKDIR /build
 
 # Copy workspace files
+# NOTE: This Dockerfile must be run from the parapet root directory
+# All workspace members are required even though we only build rpc-proxy
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
+COPY api ./api
+COPY mcp ./mcp
+COPY tools ./tools
 
 # Build optimized release binary
 RUN cargo build --release -p parapet-rpc-proxy --bin parapet-rpc-proxy
 
 # ============================================
-# Runtime Stage: Minimal Debian image
+# Runtime Stage: Minimal Debian image with GLIBC 2.39+
 # ============================================
-FROM debian:bookworm-slim
+# IMPORTANT: Uses Debian Trixie (testing) for GLIBC 2.39+ support
+# Rust nightly binaries require GLIBC 2.39+. Debian Bookworm only has 2.36.
+# If you see "GLIBC_2.39 not found" errors, ensure you're using Trixie or newer.
+FROM debian:trixie-slim
 
 # Install minimal runtime dependencies
 RUN apt-get update && \

@@ -23,28 +23,6 @@
   },
   {
     "version": "1.0",
-    "id": "block-malicious-programs",
-    "name": "Block Malicious Programs",
-    "description": "Blocks transactions involving blocklisted programs",
-    "author": "securecheck",
-    "enabled": true,
-    "tags": ["security", "critical", "blocklist"],
-    "rule": {
-      "action": "block",
-      "conditions": {
-        "field": "security:blocked_program_detected",
-        "operator": "equals",
-        "value": true
-      },
-      "message": "🚨 BLOCKED: Known malicious program detected"
-    },
-    "metadata": {
-      "severity": "critical",
-      "weight": 100
-    }
-  },
-  {
-    "version": "1.0",
     "id": "block-large-sol-transfer",
     "name": "Block Large SOL Transfer",
     "description": "Blocks transactions transferring >10 SOL",

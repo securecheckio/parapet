@@ -27,10 +27,13 @@ Choose your deployment model:
 ### Basic (Proxy Only)
 
 ```bash
-cd deployments/flyio/basic
-fly launch --config fly.toml --dockerfile Dockerfile --no-deploy
-fly deploy
+# Deploy from parapet root directory
+cd /path/to/parapet
+fly launch --config deployments/flyio/basic/fly.toml --dockerfile deployments/flyio/basic/Dockerfile --no-deploy
+fly deploy --config deployments/flyio/basic/fly.toml --dockerfile deployments/flyio/basic/Dockerfile -a parapet-rpc-proxy
 ```
+
+**Note:** Must deploy from parapet root (not from `deployments/flyio/basic`) because the Dockerfile needs access to all workspace crates.
 
 ### Full Stack
 
