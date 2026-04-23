@@ -50,9 +50,8 @@ COPY --from=builder /build/target/release/update-safe-lists /usr/local/bin/
 COPY --from=builder /build/target/release/keygen /usr/local/bin/
 COPY --from=builder /build/target/release/rpc-perf /usr/local/bin/
 
-# Copy configuration files and rules
+# Copy rules (config files should be mounted at runtime or use env vars)
 COPY rpc-proxy/rules ./rules
-COPY api/config.toml ./api-config.toml
 
 # Create non-root user for security
 RUN useradd -m -u 1000 parapet && \
