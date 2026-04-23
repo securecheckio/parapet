@@ -5,9 +5,9 @@ Use this option when you need the complete operational stack: proxy, API, Redis,
 ## Includes
 
 - Parapet RPC proxy
-- Parapet API for dynamic rule and escalation workflows
+- Parapet API for dynamic rule management
 - Redis shared state
-- Dashboard for monitoring and approvals
+- Dashboard for monitoring and analytics
 
 ## Deployment Methods
 
@@ -17,5 +17,5 @@ Use this option when you need the complete operational stack: proxy, API, Redis,
 ## Best For
 
 - Teams needing centralized monitoring
-- Human-in-the-loop approval workflows
+- AI agent operators wanting visibility into blocked transactions
 - Multi-operator or managed environments

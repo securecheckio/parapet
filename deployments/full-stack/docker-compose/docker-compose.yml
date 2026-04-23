@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Redis - Shared state for escalations, caching, and rate limiting
+  # Redis - Shared state for activity feed, caching, and rate limiting
   redis:
     image: redis:7-alpine
     container_name: parapet-redis
@@ -33,17 +33,17 @@ services:
       # Upstream Solana RPC
       - UPSTREAM_RPC_URL=${UPSTREAM_RPC_URL:-https://api.mainnet-beta.solana.com}
       
-      # Redis for caching and escalations
+      # Redis for caching and activity feed
       - REDIS_URL=redis://redis:6379
       
       # Proxy configuration
       - PROXY_PORT=8899
       - DEFAULT_BLOCK_THRESHOLD=${DEFAULT_BLOCK_THRESHOLD:-70}
       
-      # Escalation configuration
-      - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-true}
-      - ESCALATION_APPROVER_WALLET=${ESCALATION_APPROVER_WALLET}
-      - ESCALATION_API_URL=http://api:3001
+      # Experimental features (not yet tested)
+      # - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-false}
+      # - ESCALATION_APPROVER_WALLET=${ESCALATION_APPROVER_WALLET}
+      # - ESCALATION_API_URL=http://api:3001
       
       # API Keys for analyzers
       - HELIUS_API_KEY=${HELIUS_API_KEY:-}
@@ -83,7 +83,7 @@ services:
     networks:
       - parapet-network
 
-  # Parapet API - Escalation management and rule management
+  # Parapet API - Rule management and activity feed
   api:
     image: parapet:latest
     container_name: parapet-api
@@ -137,7 +137,7 @@ services:
     networks:
       - parapet-network
 
-  # Dashboard - Web UI for escalation management (served by nginx)
+  # Dashboard - Web UI for monitoring and rule management (served by nginx)
   dashboard:
     image: nginx:alpine
     container_name: parapet-dashboard

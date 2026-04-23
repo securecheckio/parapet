@@ -1,4 +1,4 @@
-# Proxy-only Docker Deployment
+# Basic Docker Deployment
 
 Deploy only the Parapet RPC proxy with a single Docker Compose service.
 
@@ -11,7 +11,7 @@ Deploy only the Parapet RPC proxy with a single Docker Compose service.
 ## Quick Start
 
 ```bash
-cd deployments/proxy-only/docker
+cd deployments/basic/docker
 docker-compose up -d --build
 curl http://localhost:8899/health
 ```
@@ -23,7 +23,6 @@ Set values in your shell or `.env` file:
 - `UPSTREAM_RPC_URL` (recommended)
 - `DEFAULT_BLOCK_THRESHOLD` (default: `70`)
 - `RULES_PATH` (default: `/app/rules/presets/default-protection.json`)
-- `ENABLE_ESCALATIONS` (default: `false`)
 - `REDIS_URL` (optional, only if you run Redis externally)
 
 Optional analyzer keys:

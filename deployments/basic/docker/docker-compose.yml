@@ -15,7 +15,8 @@ services:
       - PROXY_PORT=8899
       - DEFAULT_BLOCK_THRESHOLD=${DEFAULT_BLOCK_THRESHOLD:-70}
       - RULES_PATH=${RULES_PATH:-/app/rules/presets/default-protection.json}
-      - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-false}
+      # Experimental (not yet tested)
+      # - ENABLE_ESCALATIONS=${ENABLE_ESCALATIONS:-false}
       - RUST_LOG=${RUST_LOG:-info,parapet_rpc_proxy=debug}
     volumes:
       - ../../../rpc-proxy/rules:/app/rules:ro

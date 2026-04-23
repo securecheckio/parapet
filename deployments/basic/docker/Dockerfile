@@ -1,4 +1,4 @@
-# Parapet RPC Proxy - Proxy-only Docker Build
+# Parapet RPC Proxy - Basic Docker Build
 # Multi-stage build for a small runtime image
 
 FROM rustlang/rust:nightly AS builder

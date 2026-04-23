@@ -104,7 +104,7 @@ For production, see:
 
 - [Full Stack Deployment](../full-stack/README.md) - With Redis and API
 - [HTTPS Setup](../https/README.md) - With Caddy or Nginx
-- [Terraform](../proxy-only/terraform/README.md) - Cloud deployment
+- [Terraform](../basic/terraform/README.md) - Cloud deployment
 
 ## Monitoring
 

@@ -42,7 +42,7 @@ services:
     networks:
       - parapet
 
-  # Redis (for activity feed & escalations)
+  # Redis (for activity feed & caching)
   redis:
     image: redis:7-alpine
     container_name: parapet-redis

@@ -2,7 +2,7 @@
 
 Docker Compose deployment for adding dashboard/API monitoring to an existing proxy deployment.
 
-This is an advanced retrofit path. Primary deployment options are `proxy-only` and `full-stack`.
+This is an advanced retrofit path. Primary deployment options are `basic` and `full-stack`.
 
 ## Quick Start
 

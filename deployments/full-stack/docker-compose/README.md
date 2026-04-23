@@ -34,27 +34,27 @@ Complete containerized deployment of Parapet with all components.
 ### 1. **Proxy** (port 8899)
 
 - Analyzes transactions before forwarding to Solana
-- Blocks high-risk transactions
-- Creates escalations for human review
+- Blocks high-risk transactions based on rules
+- Activity logging to Redis
 - Main entry point for AI agents and clients
 
 ### 2. **API** (port 3001)
 
-- REST API for escalation management
+- REST API for rule management
 - WebSocket for real-time notifications
-- Rule management endpoints
+- Activity feed endpoints
 - Wallet authentication
 
 ### 3. **Dashboard** (port 8080)
 
-- Web UI for human approvers
-- Real-time escalation notifications
+- Web UI for monitoring
+- Real-time activity feed
 - Transaction details and risk analysis
-- Approve/deny interface
+- Rule management interface
 
 ### 4. **Redis** (port 6379)
 
-- Shared state for escalations
+- Shared state for activity feed
 - Rate limiting coordination
 - Caching layer
 
@@ -70,7 +70,6 @@ cp .env.example .env
 
 **Required variables:**
 
-- `ESCALATION_APPROVER_WALLET` - Wallet that can approve escalations
 - `UPSTREAM_RPC_URL` - Your Solana RPC endpoint
 
 **Recommended:**
@@ -117,12 +116,11 @@ export PARAPET_API_URL=http://localhost:3001
 ### Transaction Protection Flow
 
 1. **Client** sends transaction → **Proxy** :8899
-2. **Proxy** analyzes risk
+2. **Proxy** analyzes risk based on configured rules
 3. If **risk < threshold** → Forward to Solana ✅
-4. If **risk >= threshold** → Create escalation → Block ❌
-5. **Dashboard** shows escalation notification
-6. **Human** reviews and approves/denies
-7. If approved → Client retries → **Proxy** allows
+4. If **risk >= threshold** → Block and log to activity feed ❌
+5. **Dashboard** shows blocked transaction in activity feed
+6. Monitor patterns and adjust rules as needed
 
 ### Rule Management Flow
 
@@ -145,11 +143,8 @@ See `.env.example` for complete list. Key settings:
 # Security threshold (0-100)
 DEFAULT_BLOCK_THRESHOLD=70  # Higher = more permissive
 
-# Enable human approvals
-ENABLE_ESCALATIONS=true
-
-# Approver wallet
-ESCALATION_APPROVER_WALLET=YourWalletAddressHere
+# Authorized wallets for rule management
+AUTHORIZED_WALLETS=YourWalletAddressHere
 ```
 
 ### Rule Presets
@@ -216,8 +211,8 @@ docker-compose logs --tail=100 proxy
 # Connect to Redis
 docker-compose exec redis redis-cli
 
-# View escalations
-KEYS escalation:pending:*
+# View activity feed
+KEYS activity:*
 
 # Check rate limits
 KEYS rate_limit:*

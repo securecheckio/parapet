@@ -11,7 +11,7 @@ Deploy Parapet RPC proxy to DigitalOcean with automatic HTTPS, rate limiting, an
 # - Upstream RPC URL (Helius, QuickNode, etc.)
 
 # 2. Configure
-cd deployments/proxy-only/terraform/digitalocean
+cd deployments/basic/terraform/digitalocean
 cp ../terraform.tfvars.example terraform.tfvars
 nano terraform.tfvars  # Set: do_token, upstream_rpc_url, domain_name, email, manage_dns, dns_zone
 
@@ -94,7 +94,7 @@ deployment_mode = "native"
 ### 2. Configure Variables
 
 ```bash
-cd deployments/proxy-only/terraform/digitalocean
+cd deployments/basic/terraform/digitalocean
 
 # Copy example config
 cp ../terraform.tfvars.example terraform.tfvars

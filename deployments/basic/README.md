@@ -1,4 +1,4 @@
-# Proxy-only Deployments
+# Basic Deployments
 
 Use this option when you want the simplest production path: protect transactions through the Parapet RPC proxy only.
 
@@ -11,8 +11,8 @@ Use this option when you want the simplest production path: protect transactions
 
 ## Deployment Methods
 
-- [`docker/`](./docker/) - Proxy-only Docker Compose deployment
-- [`terraform/`](./terraform/) - Proxy-only infrastructure provisioning
+- [`docker/`](./docker/) - Basic Docker Compose deployment (proxy only)
+- [`terraform/`](./terraform/) - Basic infrastructure provisioning (proxy only)
 
 ## Best For
 
