@@ -1,3 +1,11 @@
+# SECURITY NOTE: RUSTSEC-2026-0104 (rustls-webpki)
+# Solana SDK 2.3.x transitively includes rustls-webpki 0.101.7 which has a vulnerability
+# affecting certificate revocation list (CRL) parsing. This is low-risk for our use case:
+# - Only affects CRL parsing (DoS/panic), not cryptographic security
+# - Solana WebSocket connections typically don't use CRLs
+# - Upgrading to SDK 4.0 requires solana-client 4.0 (currently alpha), significant breaking changes
+# Plan: Upgrade to stable Solana SDK 4.x when solana-client 4.0 stable is released
+
 [workspace]
 resolver = "2"
 members = [
