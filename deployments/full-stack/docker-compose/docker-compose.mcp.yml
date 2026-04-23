@@ -5,7 +5,9 @@ services:
   parapet-api:
     build:
       context: ../../..
-      dockerfile: deployments/full-stack/docker-compose/Dockerfile.api
+      dockerfile: Dockerfile
+    image: parapet:latest
+    command: ["parapet-api"]
     ports:
       - "3001:3001"
     environment:

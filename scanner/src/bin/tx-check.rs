@@ -17,6 +17,7 @@ use solana_transaction_status::{
 };
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
 #[derive(Parser, Debug)]
 #[command(name = "tx-check")]
@@ -53,6 +54,220 @@ struct Args {
     /// Output format: pretty or json
     #[arg(short, long, default_value = "pretty")]
     format: String,
+
+    /// Human-friendly output: clean, visual format for presentations and readability
+    #[arg(long, default_value_t = false)]
+    human: bool,
+
+    /// Animation delay for human mode (milliseconds between lines, 0 = no animation)
+    #[arg(long, default_value_t = 150)]
+    human_delay: u64,
+}
+
+fn sleep_ms(ms: u64) {
+    std::thread::sleep(std::time::Duration::from_millis(ms));
+}
+
+fn print_human_line(text: &str, delay_ms: u64) {
+    println!("{}", text);
+    if delay_ms > 0 {
+        sleep_ms(delay_ms);
+    }
+}
+
+fn format_human_output(
+    signature: &str,
+    decision: &parapet_core::rules::types::RuleDecision,
+    analysis_time_ms: f64,
+    animated: bool,
+    delay_ms: u64,
+) {
+    let delay = if animated { delay_ms } else { 0 };
+
+    println!();
+    print_human_line(
+        &format!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                .bright_blue()
+                .bold()
+        ),
+        delay,
+    );
+    print_human_line(
+        &format!(
+            "{}",
+            "                    PARAPET SECURITY ANALYSIS"
+                .bright_blue()
+                .bold()
+        ),
+        delay,
+    );
+    print_human_line(
+        &format!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                .bright_blue()
+                .bold()
+        ),
+        delay,
+    );
+    println!();
+
+    // Transaction info
+    let short_sig = if signature.len() > 20 {
+        format!(
+            "{}...{}",
+            &signature[..10],
+            &signature[signature.len() - 7..]
+        )
+    } else {
+        signature.to_string()
+    };
+    print_human_line(
+        &format!("  📝 Transaction: {}", short_sig.bright_cyan()),
+        delay,
+    );
+    print_human_line(
+        &format!(
+            "{}",
+            format!("  ⚡ Analysis time: {:.2}ms", analysis_time_ms).dimmed()
+        ),
+        delay,
+    );
+    println!();
+
+    if delay > 0 {
+        sleep_ms(delay * 2);
+    }
+
+    // Analysis results
+    print_human_line(&format!("{}", "  🔍 SECURITY ANALYSIS".bold()), delay);
+    print_human_line(
+        &format!(
+            "{}",
+            "  ─────────────────────────────────────────────────────────".dimmed()
+        ),
+        delay,
+    );
+
+    if !decision.matched_rules.is_empty() {
+        for rule in &decision.matched_rules {
+            let formatted_msg = match rule.action {
+                parapet_core::rules::types::RuleAction::Block => {
+                    format!("  {} {}", "🚨", rule.message.bright_red().bold())
+                }
+                parapet_core::rules::types::RuleAction::Alert => {
+                    format!("  {} {}", "⚠️", rule.message.bright_yellow().bold())
+                }
+                parapet_core::rules::types::RuleAction::Pass => {
+                    format!("  {} {}", "✅", rule.message.bright_green())
+                }
+            };
+
+            print_human_line(&format!("{}", formatted_msg), delay);
+
+            if delay > 0 {
+                sleep_ms(delay / 2);
+            }
+        }
+    } else {
+        print_human_line(
+            &format!("  {} {}", "✅", "No threats detected".bright_green()),
+            delay,
+        );
+    }
+
+    println!();
+    if delay > 0 {
+        sleep_ms(delay * 2);
+    }
+
+    // Risk score
+    print_human_line(&format!("{}", "  📊 RISK ASSESSMENT".bold()), delay);
+    print_human_line(
+        &format!(
+            "{}",
+            "  ─────────────────────────────────────────────────────────".dimmed()
+        ),
+        delay,
+    );
+
+    let risk_display = if decision.total_risk >= 70 {
+        format!("{}", decision.total_risk.to_string().bright_red().bold())
+    } else if decision.total_risk >= 40 {
+        format!("{}", decision.total_risk.to_string().bright_yellow().bold())
+    } else {
+        format!("{}", decision.total_risk.to_string().bright_green())
+    };
+
+    print_human_line(&format!("  Risk Score: {}/100", risk_display), delay);
+
+    println!();
+    if delay > 0 {
+        sleep_ms(delay * 3);
+    }
+
+    // Final decision
+    print_human_line(&format!("{}", "  ⚖️  DECISION".bold()), delay);
+    print_human_line(
+        &format!(
+            "{}",
+            "  ─────────────────────────────────────────────────────────".dimmed()
+        ),
+        delay,
+    );
+
+    let formatted_decision = match decision.action {
+        parapet_core::rules::types::RuleAction::Block => {
+            format!("  {} {}", "🛑", "TRANSACTION BLOCKED".bright_red().bold())
+        }
+        parapet_core::rules::types::RuleAction::Alert => {
+            format!(
+                "  {} {}",
+                "⚠️",
+                "ALERT - Review Required".bright_yellow().bold()
+            )
+        }
+        parapet_core::rules::types::RuleAction::Pass => {
+            format!(
+                "  {} {}",
+                "✅",
+                "TRANSACTION APPROVED".bright_green().bold()
+            )
+        }
+    };
+
+    print_human_line(&format!("{}", formatted_decision), delay);
+
+    // Impact statement for blocked transactions
+    if decision.action == parapet_core::rules::types::RuleAction::Block && decision.total_risk >= 80
+    {
+        println!();
+        if delay > 0 {
+            sleep_ms(delay * 2);
+        }
+        print_human_line(
+            &format!(
+                "  {} {}",
+                "💰",
+                "Potential attack prevented".bright_green().bold()
+            ),
+            delay,
+        );
+    }
+
+    println!();
+    print_human_line(
+        &format!(
+            "{}",
+            "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                .bright_blue()
+                .bold()
+        ),
+        delay,
+    );
+    println!();
 }
 
 #[tokio::main]
@@ -60,8 +275,9 @@ async fn main() -> Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     let args = Args::parse();
+    let start_time = Instant::now();
 
-    if args.format == "pretty" {
+    if args.format == "pretty" && !args.human {
         println!();
         println!(
             "{}",
@@ -90,7 +306,7 @@ async fn main() -> Result<()> {
     }
 
     // --- 1. Fetch transaction from RPC ---
-    if args.format == "pretty" {
+    if args.format == "pretty" && !args.human {
         println!("{}", "Fetching transaction...".dimmed());
     }
 
@@ -217,7 +433,7 @@ async fn main() -> Result<()> {
         inner_instructions,
     };
 
-    if args.format == "pretty" {
+    if args.format == "pretty" && !args.human {
         println!("{}", "Transaction decoded successfully.".dimmed());
         println!();
         println!(
@@ -297,7 +513,7 @@ async fn main() -> Result<()> {
         .load_rules_from_file(&args.rules)
         .map_err(|e| anyhow!("Failed to load rules from '{}': {}", args.rules, e))?;
 
-    if args.format == "pretty" {
+    if args.format == "pretty" && !args.human {
         println!(
             "  Loaded {} rules from {}",
             engine.enabled_rule_count(),
@@ -370,7 +586,25 @@ async fn main() -> Result<()> {
         .evaluate_with_metadata_and_threshold(&transaction, &tx_metadata, args.threshold)
         .await?;
 
+    let analysis_time_ms = start_time.elapsed().as_secs_f64() * 1000.0;
+
     // --- 6. Output ---
+    if args.human {
+        format_human_output(
+            &args.signature,
+            &decision,
+            analysis_time_ms,
+            true,
+            args.human_delay,
+        );
+
+        // Exit with non-zero code if blocked
+        if decision.matched && decision.action == parapet_core::rules::types::RuleAction::Block {
+            std::process::exit(1);
+        }
+        return Ok(());
+    }
+
     if args.format == "json" {
         let out = serde_json::json!({
             "signature": args.signature,

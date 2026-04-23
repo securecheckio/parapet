@@ -56,23 +56,59 @@ jobs:
     - name: Build all release binaries
       run: cargo build --workspace --release --verbose
 
-    - name: Strip binary (Linux)
+    - name: Strip binaries (Linux)
       if: matrix.os == 'ubuntu-latest'
-      run: strip target/release/parapet-rpc-proxy
+      run: |
+        strip target/release/parapet-rpc-proxy
+        strip target/release/parapet-api
+        strip target/release/parapet-mcp
+        strip target/release/wallet-scanner
+        strip target/release/program-analyzer
+        strip target/release/tx-check
+        strip target/release/update-safe-lists
+        strip target/release/keygen
+        strip target/release/rpc-perf
 
-    - name: Strip binary (macOS)
+    - name: Strip binaries (macOS)
       if: matrix.os == 'macos-latest'
-      run: strip target/release/parapet-rpc-proxy
+      run: |
+        strip target/release/parapet-rpc-proxy
+        strip target/release/parapet-api
+        strip target/release/parapet-mcp
+        strip target/release/wallet-scanner
+        strip target/release/program-analyzer
+        strip target/release/tx-check
+        strip target/release/update-safe-lists
+        strip target/release/keygen
+        strip target/release/rpc-perf
 
-    - name: Generate attestation for parapet-rpc-proxy binary
+    - name: Generate attestations for all binaries
       uses: actions/attest-build-provenance@v1
       with:
-        subject-path: target/release/parapet-rpc-proxy
+        subject-path: |
+          target/release/parapet-rpc-proxy
+          target/release/parapet-api
+          target/release/parapet-mcp
+          target/release/wallet-scanner
+          target/release/program-analyzer
+          target/release/tx-check
+          target/release/update-safe-lists
+          target/release/keygen
+          target/release/rpc-perf
 
-    - name: Create tarball
+    - name: Create tarball with all binaries
       run: |
         cd target/release
-        tar -czf ${{ matrix.artifact-name }}.tar.gz parapet-rpc-proxy
+        tar -czf ${{ matrix.artifact-name }}.tar.gz \
+          parapet-rpc-proxy \
+          parapet-api \
+          parapet-mcp \
+          wallet-scanner \
+          program-analyzer \
+          tx-check \
+          update-safe-lists \
+          keygen \
+          rpc-perf
         sha256sum ${{ matrix.artifact-name }}.tar.gz > ${{ matrix.artifact-name }}.tar.gz.sha256
 
     - name: Upload artifact
@@ -110,7 +146,9 @@ jobs:
       id: meta
       uses: docker/metadata-action@v5
       with:
-        images: ghcr.io/${{ github.repository_owner }}/parapet-rpc-proxy
+        images: |
+          ghcr.io/${{ github.repository_owner }}/parapet
+          ghcr.io/${{ github.repository_owner }}/parapet-rpc-proxy
         tags: |
           type=ref,event=branch
           type=semver,pattern={{version}}
@@ -118,11 +156,11 @@ jobs:
           type=semver,pattern={{major}}
           type=sha
     
-    - name: Build and push Docker image
+    - name: Build and push unified Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
-        file: ./deployments/full-stack/docker-compose/Dockerfile
+        file: ./Dockerfile
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -162,10 +200,23 @@ jobs:
         body: |
           ## Installation
           
+          ### Included Binaries
+          
+          This release includes all Parapet components:
+          - **parapet-rpc-proxy** - RPC proxy server with security rules
+          - **parapet-api** - API server for rule management and escalations
+          - **parapet-mcp** - Model Context Protocol server for AI agents
+          - **wallet-scanner** - CLI wallet security scanner
+          - **program-analyzer** - CLI program analyzer
+          - **tx-check** - Transaction security checker
+          - **update-safe-lists** - Safe list updater utility
+          - **keygen** - Key generation utility
+          - **rpc-perf** - Performance testing tool
+          
           ### Verify Binary Authenticity
           All binaries are signed with GitHub attestations. Verify before use:
           ```bash
-          # Download the binary
+          # Extract all binaries
           tar -xzf parapet-*.tar.gz
           
           # Verify with GitHub CLI
@@ -179,7 +230,13 @@ jobs:
           
           ### Docker (Recommended for servers)
           ```bash
-          docker pull ghcr.io/securecheckio/parapet-rpc-proxy:${{ github.ref_name }}
+          # Pull unified image (contains all binaries)
+          docker pull ghcr.io/securecheckio/parapet:${{ github.ref_name }}
+          
+          # Run specific service
+          docker run ghcr.io/securecheckio/parapet:${{ github.ref_name }} parapet-rpc-proxy
+          docker run ghcr.io/securecheckio/parapet:${{ github.ref_name }} parapet-api
+          docker run ghcr.io/securecheckio/parapet:${{ github.ref_name }} wallet-scanner --help
           ```
           
           ### SHA256 Checksums

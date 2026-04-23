@@ -5,7 +5,9 @@ services:
   parapet-rpc-proxy:
     build:
       context: ../..
-      dockerfile: deployments/proxy-only/docker/Dockerfile
+      dockerfile: Dockerfile
+    image: parapet:latest
+    command: ["parapet-rpc-proxy"]
     container_name: parapet-rpc-proxy
     restart: unless-stopped
     ports:
@@ -24,9 +26,8 @@ services:
 
   # Parapet API
   parapet-api:
-    build:
-      context: ../../api
-      dockerfile: Dockerfile
+    image: parapet:latest
+    command: ["parapet-api"]
     container_name: parapet-api
     restart: unless-stopped
     ports:

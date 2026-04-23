@@ -4,8 +4,10 @@ services:
   proxy:
     build:
       context: ../../..
-      dockerfile: deployments/proxy-only/docker/Dockerfile
+      dockerfile: Dockerfile
+    image: parapet:latest
     container_name: parapet-rpc-proxy
+    command: ["parapet-rpc-proxy"]
     ports:
       - "8899:8899"
     environment:
