@@ -61,11 +61,50 @@ https_allowed_ips = ["0.0.0.0/0", "::/0"]
 enable_https = false
 
 # Your domain name (e.g., rpc.yourdomain.com)
-# IMPORTANT: Point DNS A record to your server IP BEFORE deploying
 # domain_name = "rpc.yourdomain.com"
 
 # Email for Let's Encrypt notifications (certificate expiry, etc.)
 # email = "you@email.com"
+
+# -----------------------
+# DNS Management (Optional but Recommended)
+# -----------------------
+# Automatically manage DNS in DigitalOcean (requires domain hosted in DO)
+# manage_dns = true
+
+# Base domain/zone in DigitalOcean (e.g., "yourdomain.com")
+# Required if manage_dns = true
+# dns_zone = "yourdomain.com"
+
+# IMPORTANT: 
+# - If manage_dns = true: Terraform automatically updates DNS → No manual steps!
+# - If manage_dns = false: You must manually update DNS AFTER deployment
+#   (Get IP from: terraform output droplet_ip)
+
+# -----------------------
+# Security Rules Configuration
+# -----------------------
+# How to load security rules:
+# - "feed": Auto-updating rules from HTTP (recommended, zero-downtime updates)
+# - "local": Static rules file on server (manual updates via SSH OR deploy from local file)
+# - "embedded": Use rules packaged in Docker image (no external dependencies)
+rules_source = "feed"
+
+# Rules feed URL (only used if rules_source = "feed")
+# Recommended: Community rules that work without API keys
+rules_feed_url = "https://parapet-rules.securecheck.io/community/core-protection.json"
+
+# Enable automatic rule updates from feeds
+rules_feed_enabled = true
+
+# Check for rule updates every N seconds (default: 3600 = 1 hour)
+# Recommendations: 3600 (balanced), 600 (high-security), 7200 (cost-conscious)
+rules_feed_poll_interval = 3600
+
+# Deploy custom rules from local file (only used if rules_source = "local")
+# Example: local_rules_file = "../rules/my-custom-rules.json"
+# If empty, uses default built-in rules
+# local_rules_file = ""
 
 # -----------------------
 # Cloud Provider Specific

@@ -6,6 +6,12 @@ package_update: true
 package_upgrade: true
 
 runcmd:
+  # Configure firewall (UFW is active by default on DigitalOcean Docker images)
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 22/tcp
+  - ufw --force enable
+  
   # Ensure Docker is running
   - systemctl start docker
   - systemctl enable docker
@@ -21,11 +27,79 @@ runcmd:
     ENABLE_RATE_LIMITING=${enable_rate_limiting}
     DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
     WHITELISTED_WALLETS=${whitelisted_wallets}
-    RUST_LOG=info,sol_shield_proxy=debug
+    RUST_LOG=info,parapet_rpc_proxy=debug
+    %{~ if rules_source == "feed" ~}
+    RULES_FEED_ENABLED=${rules_feed_enabled}
+    RULES_FEED_URL_1=${rules_feed_url}
+    RULES_FEED_POLL_INTERVAL=${rules_feed_poll_interval}
+    %{~ endif ~}
     EOF
   
   # Pull latest Docker image from GitHub Container Registry
   - docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  
+  %{~ if rules_source == "local" ~}
+  # Create local rules directory (user-managed rules)
+  - mkdir -p /opt/parapet/rules
+  %{~ if local_rules_content != "" ~}
+  # Deploy custom rules from local file
+  - |
+    cat > /opt/parapet/rules/default-protection.json <<'RULEOF'
+    ${local_rules_content}
+    RULEOF
+  %{~ else ~}
+  # Use default built-in rules
+  - |
+    cat > /opt/parapet/rules/default-protection.json <<'RULEOF'
+    [
+      {
+        "version": "1.0",
+        "id": "block-unlimited-delegation",
+        "name": "Block Unlimited Delegations",
+        "description": "Blocks unlimited token approvals (u64::MAX)",
+        "author": "securecheck",
+        "enabled": true,
+        "tags": ["security", "critical", "delegation"],
+        "rule": {
+          "action": "block",
+          "conditions": {
+            "field": "token_instructions:unlimited_approve_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          "message": "BLOCKED: Unlimited token delegation detected"
+        },
+        "metadata": {
+          "severity": "critical",
+          "weight": 100
+        }
+      },
+      {
+        "version": "1.0",
+        "id": "block-large-sol-transfer",
+        "name": "Block Large SOL Transfer",
+        "description": "Blocks transactions transferring >10 SOL",
+        "author": "securecheck",
+        "enabled": true,
+        "tags": ["security", "critical", "sol-transfer"],
+        "rule": {
+          "action": "block",
+          "conditions": {
+            "field": "system:max_sol_transfer",
+            "operator": "greater_than",
+            "value": 10000000000
+          },
+          "message": "BLOCKED: Large SOL transfer detected (>10 SOL)"
+        },
+        "metadata": {
+          "severity": "critical",
+          "weight": 80
+        }
+      }
+    ]
+    RULEOF
+  %{~ endif ~}
+  %{~ endif ~}
   
   # Create systemd service for Docker container with optimized settings
   - |
@@ -43,13 +117,13 @@ runcmd:
     ExecStartPre=-/usr/bin/docker rm parapet-rpc-proxy
     ExecStart=/usr/bin/docker run --name parapet-rpc-proxy \\
       --env-file /opt/parapet/.env \\
+      %{~ if rules_source == "local" ~}-v /opt/parapet/rules:/app/rules/presets:ro \\%{~ endif ~}
       --network host \\
       --log-opt max-size=50m \\
       --log-opt max-file=3 \\
-      --memory=1500m \\
-      --memory-swap=1500m \\
-      --cpus=1.8 \\
-      --restart unless-stopped \\
+      --memory=900m \\
+      --memory-swap=900m \\
+      --cpus=0.9 \\
       ghcr.io/securecheckio/parapet-rpc-proxy:latest
     ExecStop=/usr/bin/docker stop parapet-rpc-proxy
     
@@ -137,7 +211,7 @@ write_files:
       - Dependency isolation
       - Good for open-source distribution
   
-  - path: /usr/local/bin/solshield-stats
+  - path: /usr/local/bin/parapet-stats
     permissions: '0755'
     content: |
       #!/bin/bash
@@ -163,9 +237,9 @@ write_files:
       
       echo ""
       echo "Total transactions:     $TOTAL"
-      echo "  ✅ Passed:            $PASSES"
-      echo "  ⚠️  Alerted:          $ALERTS"  
-      echo "  🚫 Blocked:           $BLOCKS"
+      echo "  [OK] Passed:          $PASSES"
+      echo "  [!]  Alerted:         $ALERTS"  
+      echo "  [X]  Blocked:         $BLOCKS"
       echo ""
       
       if [ $TOTAL -gt 0 ]; then
@@ -188,7 +262,7 @@ write_files:
       echo ""
       echo "Run 'journalctl -u parapet -f' for real-time logs"
   
-  - path: /usr/local/bin/solshield-watch
+  - path: /usr/local/bin/parapet-watch
     permissions: '0755'
     content: |
       #!/bin/bash

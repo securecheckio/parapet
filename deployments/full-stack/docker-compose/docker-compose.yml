@@ -115,7 +115,7 @@ services:
       - RULES_PATH=/app/rules/presets/default-protection.json
       
       # Logging
-      - RUST_LOG=${RUST_LOG:-info,sol_shield_api=debug}
+      - RUST_LOG=${RUST_LOG:-info,parapet_api=debug}
     
     volumes:
       - ../../../rpc-proxy/rules:/app/rules:ro

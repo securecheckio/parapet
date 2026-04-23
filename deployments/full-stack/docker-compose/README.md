@@ -32,24 +32,28 @@ Complete containerized deployment of Parapet with all components.
 ## Components
 
 ### 1. **Proxy** (port 8899)
+
 - Analyzes transactions before forwarding to Solana
 - Blocks high-risk transactions
 - Creates escalations for human review
 - Main entry point for AI agents and clients
 
 ### 2. **API** (port 3001)
+
 - REST API for escalation management
 - WebSocket for real-time notifications
 - Rule management endpoints
 - Wallet authentication
 
 ### 3. **Dashboard** (port 8080)
+
 - Web UI for human approvers
 - Real-time escalation notifications
 - Transaction details and risk analysis
 - Approve/deny interface
 
 ### 4. **Redis** (port 6379)
+
 - Shared state for escalations
 - Rate limiting coordination
 - Caching layer
@@ -65,10 +69,12 @@ cp .env.example .env
 ```
 
 **Required variables:**
+
 - `ESCALATION_APPROVER_WALLET` - Wallet that can approve escalations
 - `UPSTREAM_RPC_URL` - Your Solana RPC endpoint
 
 **Recommended:**
+
 - `HELIUS_API_KEY` - For wallet identity checks
 - `AUTHORIZED_WALLETS` - For rule management
 
@@ -87,9 +93,9 @@ docker-compose ps
 
 ### 3. Access Services
 
-- **Dashboard**: http://localhost:8080
-- **Proxy RPC**: http://localhost:8899
-- **API**: http://localhost:3001
+- **Dashboard**: [http://localhost:8080](http://localhost:8080)
+- **Proxy RPC**: [http://localhost:8899](http://localhost:8899)
+- **API**: [http://localhost:3001](http://localhost:3001)
 
 ### 4. Configure Your Client
 
@@ -171,6 +177,7 @@ volumes:
 ```
 
 Then set:
+
 ```bash
 RULES_PATH=/app/rules/custom/rules.json
 ```
@@ -412,3 +419,4 @@ tar -czf parapet-backup.tar.gz .env rpc-proxy/rules/custom/
 - [Operations Guide](../../docs/OPERATIONS_GUIDE.md)
 - [Agent Integration Guide](../../docs/AGENT_GUIDE.md)
 - [Use Cases](../../docs/USE_CASES.md)
+

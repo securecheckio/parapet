@@ -47,7 +47,7 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
 # Run as non-root user
-RUN useradd -m -u 1000 solshield
-USER solshield
+RUN useradd -m -u 1000 parapet
+USER parapet
 
 CMD ["parapet-api"]

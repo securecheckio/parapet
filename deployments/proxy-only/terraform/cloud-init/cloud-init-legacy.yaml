@@ -19,7 +19,7 @@ runcmd:
     ENABLE_RATE_LIMITING=${enable_rate_limiting}
     DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
     ALLOWED_WALLETS=${allowlisted_wallets}
-    RUST_LOG=info,sol_shield_proxy=debug
+    RUST_LOG=info,parapet_rpc_proxy=debug
     EOF
   
   # Pull latest Docker image from GitHub Container Registry

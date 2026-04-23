@@ -11,8 +11,8 @@ Use this option when you need the complete operational stack: proxy, API, Redis,
 
 ## Deployment Methods
 
-- [`docker-compose/`](./docker-compose/) - Full stack via Docker Compose
-- [`retrofit/`](./retrofit/) - Advanced dashboard/API retrofit deployment
+- `[docker-compose/](./docker-compose/)` - Full stack via Docker Compose
+- `[retrofit/](./retrofit/)` - Advanced dashboard/API retrofit deployment
 
 ## Best For
 

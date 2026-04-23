@@ -13,32 +13,20 @@ provider "digitalocean" {
   token = var.do_token
 }
 
-# Get all existing SSH keys in DigitalOcean account
-data "digitalocean_ssh_keys" "existing" {}
-
-# Create SSH key only if it doesn't already exist
-resource "digitalocean_ssh_key" "sol_shield" {
-  # Only create if no keys exist in account
-  count = length(data.digitalocean_ssh_keys.existing.ssh_keys) == 0 ? 1 : 0
-
-  name       = "parapet-${var.deployment_name}"
-  public_key = file(var.ssh_public_key_path)
-}
-
-locals {
-  # Use existing SSH key if available, otherwise use the newly created one
-  ssh_key_fingerprint = length(data.digitalocean_ssh_keys.existing.ssh_keys) > 0 ? data.digitalocean_ssh_keys.existing.ssh_keys[0].fingerprint : digitalocean_ssh_key.sol_shield[0].fingerprint
+# Use existing SSH key from DigitalOcean account
+data "digitalocean_ssh_key" "existing" {
+  name = "thinkpad"
 }
 
 # Droplet for Parapet
-resource "digitalocean_droplet" "sol_shield" {
+resource "digitalocean_droplet" "parapet" {
   name   = "parapet-${var.deployment_name}"
   region = var.region
   size   = var.droplet_size
   # Use docker image for docker mode, ubuntu for native mode
   image = var.deployment_mode == "docker" ? "docker-20-04" : "ubuntu-22-04-x64"
 
-  ssh_keys = [local.ssh_key_fingerprint]
+  ssh_keys = [data.digitalocean_ssh_key.existing.id]
 
   # Choose cloud-init template based on deployment mode
   user_data = templatefile("${path.module}/../cloud-init/cloud-init-${var.deployment_mode}.yaml", {
@@ -52,6 +40,11 @@ resource "digitalocean_droplet" "sol_shield" {
     domain_name                = var.domain_name
     email                      = var.email
     https_allowed_ips          = join(" ", var.https_allowed_ips)
+    rules_source               = var.rules_source
+    rules_feed_enabled         = var.rules_feed_enabled
+    rules_feed_url             = var.rules_feed_url
+    rules_feed_poll_interval   = var.rules_feed_poll_interval
+    local_rules_content        = var.local_rules_file != "" ? file(var.local_rules_file) : ""
   })
 
   tags = concat(
@@ -61,10 +54,10 @@ resource "digitalocean_droplet" "sol_shield" {
 }
 
 # Firewall rules
-resource "digitalocean_firewall" "sol_shield" {
+resource "digitalocean_firewall" "parapet" {
   name = "parapet-${var.deployment_name}"
 
-  droplet_ids = [digitalocean_droplet.sol_shield.id]
+  droplet_ids = [digitalocean_droplet.parapet.id]
 
   # SSH - restricted by IP
   inbound_rule {
@@ -125,9 +118,37 @@ resource "digitalocean_database_cluster" "redis" {
 }
 
 # Optional: Reserved IP
-resource "digitalocean_reserved_ip" "sol_shield" {
+resource "digitalocean_reserved_ip" "parapet" {
   count = var.use_reserved_ip ? 1 : 0
 
   region     = var.region
-  droplet_id = digitalocean_droplet.sol_shield.id
+  droplet_id = digitalocean_droplet.parapet.id
+}
+
+# Optional: DNS Management
+# Automatically creates/updates A record for your domain
+data "digitalocean_domain" "main" {
+  count = var.manage_dns && var.dns_zone != "" ? 1 : 0
+  name  = var.dns_zone
+}
+
+locals {
+  # Extract subdomain from domain_name (e.g., "rpc" from "rpc.securecheck.io")
+  # If domain_name == dns_zone, use "@" for apex record
+  dns_record_name = var.manage_dns && var.domain_name != "" && var.dns_zone != "" ? (
+    var.domain_name == var.dns_zone ? "@" : split(".${var.dns_zone}", var.domain_name)[0]
+  ) : ""
+
+  # IP to use for DNS record (reserved IP if enabled, otherwise droplet IP)
+  dns_record_ip = var.use_reserved_ip ? digitalocean_reserved_ip.parapet[0].ip_address : digitalocean_droplet.parapet.ipv4_address
+}
+
+resource "digitalocean_record" "rpc" {
+  count = var.manage_dns && var.domain_name != "" && var.dns_zone != "" ? 1 : 0
+
+  domain = data.digitalocean_domain.main[0].id
+  type   = "A"
+  name   = local.dns_record_name
+  value  = local.dns_record_ip
+  ttl    = 300 # 5 minutes for faster updates
 }

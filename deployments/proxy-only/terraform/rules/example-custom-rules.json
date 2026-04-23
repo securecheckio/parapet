@@ -1,0 +1,68 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-unlimited-delegation",
+    "name": "Block Unlimited Delegations",
+    "description": "Blocks unlimited token approvals (u64::MAX)",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "delegation"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "token_instructions:unlimited_approve_count",
+        "operator": "greater_than",
+        "value": 0
+      },
+      "message": "BLOCKED: Unlimited token delegation detected"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-large-sol-transfer",
+    "name": "Block Large SOL Transfer",
+    "description": "Blocks transactions transferring >10 SOL",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "critical", "sol-transfer"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 10000000000
+      },
+      "message": "BLOCKED: Large SOL transfer detected (>10 SOL)"
+    },
+    "metadata": {
+      "severity": "critical",
+      "weight": 80
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-new-token-creation",
+    "name": "Alert on New Token Creation",
+    "description": "Alerts when transaction creates a new SPL token",
+    "author": "your-company",
+    "enabled": true,
+    "tags": ["security", "monitoring", "token"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "token_instructions:mints_new_token",
+        "operator": "equals",
+        "value": true
+      },
+      "message": "ALERT: New token creation detected"
+    },
+    "metadata": {
+      "severity": "info",
+      "weight": 10
+    }
+  }
+]

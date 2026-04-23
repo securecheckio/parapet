@@ -12,15 +12,21 @@ packages:
 
 # Create dedicated user for security
 users:
-  - name: solshield
+  - name: parapet
     system: true
     shell: /usr/sbin/nologin
     home: /opt/parapet
 
 runcmd:
+  # Configure firewall (UFW may be active by default)
+  - ufw allow 80/tcp
+  - ufw allow 443/tcp
+  - ufw allow 22/tcp
+  - ufw --force enable
+  
   # Create application directory
   - mkdir -p /opt/parapet
-  - chown solshield:solshield /opt/parapet
+  - chown parapet:parapet /opt/parapet
   
   # Download latest release binary from GitHub
   - |
@@ -52,7 +58,7 @@ runcmd:
   # Install binary
   - chmod +x /tmp/parapet-rpc-proxy
   - mv /tmp/parapet-rpc-proxy /opt/parapet/parapet-rpc-proxy
-  - chown solshield:solshield /opt/parapet/parapet-rpc-proxy
+  - chown parapet:parapet /opt/parapet/parapet-rpc-proxy
   
   # Verify binary
   - file /opt/parapet/parapet-rpc-proxy
@@ -66,9 +72,9 @@ runcmd:
     ENABLE_RATE_LIMITING=${enable_rate_limiting}
     DEFAULT_REQUESTS_PER_MONTH=${default_requests_per_month}
     WHITELISTED_WALLETS=${whitelisted_wallets}
-    RUST_LOG=info,sol_shield_proxy=debug
+    RUST_LOG=info,parapet_rpc_proxy=debug
     EOF
-  - chown solshield:solshield /opt/parapet/.env
+  - chown parapet:parapet /opt/parapet/.env
   - chmod 600 /opt/parapet/.env
   
   # Create systemd service with security hardening
@@ -81,8 +87,8 @@ runcmd:
     
     [Service]
     Type=simple
-    User=solshield
-    Group=solshield
+    User=parapet
+    Group=parapet
     WorkingDirectory=/opt/parapet
     
     # Load environment variables
@@ -195,7 +201,7 @@ write_files:
       Deployment Mode: Native Binary
       - Direct execution on host (no container overhead)
       - Systemd security hardening enabled
-      - Dedicated solshield user (non-root)
+      - Dedicated parapet user (non-root)
       - Resource limits: 65536 file descriptors, 512 processes
       - Performance: Maximum (~2-5% faster than Docker)
       
@@ -205,7 +211,7 @@ write_files:
       - Minimal memory overhead
       - Best for high-throughput production
   
-  - path: /usr/local/bin/solshield-stats
+  - path: /usr/local/bin/parapet-stats
     permissions: '0755'
     content: |
       #!/bin/bash
@@ -253,7 +259,7 @@ write_files:
       echo "--------------"
       echo "$LOGS" | grep "ERROR" | tail -5
   
-  - path: /usr/local/bin/solshield-watch
+  - path: /usr/local/bin/parapet-watch
     permissions: '0755'
     content: |
       #!/bin/bash

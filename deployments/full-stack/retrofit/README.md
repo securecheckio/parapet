@@ -45,6 +45,7 @@ environment:
 ## Networking
 
 Default ports:
+
 - Dashboard: `http://localhost:8080`
 - API: `http://localhost:3001`
 - Redis: `localhost:6379` (internal only)
@@ -83,15 +84,18 @@ See [dashboard/Dockerfile](../../dashboard/Dockerfile) for containerized product
 ## Troubleshooting
 
 ### Dashboard not loading
+
 - Check if services are running: `docker-compose ps`
 - Check API logs: `docker-compose logs api`
 
 ### No activity showing
+
 - Verify proxy is running and forwarding to API
 - Check Redis connection: `docker-compose exec redis redis-cli keys activity:*`
 - Verify wallet is connected in dashboard
 
 ### CORS errors
+
 - Ensure API allows dashboard origin in config.toml
 - Check browser console for specific CORS issues
 

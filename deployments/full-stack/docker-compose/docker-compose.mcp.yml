@@ -44,7 +44,7 @@ services:
       - RULES_PATH=/app/rules/presets/wallet-scan-enhanced.json
       
       # Logging
-      - RUST_LOG=${RUST_LOG:-info,sol_shield=debug}
+      - RUST_LOG=${RUST_LOG:-info,parapet_core=debug}
     
     volumes:
       # Mount rules directory

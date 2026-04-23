@@ -115,9 +115,56 @@ variable "deployment_mode" {
   description = "Deployment mode: 'docker' for containerized (easy, portable) or 'native' for binary (max performance)"
   type        = string
   default     = "docker"
-  
+
   validation {
     condition     = contains(["docker", "native"], var.deployment_mode)
     error_message = "The deployment_mode must be either 'docker' or 'native'."
   }
+}
+
+variable "manage_dns" {
+  description = "Automatically manage DNS records in DigitalOcean (requires domain to be hosted in DO)"
+  type        = bool
+  default     = false
+}
+
+variable "dns_zone" {
+  description = "DNS zone/domain managed in DigitalOcean (e.g., 'securecheck.io'). Required if manage_dns is true."
+  type        = string
+  default     = ""
+}
+
+variable "rules_source" {
+  description = "Rules source: 'feed' for HTTP feeds (recommended), 'local' for static files, or 'embedded' for container defaults"
+  type        = string
+  default     = "feed"
+
+  validation {
+    condition     = contains(["feed", "local", "embedded"], var.rules_source)
+    error_message = "Rules source must be 'feed', 'local', or 'embedded'."
+  }
+}
+
+variable "rules_feed_url" {
+  description = "Primary rules feed URL (e.g., https://parapet-rules.securecheck.io/community/core-protection.json)"
+  type        = string
+  default     = "https://parapet-rules.securecheck.io/community/core-protection.json"
+}
+
+variable "rules_feed_enabled" {
+  description = "Enable automatic rule updates from HTTP feeds"
+  type        = bool
+  default     = true
+}
+
+variable "rules_feed_poll_interval" {
+  description = "How often to check feeds for updates (in seconds)"
+  type        = number
+  default     = 3600 # 1 hour
+}
+
+variable "local_rules_file" {
+  description = "Path to local rules JSON file to deploy (only used if rules_source = 'local'). If empty, uses default rules."
+  type        = string
+  default     = ""
 }
