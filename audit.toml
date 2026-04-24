@@ -1,0 +1,48 @@
+# Parapet Security Audit Configuration
+# This file configures cargo-audit to handle known issues from third-party dependencies
+
+[advisories]
+# Vulnerabilities we're tracking but can't immediately fix without major upgrades
+
+# RUSTSEC-2026-0104: rustls-webpki CRL parsing panic
+# Status: Waiting for stable Solana SDK 4.0 release with solana-client 4.0
+# Impact: Low - DoS/panic in CRL parsing only, Solana WebSocket connections don't typically use CRLs
+# Mitigation: Monitor for Solana SDK 4.0 stable release
+ignore = [
+    "RUSTSEC-2026-0104",  # rustls-webpki versions 0.101.7 and 0.103.12
+]
+
+# RUSTSEC-2026-0097: rand unsoundness with custom logger
+# Status: Transitive dependency from Solana SDK 2.3.x
+# Impact: Low - requires custom logger implementation, which we don't use
+# Mitigation: Will be resolved when upgrading to Solana SDK 4.0
+# Note: Affects rand 0.7.3 and 0.8.5 via Solana dependencies
+
+[advisories.unmaintained]
+# Unmaintained crates that are transitive dependencies from Solana SDK
+# These will be resolved when upgrading to Solana SDK 4.0
+
+ignore = [
+    "RUSTSEC-2024-0375",  # atty - unmaintained, from solana-logger
+    "RUSTSEC-2025-0141",  # bincode 1.3.3 - unmaintained, from Solana SDK
+    "RUSTSEC-2024-0388",  # derivative - unmaintained, from ark-* (Solana crypto)
+    "RUSTSEC-2025-0161",  # libsecp256k1 - unmaintained, from Solana secp256k1
+    "RUSTSEC-2025-0119",  # number_prefix - unmaintained, from indicatif (Solana progress bars)
+    "RUSTSEC-2024-0436",  # paste - unmaintained, from ark-ff (Solana crypto)
+]
+
+[advisories.unsound]
+# Unsound crates from transitive dependencies
+
+# RUSTSEC-2021-0145: atty potential unaligned read
+# Status: Transitive from solana-logger via env_logger
+# Impact: Low - atty is only used for terminal detection
+ignore = [
+    "RUSTSEC-2021-0145",  # atty unaligned read
+    "RUSTSEC-2026-0097",  # rand unsoundness (covered above but listed here for clarity)
+]
+
+# Database security recommendations
+[database]
+# Note: We use Postgres 15+ for parapet-platform (meets requirements)
+# Note: We use Redis 7+ for production caching (meets requirements)
