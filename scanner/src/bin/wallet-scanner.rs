@@ -275,36 +275,89 @@ fn initialize_analyzers_and_rules(
     // Create rule engine (consumes the registry)
     let mut engine = RuleEngine::new(engine_registry);
 
-    // Load rules from default location or environment
-    let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
-        // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
-        let enhanced_candidates = vec![
-            "../../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
-            "../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
-            "./rules/presets/wallet-scan-enhanced.json",
-            "rules/presets/wallet-scan-enhanced.json",
-        ];
+    // Check for rules feed configuration first (recommended)
+    use parapet_core::rules::{FeedConfig, FeedSource, FeedUpdater};
 
-        // Fallback to bot-essentials if enhanced not found
-        let fallback_candidates = vec![
-            "../../rpc-proxy/rules/presets/bot-essentials.json",
-            "../rpc-proxy/rules/presets/bot-essentials.json",
-            "./rules/presets/bot-essentials.json",
-            "rules/presets/bot-essentials.json",
-        ];
+    let rules_feed_enabled = std::env::var("RULES_FEED_ENABLED")
+        .ok()
+        .and_then(|v| v.parse::<bool>().ok())
+        .unwrap_or(false);
 
-        enhanced_candidates
-            .iter()
-            .chain(fallback_candidates.iter())
-            .find(|p| std::path::Path::new(p).exists())
-            .map(|s| s.to_string())
-    });
+    let rules_feed_urls = std::env::var("RULES_FEED_URLS").ok();
 
-    if let Some(path) = rules_path {
-        engine.load_rules_from_file(&path)?;
-        log::info!("📋 Loaded rules from: {}", path);
+    if rules_feed_enabled || rules_feed_urls.is_some() {
+        // Parse feed URLs
+        let feed_urls = rules_feed_urls.unwrap_or_default();
+        let feed_sources: Vec<FeedSource> = feed_urls
+            .split(',')
+            .enumerate()
+            .map(|(i, url)| FeedSource {
+                url: url.trim().to_string(),
+                name: Some(format!("feed-{}", i)),
+                priority: i as u32,
+                min_request_interval: 300, // 5 minutes
+            })
+            .collect();
+
+        if !feed_sources.is_empty() {
+            let poll_interval = std::env::var("RULES_FEED_POLL_INTERVAL")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(3600);
+
+            let feed_config = FeedConfig {
+                feed_sources: feed_sources.clone(),
+                poll_interval,
+                enabled: true,
+            };
+
+            let updater = FeedUpdater::new(feed_config);
+            let engine_arc = Arc::new(engine);
+
+            // Start background updater
+            updater.start_background_updates(engine_arc.clone());
+
+            println!(
+                "✅ Rules feed enabled - auto-updating from {} sources",
+                feed_sources.len()
+            );
+
+            engine = Arc::try_unwrap(engine_arc).unwrap_or_else(|arc| (*arc).clone());
+        } else {
+            eprintln!("⚠️  RULES_FEED_ENABLED=true but no RULES_FEED_URLS provided");
+        }
     } else {
-        log::warn!("⚠️  No rules file found, using minimal built-in protection");
+        // Fallback to static rules file
+        let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
+            // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
+            let enhanced_candidates = vec![
+                "../../rules/presets/wallet-scan-enhanced.json",
+                "../rules/presets/wallet-scan-enhanced.json",
+                "./rules/presets/wallet-scan-enhanced.json",
+                "rules/presets/wallet-scan-enhanced.json",
+            ];
+
+            // Fallback to bot-essentials if enhanced not found
+            let fallback_candidates = vec![
+                "../../rules/presets/bot-essentials.json",
+                "../rules/presets/bot-essentials.json",
+                "./rules/presets/bot-essentials.json",
+                "rules/presets/bot-essentials.json",
+            ];
+
+            enhanced_candidates
+                .iter()
+                .chain(fallback_candidates.iter())
+                .find(|p| std::path::Path::new(p).exists())
+                .map(|s| s.to_string())
+        });
+
+        if let Some(path) = rules_path {
+            engine.load_rules_from_file(&path)?;
+            log::info!("📋 Loaded rules from: {}", path);
+        } else {
+            log::warn!("⚠️  No rules file found, using minimal built-in protection");
+        }
     }
 
     // Create separate registry for scanner (needs it to call analyzers directly)

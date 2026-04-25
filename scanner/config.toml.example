@@ -23,9 +23,35 @@ network = "mainnet-beta"
 # rpc_url = "https://api.mainnet-beta.solana.com"
 
 [security]
+# ============================================================================
+# Rules Configuration (Choose ONE option)
+# ============================================================================
+
+# OPTION 1: Rules Feed (RECOMMENDED - auto-updating from HTTP)
+# Auto-updates rules without redeployment, fresh threat intel
+# Env vars: RULES_FEED_ENABLED, RULES_FEED_URLS, RULES_FEED_POLL_INTERVAL
+
+# RULES_FEED_ENABLED=true
+# RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json
+# RULES_FEED_POLL_INTERVAL=3600  # Check every hour
+
+# Available community feeds (see https://github.com/securecheckio/parapet-rules):
+#   core-protection.json     - Basic rules (no API keys)
+#   helius-protection.json   - Requires HELIUS_API_KEY
+#   jupiter-protection.json  - Requires JUPITER_API_KEY
+#   rugcheck-protection.json - Requires RUGCHECK_API_KEY
+#   ai-agent-protection.json - AI agent patterns
+#   advanced-patterns.json   - CPI + instruction padding
+
+# Multiple feeds (comma-separated, merged by priority):
+# RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json,https://parapet-rules.securecheck.io/community/helius-protection.json
+
+# OPTION 2: Static Rules File (fallback)
 # Path to security rules JSON file (auto-discovers if not set)
 # Searches for wallet-scan-enhanced.json or bot-essentials.json
 # rules_path = "./rpc-proxy/rules/presets/wallet-scan-enhanced.json"
+
+# ============================================================================
 
 # Path to custom known-safe programs JSON file
 # Merges with built-in safe list
@@ -137,7 +163,10 @@ temperature = 0.1
 # - AI_MODEL
 # - AI_MAX_TOKENS
 # - AI_TEMPERATURE
-# - RULES_PATH
+# - RULES_FEED_ENABLED (boolean)
+# - RULES_FEED_URLS (comma-separated URLs)
+# - RULES_FEED_POLL_INTERVAL (seconds)
+# - RULES_PATH (fallback if feeds disabled)
 # - PARAPET_RPC_URL
 # - HELIUS_RATE_LIMIT (format: "20/60")
 # - OTTERSEC_RATE_LIMIT (format: "30/60")

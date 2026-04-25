@@ -42,5 +42,28 @@
       "severity": "critical",
       "weight": 80
     }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-token-account-for-other",
+    "name": "Alert: Creating Token Account for Someone Else",
+    "description": "Warns when creating a token account where the owner is not the transaction signer",
+    "author": "securecheck",
+    "enabled": true,
+    "tags": ["security", "high", "wallet-drainer"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          { "field": "token_instructions:creates_account_for_other", "operator": "equals", "value": true },
+          { "field": "token_instructions:transfers_to_newly_created", "operator": "equals", "value": true }
+        ]
+      },
+      "message": "⚠️ WARNING: Creating token account for someone else and transferring tokens"
+    },
+    "metadata": {
+      "severity": "high",
+      "weight": 70
+    }
   }
 ]

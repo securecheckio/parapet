@@ -39,7 +39,7 @@ pub use simulation::{
     feature = "jupiter",
     feature = "rugcheck"
 ))]
-pub use feed_updater::FeedUpdater;
+pub use feed_updater::SafeListFeedUpdater;
 
 // Re-export third-party analyzers
 #[cfg(feature = "token-mint")]

@@ -5,9 +5,14 @@ use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use solana_sdk::transaction::Transaction;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
+
+const ASSOCIATED_TOKEN_PROGRAM: &str = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+const SPL_TOKEN_PROGRAM: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN_2022_PROGRAM: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const INITIALIZE_ACCOUNT: u8 = 1;
 
 /// Response from Helius Identity API
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -65,6 +70,105 @@ impl HeliusIdentityAnalyzer {
             cache,
             rate_limiter,
         }
+    }
+
+    /// Extract owners of newly created token accounts from transaction
+    fn extract_newly_created_account_owners(tx: &Transaction) -> HashSet<String> {
+        let mut owners = HashSet::new();
+        let fee_payer = tx.message.account_keys.first().map(|k| k.to_string());
+
+        for instruction in &tx.message.instructions {
+            if let Some(program_id) = tx
+                .message
+                .account_keys
+                .get(instruction.program_id_index as usize)
+            {
+                let prog_str = program_id.to_string();
+
+                // Check ATA creation
+                if prog_str == ASSOCIATED_TOKEN_PROGRAM {
+                    if let Some(&owner_idx) = instruction.accounts.get(1) {
+                        if let Some(owner) = tx.message.account_keys.get(owner_idx as usize) {
+                            let owner_str = owner.to_string();
+                            if Some(owner_str.clone()) != fee_payer {
+                                owners.insert(owner_str);
+                            }
+                        }
+                    }
+                }
+
+                // Check InitializeAccount
+                if prog_str == SPL_TOKEN_PROGRAM || prog_str == TOKEN_2022_PROGRAM {
+                    if let Some(&discriminator) = instruction.data.first() {
+                        if discriminator == INITIALIZE_ACCOUNT {
+                            if let Some(&owner_idx) = instruction.accounts.get(3) {
+                                if let Some(owner) = tx.message.account_keys.get(owner_idx as usize)
+                                {
+                                    let owner_str = owner.to_string();
+                                    if Some(owner_str.clone()) != fee_payer {
+                                        owners.insert(owner_str);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        owners
+    }
+
+    /// Fetch SOL balance (in lamports) for an address via Helius RPC
+    async fn get_sol_balance(&self, address: &str) -> Result<u64> {
+        let api_key = self
+            .api_key
+            .as_ref()
+            .ok_or_else(|| anyhow!("HELIUS_API_KEY not configured"))?;
+
+        // Check cache first
+        let cache_key = format!("helius:sol_balance:{}", address);
+        if let Ok(Some(balance)) = self.cache.get::<u64>(&cache_key).await {
+            log::debug!("SOL balance cache hit for {}", address);
+            return Ok(balance);
+        }
+
+        // Fetch from Helius RPC
+        let url = format!(
+            "https://api.helius.xyz/v0/addresses/{}/balances?api-key={}",
+            address, api_key
+        );
+
+        let _permit = self.rate_limiter.acquire().await;
+
+        let response = self.http_client.get(&url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(anyhow!("Helius balance API error: {}", response.status()));
+        }
+
+        #[derive(Deserialize)]
+        struct BalanceResponse {
+            #[serde(rename = "nativeBalance")]
+            native_balance: u64,
+        }
+
+        let balance_data: BalanceResponse = response.json().await?;
+
+        // Cache for 30 seconds (balance changes frequently)
+        if let Err(e) = self
+            .cache
+            .set(
+                &cache_key,
+                &balance_data.native_balance,
+                Duration::from_secs(30),
+            )
+            .await
+        {
+            log::warn!("Failed to cache SOL balance for {}: {}", address, e);
+        }
+
+        Ok(balance_data.native_balance)
     }
 
     /// Batch lookup identities for multiple addresses (with rate limiting and retry)
@@ -169,6 +273,9 @@ impl TransactionAnalyzer for HeliusIdentityAnalyzer {
         vec![
             "signer_classifications".to_string(),
             "other_classifications".to_string(),
+            "zero_sol_addresses".to_string(),
+            "low_sol_addresses".to_string(),
+            "owner_has_zero_sol".to_string(),
         ]
     }
 
@@ -212,6 +319,39 @@ impl TransactionAnalyzer for HeliusIdentityAnalyzer {
             .filter_map(|i| i.category.clone())
             .collect();
 
+        // Extract newly created token account owners
+        let newly_created_owners = Self::extract_newly_created_account_owners(tx);
+
+        // Check SOL balances for all addresses
+        let mut zero_sol_addresses = Vec::new();
+        let mut low_sol_addresses = Vec::new();
+        let mut owner_has_zero_sol = false;
+
+        for address in &addresses {
+            match self.get_sol_balance(address).await {
+                Ok(balance) => {
+                    if balance == 0 {
+                        zero_sol_addresses.push(address.clone());
+                        // Check if this zero-balance address is a newly created account owner
+                        if newly_created_owners.contains(address) {
+                            owner_has_zero_sol = true;
+                            log::info!(
+                                "🚨 Detected token transfer to unfunded wallet owner: {}",
+                                address
+                            );
+                        }
+                    } else if balance < 10_000_000 {
+                        // < 0.01 SOL
+                        low_sol_addresses.push(address.clone());
+                    }
+                }
+                Err(e) => {
+                    log::debug!("Failed to fetch SOL balance for {}: {}", address, e);
+                    // Continue on error - graceful degradation
+                }
+            }
+        }
+
         let mut fields = HashMap::new();
         fields.insert(
             "signer_classifications".to_string(),
@@ -221,6 +361,9 @@ impl TransactionAnalyzer for HeliusIdentityAnalyzer {
             "other_classifications".to_string(),
             json!(other_classifications),
         );
+        fields.insert("zero_sol_addresses".to_string(), json!(zero_sol_addresses));
+        fields.insert("low_sol_addresses".to_string(), json!(low_sol_addresses));
+        fields.insert("owner_has_zero_sol".to_string(), json!(owner_has_zero_sol));
 
         Ok(fields)
     }

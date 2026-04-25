@@ -423,6 +423,7 @@ where
 
     // Initialize scanner with analyzers
     let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None)
+        .await
         .map_err(|e| McpError {
             code: -32603,
             message: format!("Failed to initialize analyzers: {}", e),
@@ -757,6 +758,7 @@ where
 
     // Scan wallet for threats (using scan_wallet_tool logic but without quota)
     let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None)
+        .await
         .map_err(|e| McpError {
             code: -32603,
             message: format!("Failed to initialize analyzers: {}", e),

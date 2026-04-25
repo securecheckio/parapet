@@ -1,7 +1,7 @@
 /// CLI tool to update known-safe programs and owners from remote feeds
 use anyhow::Result;
 use clap::Parser;
-use parapet_core::rules::analyzers::FeedUpdater;
+use parapet_core::rules::analyzers::SafeListFeedUpdater;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     println!();
 
     // Create updater
-    let updater = FeedUpdater::new();
+    let updater = SafeListFeedUpdater::new();
 
     // Update based on flags
     if args.programs_only {

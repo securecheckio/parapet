@@ -18,11 +18,11 @@ pub struct FeedMetadata {
 }
 
 /// Feed updater for pulling remote safe programs/owners lists
-pub struct FeedUpdater {
+pub struct SafeListFeedUpdater {
     client: reqwest::blocking::Client,
 }
 
-impl FeedUpdater {
+impl SafeListFeedUpdater {
     pub fn new() -> Self {
         Self {
             client: reqwest::blocking::Client::builder()
@@ -272,7 +272,7 @@ impl FeedUpdater {
     }
 }
 
-impl Default for FeedUpdater {
+impl Default for SafeListFeedUpdater {
     fn default() -> Self {
         Self::new()
     }
@@ -284,7 +284,7 @@ mod tests {
 
     #[test]
     fn test_default_feed_urls() {
-        let updater = FeedUpdater::new();
+        let updater = SafeListFeedUpdater::new();
         assert!(updater.default_programs_feed_url().starts_with("https://"));
         assert!(updater.default_owners_feed_url().starts_with("https://"));
     }

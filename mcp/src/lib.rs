@@ -7,6 +7,7 @@
 //!
 //! **All MCP tool logic lives here** - this is the single source of truth.
 
+pub mod helius_tools;
 pub mod tools;
 
 // Re-export commonly used items

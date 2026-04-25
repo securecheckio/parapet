@@ -6,6 +6,7 @@ use std::collections::{HashMap, HashSet};
 
 const SPL_TOKEN_PROGRAM: &str = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
 const TOKEN_2022_PROGRAM: &str = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const ASSOCIATED_TOKEN_PROGRAM: &str = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 
 // SPL Token instruction discriminators
 const INITIALIZE_MINT: u8 = 0;
@@ -55,6 +56,78 @@ impl TokenInstructionAnalyzer {
     fn analyze_instructions(tx: &Transaction) -> InstructionStats {
         let mut stats = InstructionStats::default();
 
+        // First pass: track account creation and ownership
+        for instruction in &tx.message.instructions {
+            if let Some(program_id) = tx
+                .message
+                .account_keys
+                .get(instruction.program_id_index as usize)
+            {
+                let prog_str = program_id.to_string();
+
+                // Track Associated Token Account creation
+                if prog_str == ASSOCIATED_TOKEN_PROGRAM {
+                    // ATA Create: accounts[1] is the token account, accounts[0] is the wallet owner
+                    if let (Some(&account_idx), Some(&owner_idx)) =
+                        (instruction.accounts.first(), instruction.accounts.get(1))
+                    {
+                        if let (Some(account), Some(owner)) = (
+                            tx.message.account_keys.get(account_idx as usize),
+                            tx.message.account_keys.get(owner_idx as usize),
+                        ) {
+                            let account_str = account.to_string();
+                            let owner_str = owner.to_string();
+                            stats
+                                .newly_created_token_accounts
+                                .insert(account_str.clone());
+                            stats
+                                .token_account_owners
+                                .insert(account_str, owner_str.clone());
+
+                            // Check if owner is a signer (fee payer is always first signer)
+                            let fee_payer = tx.message.account_keys.first().map(|k| k.to_string());
+                            if Some(owner_str.clone()) != fee_payer {
+                                stats.creates_account_for_other = true;
+                            }
+                        }
+                    }
+                }
+
+                // Track token InitializeAccount instructions
+                if Self::is_token_program(&prog_str) {
+                    if let Some(&discriminator) = instruction.data.first() {
+                        if discriminator == INITIALIZE_ACCOUNT {
+                            // InitializeAccount: accounts[0] is the account, accounts[3] is the owner
+                            if let (Some(&account_idx), Some(&owner_idx)) =
+                                (instruction.accounts.first(), instruction.accounts.get(3))
+                            {
+                                if let (Some(account), Some(owner)) = (
+                                    tx.message.account_keys.get(account_idx as usize),
+                                    tx.message.account_keys.get(owner_idx as usize),
+                                ) {
+                                    let account_str = account.to_string();
+                                    let owner_str = owner.to_string();
+                                    stats
+                                        .newly_created_token_accounts
+                                        .insert(account_str.clone());
+                                    stats
+                                        .token_account_owners
+                                        .insert(account_str, owner_str.clone());
+
+                                    let fee_payer =
+                                        tx.message.account_keys.first().map(|k| k.to_string());
+                                    if Some(owner_str) != fee_payer {
+                                        stats.creates_account_for_other = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Second pass: analyze instructions
         for instruction in &tx.message.instructions {
             if let Some(program_id) = tx
                 .message
@@ -80,7 +153,13 @@ impl TokenInstructionAnalyzer {
                             // Extract destination (accounts[1])
                             if let Some(&dest_idx) = instruction.accounts.get(1) {
                                 if let Some(dest) = tx.message.account_keys.get(dest_idx as usize) {
-                                    stats.transfer_recipients.push(dest.to_string());
+                                    let dest_str = dest.to_string();
+                                    stats.transfer_recipients.push(dest_str.clone());
+
+                                    // Check if transferring to newly created account
+                                    if stats.newly_created_token_accounts.contains(&dest_str) {
+                                        stats.transfers_to_newly_created = true;
+                                    }
                                 }
                             }
                             // Check ownership: source owner is accounts[2]
@@ -102,7 +181,13 @@ impl TokenInstructionAnalyzer {
                             // Extract destination (accounts[1])
                             if let Some(&dest_idx) = instruction.accounts.get(1) {
                                 if let Some(dest) = tx.message.account_keys.get(dest_idx as usize) {
-                                    stats.transfer_recipients.push(dest.to_string());
+                                    let dest_str = dest.to_string();
+                                    stats.transfer_recipients.push(dest_str.clone());
+
+                                    // Check if transferring to newly created account
+                                    if stats.newly_created_token_accounts.contains(&dest_str) {
+                                        stats.transfers_to_newly_created = true;
+                                    }
                                 }
                             }
                             // Extract mint address (accounts[2])
@@ -274,6 +359,12 @@ struct InstructionStats {
 
     // TransferChecked usage
     transfer_checked_count: usize,
+
+    // Wallet drainer detection
+    newly_created_token_accounts: HashSet<String>,
+    token_account_owners: HashMap<String, String>,
+    creates_account_for_other: bool,
+    transfers_to_newly_created: bool,
 }
 
 #[async_trait::async_trait]
@@ -332,6 +423,11 @@ impl TransactionAnalyzer for TokenInstructionAnalyzer {
             "modifies_supply".to_string(),
             "modifies_permissions".to_string(),
             "account_management_detected".to_string(),
+            // Wallet drainer detection
+            "creates_account_for_other".to_string(),
+            "transfers_to_newly_created".to_string(),
+            "newly_created_account_owners".to_string(),
+            "new_account_owner_address".to_string(),
         ]
     }
 
@@ -480,6 +576,37 @@ impl TransactionAnalyzer for TokenInstructionAnalyzer {
         fields.insert(
             "uses_transfer_checked".to_string(),
             json!(stats.transfer_checked_count > 0),
+        );
+
+        // Wallet drainer detection
+        fields.insert(
+            "creates_account_for_other".to_string(),
+            json!(stats.creates_account_for_other),
+        );
+        fields.insert(
+            "transfers_to_newly_created".to_string(),
+            json!(stats.transfers_to_newly_created),
+        );
+
+        // Extract unique owners of newly created accounts
+        let mut newly_created_owners: Vec<String> = stats
+            .newly_created_token_accounts
+            .iter()
+            .filter_map(|account| stats.token_account_owners.get(account))
+            .cloned()
+            .collect();
+        newly_created_owners.sort();
+        newly_created_owners.dedup();
+
+        fields.insert(
+            "newly_created_account_owners".to_string(),
+            json!(newly_created_owners.clone()),
+        );
+
+        // Helper field: first newly created account owner (for rule matching)
+        fields.insert(
+            "new_account_owner_address".to_string(),
+            json!(newly_created_owners.first().cloned().unwrap_or_default()),
         );
 
         Ok(fields)

@@ -29,6 +29,7 @@ use serde_json::{json, Value};
 use solana_sdk::commitment_config::CommitmentConfig;
 use std::io::{self, BufRead, Write};
 
+mod helius_tools;
 mod rugcheck_tools;
 
 // Import shared tools from the library
@@ -255,6 +256,51 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                         },
                         "required": ["mint_address"]
                     }
+                },
+                {
+                    "name": "get_wallet_history",
+                    "description": "Get transaction history for a Solana wallet using Helius API. Returns up to 100 transactions with pagination support. Filter by transaction type.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "wallet_address": {
+                                "type": "string",
+                                "description": "Solana wallet address to query"
+                            },
+                            "transaction_type": {
+                                "type": "string",
+                                "description": "Filter by transaction type (optional)",
+                                "enum": ["TRANSFER", "SWAP", "NFT_SALE", "NFT_MINT", "TOKEN_MINT", "BURN", "APPROVE", "REVOKE", "UNKNOWN"]
+                            },
+                            "limit": {
+                                "type": "number",
+                                "description": "Maximum number of transactions to return (1-100, default: 100)"
+                            },
+                            "before_cursor": {
+                                "type": "string",
+                                "description": "Pagination cursor (transaction signature) to fetch transactions before this point"
+                            }
+                        },
+                        "required": ["wallet_address"]
+                    }
+                },
+                {
+                    "name": "get_token_accounts_by_delegate",
+                    "description": "Get all SPL Token accounts that have approved a specific address as delegate. Useful for finding delegation actions and auditing delegated authorities.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "delegate_address": {
+                                "type": "string",
+                                "description": "The delegate address to query (the address that has been granted spending authority)"
+                            },
+                            "program_id": {
+                                "type": "string",
+                                "description": "Token program ID (optional, defaults to TokenkegQfeZyiNwAJbNbGKPFXCwuBvf9Ss623VQ5DA)"
+                            }
+                        },
+                        "required": ["delegate_address"]
+                    }
                 }
             ]
         })),
@@ -290,6 +336,13 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                 }
                 Some("check_liquidity_lock") => {
                     handle_check_liquidity_lock(arguments.cloned().unwrap_or(json!({}))).await
+                }
+                Some("get_wallet_history") => {
+                    handle_get_wallet_history(arguments.cloned().unwrap_or(json!({}))).await
+                }
+                Some("get_token_accounts_by_delegate") => {
+                    handle_get_token_accounts_by_delegate(arguments.cloned().unwrap_or(json!({})))
+                        .await
                 }
                 _ => Err(anyhow::anyhow!("Unknown tool: {:?}", tool_name)),
             }
@@ -354,7 +407,7 @@ async fn handle_scan_wallet(params: Value) -> Result<Value> {
     );
 
     // Initialize analyzers and rules
-    let (registry, engine) = tools::initialize_analyzers_and_rules(None)?;
+    let (registry, engine) = tools::initialize_analyzers_and_rules(None).await?;
 
     // Create scanner
     let scanner = WalletScanner::with_analyzers(rpc_url.to_string(), registry, engine)?;
@@ -449,4 +502,38 @@ async fn handle_check_liquidity_lock(params: Value) -> Result<Value> {
 
     log::info!("Checking liquidity lock for: {}", mint_address);
     rugcheck_tools::check_liquidity_lock(mint_address).await
+}
+
+async fn handle_get_wallet_history(params: Value) -> Result<Value> {
+    let wallet_address = params
+        .get("wallet_address")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing wallet_address"))?;
+
+    let transaction_type = params.get("transaction_type").and_then(|v| v.as_str());
+
+    let limit = params
+        .get("limit")
+        .and_then(|v| v.as_u64())
+        .map(|n| n as usize);
+
+    let before_cursor = params.get("before_cursor").and_then(|v| v.as_str());
+
+    log::info!("Fetching wallet history for: {}", wallet_address);
+    helius_tools::get_wallet_history(wallet_address, transaction_type, limit, before_cursor).await
+}
+
+async fn handle_get_token_accounts_by_delegate(params: Value) -> Result<Value> {
+    let delegate_address = params
+        .get("delegate_address")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing delegate_address"))?;
+
+    let program_id = params.get("program_id").and_then(|v| v.as_str());
+
+    log::info!(
+        "Fetching delegated token accounts for: {}",
+        delegate_address
+    );
+    helius_tools::get_token_accounts_by_delegate(delegate_address, program_id).await
 }

@@ -7,7 +7,7 @@
 
 use anyhow::Result;
 use parapet_core::enrichment::EnrichmentService;
-use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
+use parapet_core::rules::{AnalyzerRegistry, FeedConfig, FeedSource, FeedUpdater, RuleEngine};
 use parapet_scanner::{ScanReport, ThreatType};
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::commitment_config::CommitmentConfig;
@@ -16,12 +16,11 @@ use std::str::FromStr;
 use std::sync::Arc;
 
 /// Initialize analyzers and rule engine (same as wallet-scanner binary)
-pub fn initialize_analyzers_and_rules(
+pub async fn initialize_analyzers_and_rules(
     safe_programs_file: Option<String>,
 ) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
-    use parapet_core::rules::analyzers::*;
-
     fn register_all_analyzers(registry: &mut AnalyzerRegistry, safe_programs_file: Option<String>) {
+        use parapet_core::rules::analyzers::*;
         let rpc_url = std::env::var("UPSTREAM_RPC_URL")
             .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
         registry.register(Arc::new(BasicAnalyzer::new()));
@@ -64,31 +63,81 @@ pub fn initialize_analyzers_and_rules(
 
     let mut engine = RuleEngine::new(engine_registry);
 
+    // Check for rules feed configuration first (recommended)
+    let rules_feed_urls = std::env::var("RULES_FEED_URLS").ok();
+
+    if let Some(feed_urls) = rules_feed_urls {
+        // Parse feed URLs
+        let feed_sources: Vec<FeedSource> = feed_urls
+            .split(',')
+            .enumerate()
+            .map(|(i, url)| FeedSource {
+                url: url.trim().to_string(),
+                name: Some(format!("feed-{}", i)),
+                priority: i as u32,
+                min_request_interval: 300, // 5 minutes
+            })
+            .collect();
+
+        if !feed_sources.is_empty() {
+            let poll_interval = std::env::var("RULES_FEED_POLL_INTERVAL")
+                .ok()
+                .and_then(|v| v.parse::<u64>().ok())
+                .unwrap_or(3600);
+
+            let feed_config = FeedConfig {
+                feed_sources: feed_sources.clone(),
+                poll_interval,
+                enabled: true,
+            };
+
+            let num_sources = feed_sources.len();
+
+            // Fetch rules from feed on startup
+            let updater = FeedUpdater::new(feed_config);
+            match updater.fetch_all_sources().await {
+                Ok(merged) => {
+                    if let Err(e) = engine.load_rules(merged.rules) {
+                        log::warn!("Failed to load rules from feed: {}", e);
+                    } else {
+                        log::info!(
+                            "✅ Rules feed enabled - loaded from {} sources",
+                            num_sources
+                        );
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Failed to fetch rules from feed: {}", e);
+                }
+            }
+
+            let mut scanner_registry = AnalyzerRegistry::new();
+            register_all_analyzers(&mut scanner_registry, safe_programs_file);
+
+            return Ok((Arc::new(scanner_registry), Arc::new(engine)));
+        }
+    }
+
+    // Fallback to static rules file (development/testing only - production uses RULES_FEED_URLS)
     let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
-        let enhanced_candidates = vec![
-            "rpc-proxy/rules/presets/wallet-scan-enhanced.json",
-            "../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
-            "../../rpc-proxy/rules/presets/wallet-scan-enhanced.json",
+        let candidates = vec![
+            "rules/presets/comprehensive-protection.json",
+            "../rules/presets/comprehensive-protection.json",
+            "rules/presets/default-protection.json",
+            "../rules/presets/default-protection.json",
         ];
 
-        let fallback_candidates = vec![
-            "rpc-proxy/rules/presets/bot-essentials.json",
-            "../rpc-proxy/rules/presets/bot-essentials.json",
-            "../../rpc-proxy/rules/presets/bot-essentials.json",
-        ];
-
-        enhanced_candidates
+        candidates
             .iter()
-            .chain(fallback_candidates.iter())
             .find(|p| std::path::Path::new(p).exists())
             .map(|s| s.to_string())
     });
 
     if let Some(path) = rules_path {
         engine.load_rules_from_file(&path)?;
-        log::info!("Loaded rules from: {}", path);
+        log::info!("📋 Loaded rules from: {}", path);
     } else {
-        log::warn!("No rules file found, using minimal built-in protection");
+        log::warn!("⚠️  No rules file or feed found, using minimal built-in protection");
     }
 
     let mut scanner_registry = AnalyzerRegistry::new();
@@ -459,6 +508,157 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
 
     if data.rugcheck.is_none() && data.jupiter.is_none() && data.insider_analysis.is_none() {
         output.push_str("⚠️ No reputation data available for this token\n");
+    }
+
+    Ok(output)
+}
+
+/// Check a specific transaction for security threats
+pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String> {
+    use base64::engine::general_purpose;
+    use base64::Engine;
+    use solana_client::rpc_config::RpcTransactionConfig;
+    use solana_sdk::signature::Signature;
+    use solana_sdk::transaction::VersionedTransaction;
+    use solana_transaction_status::UiTransactionEncoding;
+
+    let mut output = String::new();
+    output.push_str(&format!("# Transaction Analysis: {}\n\n", signature));
+
+    // Parse signature
+    let sig = Signature::from_str(signature)?;
+
+    // Create RPC client
+    let rpc_client =
+        RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
+
+    // Fetch transaction
+    output.push_str("## Fetching Transaction...\n");
+    let tx_response = rpc_client
+        .get_transaction_with_config(
+            &sig,
+            RpcTransactionConfig {
+                encoding: Some(UiTransactionEncoding::Base64),
+                commitment: Some(CommitmentConfig::confirmed()),
+                max_supported_transaction_version: Some(0),
+            },
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to fetch transaction: {}", e))?;
+
+    // Parse transaction
+    let tx_with_meta = tx_response.transaction;
+    let encoded_tx = match &tx_with_meta {
+        solana_transaction_status::EncodedTransactionWithStatusMeta {
+            transaction: solana_transaction_status::EncodedTransaction::LegacyBinary(encoded_data),
+            ..
+        } => encoded_data,
+        solana_transaction_status::EncodedTransactionWithStatusMeta {
+            transaction: solana_transaction_status::EncodedTransaction::Binary(encoded_data, _),
+            ..
+        } => encoded_data,
+        _ => return Err(anyhow::anyhow!("Unexpected transaction encoding")),
+    };
+
+    let decoded_tx_data = general_purpose::STANDARD
+        .decode(encoded_tx)
+        .map_err(|e| anyhow::anyhow!("Failed to decode transaction: {}", e))?;
+
+    let versioned_tx: VersionedTransaction = bincode::deserialize(&decoded_tx_data)
+        .map_err(|e| anyhow::anyhow!("Failed to deserialize transaction: {}", e))?;
+
+    // Convert to legacy for analysis
+    use solana_sdk::message::{Message, VersionedMessage};
+    use solana_sdk::transaction::Transaction;
+
+    let transaction = match versioned_tx.message {
+        VersionedMessage::Legacy(legacy_message) => Transaction {
+            signatures: versioned_tx.signatures,
+            message: legacy_message,
+        },
+        VersionedMessage::V0(v0_message) => {
+            let message = Message {
+                header: v0_message.header,
+                account_keys: v0_message.account_keys,
+                recent_blockhash: v0_message.recent_blockhash,
+                instructions: v0_message.instructions,
+            };
+            Transaction {
+                signatures: versioned_tx.signatures,
+                message,
+            }
+        }
+    };
+
+    output.push_str("✓ Transaction fetched successfully\n\n");
+
+    // Extract program IDs
+    output.push_str("## Programs Invoked\n");
+    let program_ids: Vec<String> = transaction
+        .message
+        .instructions
+        .iter()
+        .filter_map(|inst| {
+            transaction
+                .message
+                .account_keys
+                .get(inst.program_id_index as usize)
+                .map(|pk| pk.to_string())
+        })
+        .collect();
+
+    for (i, program_id) in program_ids.iter().enumerate() {
+        output.push_str(&format!("{}. `{}`\n", i + 1, program_id));
+    }
+    output.push_str("\n");
+
+    // Initialize analyzers and rules
+    output.push_str("## Security Analysis\n");
+    let (registry, engine) = initialize_analyzers_and_rules(None).await?;
+
+    // Registry initialized and available for future extensions
+    log::debug!(
+        "Transaction analysis initialized with registry: {:p}",
+        registry.as_ref()
+    );
+
+    // Evaluate transaction through rule engine
+    let rule_decision = engine.evaluate(&transaction).await?;
+
+    output.push_str(&format!("- **Action:** {:?}\n", rule_decision.action));
+    output.push_str(&format!(
+        "- **Risk Score:** {}/100\n",
+        rule_decision.total_risk
+    ));
+
+    if !rule_decision.matched_rules.is_empty() {
+        output.push_str(&format!(
+            "\n**Matched Rules ({}):**\n",
+            rule_decision.matched_rules.len()
+        ));
+        for matched in &rule_decision.matched_rules {
+            output.push_str(&format!(
+                "- [{}] {} (weight: {})\n",
+                matched.action, matched.rule_name, matched.weight
+            ));
+            if !matched.message.is_empty() {
+                output.push_str(&format!("  {}\n", matched.message));
+            }
+        }
+    } else {
+        output.push_str("\n✅ No security rules triggered - transaction appears safe\n");
+    }
+
+    output.push_str("\n## Recommendation\n");
+    match rule_decision.action {
+        parapet_core::rules::RuleAction::Block => {
+            output.push_str("🚨 **BLOCK** - This transaction exhibits dangerous patterns and should not be executed.\n");
+        }
+        parapet_core::rules::RuleAction::Alert => {
+            output.push_str("⚠️ **ALERT** - This transaction shows suspicious patterns. Review carefully before proceeding.\n");
+        }
+        parapet_core::rules::RuleAction::Pass => {
+            output.push_str("✅ **PASS** - Transaction analysis complete. No major security concerns detected.\n");
+        }
     }
 
     Ok(output)

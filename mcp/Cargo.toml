@@ -23,6 +23,7 @@ parapet-core = { path = "../core", features = ["helius", "ottersec", "jupiter", 
 # Solana dependencies
 solana-client = "2.3"
 solana-sdk = "2.3"
+solana-transaction-status = "2.3"
 
 # Async runtime
 tokio = { workspace = true }
@@ -36,8 +37,15 @@ anyhow = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 
+# Encoding
+base64 = { workspace = true }
+bincode = { workspace = true }
+
 # HTTP client for verification checks
 reqwest = { version = "0.12", features = ["json"] }
+
+# Time handling for Helius timestamps
+chrono = "0.4"
 
 [features]
 default = ["reqwest"]
