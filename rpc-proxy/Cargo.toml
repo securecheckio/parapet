@@ -32,7 +32,7 @@ tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "compression-gzip"] }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 async-trait = "0.1"
 futures = "0.3"
 
@@ -60,7 +60,7 @@ thiserror = "1.0"
 log = "0.4"
 env_logger = "0.10"
 dotenvy = "0.15"
-uuid = { version = "1.0", features = ["v4"] }
+uuid = { version = "1.23", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 hex = "0.4"
 
@@ -76,6 +76,6 @@ wasm-analyzers = []
 tempfile = "3.0"
 serial_test = "3.0"
 serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 wiremock = "0.6"
 solana-system-interface = "1.0"
