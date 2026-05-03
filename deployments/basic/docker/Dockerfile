@@ -9,6 +9,7 @@ WORKDIR /build
 # Multi-stage build means only the final binary ends up in runtime image
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY upstream ./upstream
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api

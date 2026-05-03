@@ -11,6 +11,7 @@ WORKDIR /build
 # Copy all workspace members
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY upstream ./upstream
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api

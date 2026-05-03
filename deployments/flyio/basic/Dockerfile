@@ -13,6 +13,7 @@ WORKDIR /build
 # All workspace members are required even though we only build rpc-proxy
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY upstream ./upstream
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api

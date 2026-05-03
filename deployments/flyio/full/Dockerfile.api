@@ -5,6 +5,7 @@ WORKDIR /build
 # Full workspace members must exist for `cargo` to load the workspace root manifest.
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY upstream ./upstream
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api

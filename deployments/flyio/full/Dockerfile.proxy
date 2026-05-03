@@ -5,6 +5,7 @@ WORKDIR /build
 # Full workspace layout is required: root Cargo.toml lists all members.
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY upstream ./upstream
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api
