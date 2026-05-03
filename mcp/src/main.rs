@@ -4,7 +4,9 @@
 //! Provides wallet scanning and program analysis via Model Context Protocol
 //!
 //! Environment Variables:
-//!   - SOLANA_RPC_URL: RPC endpoint (default: https://api.mainnet-beta.solana.com)
+//!   - SOLANA_RPC_URL: single RPC endpoint
+//!   - SOLANA_RPC_URLS: comma-separated list (first URL used for blocking RpcClient; use parapet-rpc-proxy for failover)
+//!   - Default: https://api.mainnet-beta.solana.com
 //!   - HELIUS_API_KEY: Optional, for enhanced identity checks
 //!   - RULES_PATH: Optional, custom rules file path
 //!
@@ -26,8 +28,24 @@ use anyhow::Result;
 use parapet_scanner::{ScanConfig, WalletScanner};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_commitment_config::CommitmentConfig;
 use std::io::{self, BufRead, Write};
+
+fn default_solana_rpc_primary() -> String {
+    let raw = std::env::var("SOLANA_RPC_URLS")
+        .or_else(|_| std::env::var("SOLANA_RPC_URL"))
+        .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
+    let urls = parapet_upstream::parse_upstream_urls_list(&raw);
+    if urls.len() > 1 {
+        log::info!(
+            "Multiple SOLANA_RPC_URL* endpoints ({}); using first for blocking RpcClient. Prefer a parapet-rpc-proxy URL for failover.",
+            urls.len()
+        );
+    }
+    urls.into_iter()
+        .next()
+        .unwrap_or_else(|| "https://api.mainnet-beta.solana.com".to_string())
+}
 
 mod helius_tools;
 mod rugcheck_tools;
@@ -376,13 +394,12 @@ async fn handle_scan_wallet(params: Value) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing wallet_address"))?;
 
-    let default_rpc = std::env::var("SOLANA_RPC_URL")
-        .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
+    let default_rpc = default_solana_rpc_primary();
 
     let rpc_url = params
         .get("rpc_url")
         .and_then(|v| v.as_str())
-        .unwrap_or(&default_rpc);
+        .unwrap_or(default_rpc.as_str());
 
     let max_transactions = params
         .get("max_transactions")
@@ -448,13 +465,12 @@ async fn handle_analyze_program(params: Value) -> Result<Value> {
         .and_then(|v| v.as_str())
         .ok_or_else(|| anyhow::anyhow!("Missing program_id"))?;
 
-    let default_rpc = std::env::var("SOLANA_RPC_URL")
-        .unwrap_or_else(|_| "https://api.mainnet-beta.solana.com".to_string());
+    let default_rpc = default_solana_rpc_primary();
 
     let rpc_url = params
         .get("rpc_url")
         .and_then(|v| v.as_str())
-        .unwrap_or(&default_rpc);
+        .unwrap_or(default_rpc.as_str());
 
     let network = params
         .get("network")

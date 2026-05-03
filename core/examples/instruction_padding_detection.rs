@@ -9,7 +9,7 @@
 /// ```
 use parapet_core::rules::analyzer::TransactionAnalyzer;
 use parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer;
-use solana_sdk::instruction::CompiledInstruction;
+use solana_sdk::message::compiled_instruction::CompiledInstruction;
 use solana_sdk::message::Message;
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::transaction::Transaction;
@@ -85,7 +85,7 @@ fn create_token2022_with_extensions() -> Transaction {
     data.extend_from_slice(&1000u64.to_le_bytes()); // amount
 
     // Simulate TransferFee extension data
-    data.extend_from_slice(&vec![1u8; 108]); // TransferFee extension
+    data.extend_from_slice(&[1u8; 108]); // TransferFee extension
 
     let token_program = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         .parse::<Pubkey>()

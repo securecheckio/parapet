@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use base64::Engine;
 use solana_client::rpc_client::RpcClient;
 use solana_sdk::{message::Message, pubkey::Pubkey, transaction::Transaction};
-use spl_token::instruction as token_instruction;
+use spl_token_interface::instruction as token_instruction;
 use std::str::FromStr;
 
 /// Generate an unsigned transaction to revoke a token approval
@@ -28,8 +28,12 @@ pub async fn build_revoke_approval_tx(
         .map_err(|e| anyhow!("Invalid token account address: {}", e))?;
 
     // Create revoke instruction
-    let revoke_ix =
-        token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
+    let revoke_ix = token_instruction::revoke(
+        &spl_token_interface::id(),
+        &token_account_pubkey,
+        &owner,
+        &[],
+    )?;
 
     // Get recent blockhash
     let recent_blockhash = rpc_client
@@ -83,8 +87,12 @@ pub async fn build_batch_revoke_tx(
                 anyhow!("Invalid token account address {}: {}", token_account_str, e)
             })?;
 
-            let revoke_ix =
-                token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
+            let revoke_ix = token_instruction::revoke(
+                &spl_token_interface::id(),
+                &token_account_pubkey,
+                &owner,
+                &[],
+            )?;
 
             instructions.push(revoke_ix);
         }

@@ -447,7 +447,7 @@ fn test_rule_definition_deserialization() {
 
     let rule_def: RuleDefinition = serde_json::from_value(json).unwrap();
     assert_eq!(rule_def.id, "test-1");
-    assert_eq!(rule_def.enabled, true);
+    assert!(rule_def.enabled);
     assert!(rule_def.tags.is_empty()); // Default
     assert!(rule_def.metadata.is_empty()); // Default
 }

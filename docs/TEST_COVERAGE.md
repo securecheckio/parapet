@@ -4,7 +4,7 @@
 
 Parapet uses `cargo-llvm-cov` for test coverage reporting. This provides accurate, line-level coverage data for all Rust code.
 
-**Working directory:** run every command in this guide from the **workspace root** — the directory that contains the workspace `Cargo.toml`, `coverage.sh`, and `Makefile.coverage` (typically the `parapet` directory).
+**Working directory:** run every command in this guide from the **workspace root** — the directory that contains the workspace `Cargo.toml` (typically the `parapet` directory). Coverage scripts live under `dev-tools/coverage/` (`coverage.sh`, `Makefile.coverage`).
 
 **Prerequisites:** the workspace must compile and tests must run with `cargo test --workspace --all-features` (that is what coverage invokes). If that fails, coverage will fail for the same reason.
 
@@ -28,20 +28,20 @@ The Makefile target installs `cargo-llvm-cov` and the WASM target only; add `**l
 
 ### Generate Coverage Report
 
-`coverage.sh` builds the WASM mock when `core/tests/wasm_mock` exists, runs `cargo llvm-cov` with `--workspace --all-features`, then **checks a 70% total line threshold** (using `grep -oP` and `bc` where available). If coverage is below threshold, the script exits with a non-zero status even when the report was generated.
+`dev-tools/coverage/coverage.sh` builds the WASM mock when `core/tests/wasm_mock` exists, runs `cargo llvm-cov` with `--workspace --all-features`, then **checks a 70% total line threshold** (using `grep -oP` and `bc` where available). If coverage is below threshold, the script exits with a non-zero status even when the report was generated.
 
 ```bash
 # Generate HTML report
-./coverage.sh --html
+./dev-tools/coverage/coverage.sh --html
 
 # Generate and open in browser
-./coverage.sh --html --open
+./dev-tools/coverage/coverage.sh --html --open
 
 # Generate LCOV report (for CI/Codecov)
-./coverage.sh --lcov
+./dev-tools/coverage/coverage.sh --lcov
 
 # Show summary only
-./coverage.sh --summary
+./dev-tools/coverage/coverage.sh --summary
 ```
 
 Or use the Makefile:
@@ -59,9 +59,9 @@ make -f Makefile.coverage coverage-summary
 
 ## cargo-llvm-cov (what Parapet uses)
 
-Parapet standardizes on **[cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov)** for coverage. CI, `coverage.sh`, and `Makefile.coverage` all invoke it.
+Parapet standardizes on **[cargo-llvm-cov](https://github.com/taiki-e/cargo-llvm-cov)** for coverage. Local runs use `dev-tools/coverage/coverage.sh` and `Makefile.coverage` (there is **no** `.github/workflows/coverage.yml` in this repository—run coverage locally or add a workflow if you want CI enforcement).
 
-Typical direct invocations (same engine as the script; you usually prefer `./coverage.sh` or the Makefile for consistency):
+Typical direct invocations (same engine as the script; you usually prefer `./dev-tools/coverage/coverage.sh` or the Makefile for consistency):
 
 ```bash
 cargo llvm-cov --workspace --all-features --html --open
@@ -75,7 +75,7 @@ cargo llvm-cov --workspace --all-features --summary-only
 ### Core Library
 
 ```bash
-./coverage.sh --package parapet-core --html
+./dev-tools/coverage/coverage.sh --package parapet-core --html
 ```
 
 Or:
@@ -87,7 +87,7 @@ make -f Makefile.coverage coverage-core
 ### RPC Proxy
 
 ```bash
-./coverage.sh --package parapet-rpc-proxy --html
+./dev-tools/coverage/coverage.sh --package parapet-rpc-proxy --html
 ```
 
 Or:
@@ -99,7 +99,7 @@ make -f Makefile.coverage coverage-proxy
 ### Wallet Scanner
 
 ```bash
-./coverage.sh --package parapet-scanner --html
+./dev-tools/coverage/coverage.sh --package parapet-scanner --html
 ```
 
 Or:
@@ -140,24 +140,17 @@ Current thresholds:
 
 ### GitHub Actions
 
-Coverage is automatically generated on every push/PR via `.github/workflows/coverage.yml`.
+There is **no** coverage workflow checked into this repository. Use `./dev-tools/coverage/coverage.sh` locally (or add your own `.github/workflows/coverage.yml` if you want Codecov or PR gates).
 
-**What it does:**
+**Typical local flow:**
 
-1. Runs all tests with coverage instrumentation
-2. Generates LCOV report
-3. Uploads to Codecov
-4. Generates HTML report (artifact)
-5. Checks coverage threshold (fails if < 70%)
-
-**Viewing Reports:**
-
-- Codecov: use your repository’s Codecov project URL (configure GitHub org/repo in Codecov; the workflow uses `secrets.CODECOV_TOKEN`).
-- GitHub Actions artifacts: download the `coverage-report` / `coverage-summary` artifacts from the workflow run (`branches: main` and `master`).
+1. Run all tests with coverage instrumentation via `cargo llvm-cov` (the script wraps this).
+2. Generate LCOV or HTML output.
+3. Optional: enforce the 70% threshold (the script exits non-zero if the check fails).
 
 ### Local Pre-commit Check
 
-Avoid wiring `./coverage.sh --summary` into pre-commit unless you accept a **full workspace coverage run** plus the **70% threshold check** on every commit (slow and brittle if the tree does not compile). Prefer running coverage in CI or manually before release.
+Avoid wiring `./dev-tools/coverage/coverage.sh --summary` into pre-commit unless you accept a **full workspace coverage run** plus the **70% threshold check** on every commit (slow and brittle if the tree does not compile). Prefer running coverage in CI or manually before release.
 
 ## Reading Coverage Reports
 
@@ -203,7 +196,7 @@ end_of_record
 
 ```bash
 # Generate HTML report
-./coverage.sh --html --open
+./dev-tools/coverage/coverage.sh --html --open
 
 # Look for red lines in the report
 # Focus on critical paths first
@@ -235,7 +228,7 @@ Priority order:
 
 ### Exclude paths from reports
 
-Use `cargo llvm-cov` options (e.g. ignore filters) as documented in the [cargo-llvm-cov README](https://github.com/taiki-e/cargo-llvm-cov); align any excludes with how CI and `coverage.sh` invoke the tool.
+Use `cargo llvm-cov` options (e.g. ignore filters) as documented in the [cargo-llvm-cov README](https://github.com/taiki-e/cargo-llvm-cov); align any excludes with how `dev-tools/coverage/coverage.sh` invokes the tool.
 
 ## Coverage Best Practices
 
@@ -336,7 +329,7 @@ cargo build --target wasm32-unknown-unknown --release
 
 ### "bc: command not found" (in coverage.sh)
 
-The coverage script and `.github/workflows/coverage.yml` threshold step use `bc` for floating-point comparison.
+The coverage script uses `bc` for floating-point comparison when checking the threshold.
 
 ```bash
 # Ubuntu/Debian
@@ -348,7 +341,7 @@ brew install bc
 
 ### Threshold shows `0%` or check always fails locally
 
-`coverage.sh` parses the summary with `grep -oP`, which requires **GNU grep** (`grep (GNU grep)`). BSD grep on macOS does not support `-P`; use a Linux environment, CI, or adjust parsing to match your `cargo llvm-cov --summary-only` output.
+`dev-tools/coverage/coverage.sh` parses the summary with `grep -oP`, which requires **GNU grep** (`grep (GNU grep)`). BSD grep on macOS does not support `-P`; use a Linux environment, CI, or adjust parsing to match your `cargo llvm-cov --summary-only` output.
 
 ## Coverage Reports Location
 
@@ -421,7 +414,7 @@ Codecov provides:
 
 ## Next Steps
 
-1. **Baseline**: Run `./coverage.sh --summary` to establish current coverage
+1. **Baseline**: Run `./dev-tools/coverage/coverage.sh --summary` to establish current coverage
 2. **Identify Gaps**: Review HTML report for uncovered critical code
 3. **Add Tests**: Focus on security-critical components first
 4. **Monitor**: Set up Codecov and track coverage trends

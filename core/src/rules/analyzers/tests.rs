@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod analyzer_tests {
     use crate::rules::analyzer::TransactionAnalyzer;
     use crate::rules::analyzers::core::{program_complexity, system_program, token_instructions};
     use solana_sdk::{
@@ -256,15 +256,12 @@ mod tests {
             fields.get("non_core_program_count").unwrap(),
             &serde_json::json!(1)
         );
-        assert!(
-            fields
-                .get("non_core_programs")
-                .unwrap()
-                .as_array()
-                .unwrap()
-                .len()
-                > 0
-        );
+        assert!(!fields
+            .get("non_core_programs")
+            .unwrap()
+            .as_array()
+            .unwrap()
+            .is_empty());
     }
 
     #[tokio::test]

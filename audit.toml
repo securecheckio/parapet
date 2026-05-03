@@ -2,25 +2,30 @@
 # This file configures cargo-audit to handle known issues from third-party dependencies
 
 [advisories]
-# Vulnerabilities we're tracking but can't immediately fix without major upgrades
+# Vulnerabilities we're tracking but can't immediately fix without major upgrades.
+# Canonical config for `cargo audit` (run from the `parapet/` workspace root).
+# Previously duplicated in `.cargo/audit.toml` — keep a single file here.
 
 # RUSTSEC-2026-0104: rustls-webpki CRL parsing panic
-# Status: Waiting for stable Solana SDK 4.0 release with solana-client 4.0
-# Impact: Low - DoS/panic in CRL parsing only, Solana WebSocket connections don't typically use CRLs
-# Mitigation: Monitor for Solana SDK 4.0 stable release
+# RUSTSEC-2026-0098 / RUSTSEC-2026-0099: rustls-webpki (older tree via Solana / transitive)
+# RUSTSEC-2022-0093 / RUSTSEC-2024-0344: dalek family (Solana pins)
 ignore = [
-    "RUSTSEC-2026-0104",  # rustls-webpki versions 0.101.7 and 0.103.12
+    "RUSTSEC-2026-0104",  # rustls-webpki CRL
+    "RUSTSEC-2026-0097",  # rand / custom logger (transitive Solana)
+    "RUSTSEC-2026-0098",  # rustls-webpki constraints (transitive)
+    "RUSTSEC-2026-0099",  # rustls-webpki wildcards (transitive)
+    "RUSTSEC-2022-0093",  # ed25519-dalek (Solana)
+    "RUSTSEC-2024-0344",  # curve25519-dalek (Solana)
 ]
 
 # RUSTSEC-2026-0097: rand unsoundness with custom logger
-# Status: Transitive dependency from Solana SDK 2.3.x
+# Status: Transitive dependency from Solana SDK 4.x
 # Impact: Low - requires custom logger implementation, which we don't use
-# Mitigation: Will be resolved when upgrading to Solana SDK 4.0
-# Note: Affects rand 0.7.3 and 0.8.5 via Solana dependencies
+# Mitigation: Track upstream Solana / rand releases
 
 [advisories.unmaintained]
-# Unmaintained crates that are transitive dependencies from Solana SDK
-# These will be resolved when upgrading to Solana SDK 4.0
+# Unmaintained crates that are transitive dependencies from Solana SDK 4.x
+# Mitigation: track Solana dependency upgrades
 
 ignore = [
     "RUSTSEC-2024-0375",  # atty - unmaintained, from solana-logger

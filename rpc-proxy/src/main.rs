@@ -66,7 +66,12 @@ async fn main() -> anyhow::Result<()> {
     // Create server configuration
     let server_config = server::ServerConfig {
         port: config.server.port,
-        upstream_url: config.upstream.url,
+        upstream_url: config.upstream.primary_url(),
+        upstream_endpoint_configs: config.upstream.ordered_upstream_http_settings(),
+        upstream_strategy: config.upstream.strategy.clone(),
+        upstream_smart_max_slot_lag: config.upstream.smart_max_slot_lag,
+        rpc_allowed_methods: config.security.allowed_methods.clone(),
+        rpc_blocked_methods: config.security.blocked_methods.clone(),
         redis_url: config.redis.url,
         bind_address,
         auth_mode,

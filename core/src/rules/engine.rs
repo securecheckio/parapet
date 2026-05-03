@@ -3,15 +3,23 @@ use super::dynamic::DynamicRuleStore;
 use super::flowstate::FlowStateManager;
 use super::performance::PerformanceTracker;
 use super::types::*;
-use anyhow::{anyhow, Result};
+use crate::error::ParapetCoreError;
+use regex::Regex;
 use serde_json::Value;
 use solana_sdk::transaction::{Transaction, VersionedTransaction};
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 use tokio::sync::Mutex;
+
+type Result<T> = std::result::Result<T, ParapetCoreError>;
+
+fn flowstate_variable_regex() -> &'static Regex {
+    static RE: OnceLock<Regex> = OnceLock::new();
+    RE.get_or_init(|| Regex::new(r"\{([^}]+)\}").expect("static flowstate interpolation regex"))
+}
 
 #[cfg(feature = "reqwest")]
 use crate::enrichment::{EnrichmentData, EnrichmentService};
@@ -203,7 +211,7 @@ impl RuleEngine {
                 // Array of networks
                 network_array.iter().any(|n| {
                     n.as_str()
-                        .map_or(false, |s| s == self.current_network || s == "all")
+                        .is_some_and(|s| s == self.current_network || s == "all")
                 })
             } else {
                 // Invalid format, skip network filtering
@@ -312,7 +320,10 @@ impl RuleEngine {
             // Validate that all fields referenced in the rule have corresponding analyzers
             if let Err(e) = self.validate_rule(rule) {
                 log::error!("  ❌ Rule validation failed for '{}': {}", rule.name, e);
-                return Err(anyhow!("Rule '{}' validation failed: {}", rule.name, e));
+                return Err(ParapetCoreError::rule_validation(format!(
+                    "Rule '{}' validation failed: {}",
+                    rule.name, e
+                )));
             }
 
             // Extract required fields from this rule
@@ -398,7 +409,7 @@ impl RuleEngine {
                 }
                 // Check if field exists in any analyzer
                 if !available_fields.contains(&simple.field) {
-                    return Err(anyhow!(
+                    return Err(ParapetCoreError::rule_validation(format!(
                         "Field '{}' not provided by any registered analyzer. Available fields: {}",
                         simple.field,
                         available_fields
@@ -407,7 +418,7 @@ impl RuleEngine {
                             .cloned()
                             .collect::<Vec<_>>()
                             .join(", ")
-                    ));
+                    )));
                 }
 
                 // Validate operator/value type compatibility
@@ -424,14 +435,16 @@ impl RuleEngine {
                 let has_conditions =
                     compound.all.is_some() || compound.any.is_some() || compound.not.is_some();
                 if !has_conditions {
-                    return Err(anyhow!(
-                        "Compound condition must have at least one of: 'all', 'any', or 'not'"
+                    return Err(ParapetCoreError::rule_validation(
+                        "Compound condition must have at least one of: 'all', 'any', or 'not'",
                     ));
                 }
 
                 if let Some(all_conditions) = &compound.all {
                     if all_conditions.is_empty() {
-                        return Err(anyhow!("'all' condition cannot be empty"));
+                        return Err(ParapetCoreError::rule_validation(
+                            "'all' condition cannot be empty",
+                        ));
                     }
                     for cond in all_conditions {
                         self.validate_condition(cond, available_fields)?;
@@ -439,7 +452,9 @@ impl RuleEngine {
                 }
                 if let Some(any_conditions) = &compound.any {
                     if any_conditions.is_empty() {
-                        return Err(anyhow!("'any' condition cannot be empty"));
+                        return Err(ParapetCoreError::rule_validation(
+                            "'any' condition cannot be empty",
+                        ));
                     }
                     for cond in any_conditions {
                         self.validate_condition(cond, available_fields)?;
@@ -470,33 +485,36 @@ impl RuleEngine {
                         // Allow string numbers that can be parsed
                         s.parse::<f64>()
                             .map(|_| ())
-                            .map_err(|_| anyhow!("Operator '{:?}' requires a numeric value, got unparseable string: '{}'", operator, s))
+                            .map_err(|_| {
+                                ParapetCoreError::rule_validation(format!(
+                                    "Operator '{:?}' requires a numeric value, got unparseable string: '{}'",
+                                    operator, s
+                                ))
+                            })
                     }
-                    _ => Err(anyhow!(
+                    _ => Err(ParapetCoreError::rule_validation(format!(
                         "Operator '{:?}' requires a numeric value, got {:?}",
-                        operator,
-                        value
-                    )),
+                        operator, value
+                    ))),
                 }
             }
             In | NotIn => {
                 // In/NotIn operators require array values
                 if !value.is_array() {
-                    return Err(anyhow!(
+                    return Err(ParapetCoreError::rule_validation(format!(
                         "Operator '{:?}' requires an array value, got {:?}",
-                        operator,
-                        value
-                    ));
+                        operator, value
+                    )));
                 }
                 Ok(())
             }
             Contains => {
                 // Contains operator requires array or string haystack
                 if !value.is_array() && !value.is_string() {
-                    return Err(anyhow!(
+                    return Err(ParapetCoreError::rule_validation(format!(
                         "Operator 'contains' requires an array or string value, got {:?}",
                         value
-                    ));
+                    )));
                 }
                 Ok(())
             }
@@ -618,12 +636,13 @@ impl RuleEngine {
             Err(e) => e,
         };
 
-        Err(anyhow!(
-            "Failed to parse rules from file: {}\n  → As single rule: {}\n  → As array: {}",
-            path,
-            single_err,
-            array_err
-        ))
+        Err(ParapetCoreError::RuleParse {
+            path: path.to_string(),
+            detail: format!(
+                "could not parse as RuleDefinition or Vec<RuleDefinition>\n  single: {}\n  array: {}",
+                single_err, array_err
+            ),
+        })
     }
 
     pub fn load_rules_from_dir(&mut self, dir_path: &str) -> Result<()> {
@@ -641,7 +660,10 @@ impl RuleEngine {
                 continue;
             }
 
-            match self.load_rules_from_file(path.to_str().unwrap()) {
+            let path_str = path
+                .to_str()
+                .ok_or_else(|| ParapetCoreError::InvalidPath(path.clone()))?;
+            match self.load_rules_from_file(path_str) {
                 Ok(_) => {
                     loaded_count += 1;
                     log::debug!("  ✓ Loaded: {}", path.display());
@@ -653,10 +675,7 @@ impl RuleEngine {
         }
 
         if loaded_count == 0 {
-            return Err(anyhow!(
-                "No valid rule files found in directory: {}",
-                dir_path
-            ));
+            return Err(ParapetCoreError::NoRulesInDirectory(dir_path.to_string()));
         }
 
         log::info!(
@@ -680,7 +699,10 @@ impl RuleEngine {
         if let Some(dynamic_store) = &self.dynamic_rules {
             // Get canonical hash for matching
             let canonical_hash = if let Some(analyzer) = self.registry.get("canonical_tx") {
-                let result = analyzer.analyze(tx).await?;
+                let result = analyzer
+                    .analyze(tx)
+                    .await
+                    .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
                 result
                     .get("canonical_transaction_hash")
                     .and_then(|v| v.as_str())
@@ -704,12 +726,20 @@ impl RuleEngine {
                     // Analyze transaction for dynamic rule evaluation
                     #[cfg(feature = "reqwest")]
                     let fields = {
-                        let mut fields = self.registry.analyze_all(tx).await?;
+                        let mut fields = self
+                            .registry
+                            .analyze_all(tx)
+                            .await
+                            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
                         self.add_enrichment_to_fields(&mut fields).await;
                         fields
                     };
                     #[cfg(not(feature = "reqwest"))]
-                    let fields = self.registry.analyze_all(tx).await?;
+                    let fields = self
+                        .registry
+                        .analyze_all(tx)
+                        .await
+                        .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
 
                     let wallet = self.extract_wallet_from_fields(&fields);
 
@@ -776,7 +806,8 @@ impl RuleEngine {
             let mut fields = self
                 .registry
                 .analyze_selected(tx, &required_analyzers)
-                .await?;
+                .await
+                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
             self.add_enrichment_to_fields(&mut fields).await;
             fields
         };
@@ -784,7 +815,8 @@ impl RuleEngine {
         let fields = self
             .registry
             .analyze_selected(tx, &required_analyzers)
-            .await?;
+            .await
+            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
 
         self.evaluate_fields(fields, threshold).await
     }
@@ -1034,7 +1066,8 @@ impl RuleEngine {
             let mut fields = self
                 .registry
                 .analyze_selected_with_metadata(tx, &required_analyzers, metadata)
-                .await?;
+                .await
+                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
             self.add_enrichment_to_fields(&mut fields).await;
             fields
         };
@@ -1042,7 +1075,8 @@ impl RuleEngine {
         let fields = self
             .registry
             .analyze_selected_with_metadata(tx, &required_analyzers, metadata)
-            .await?;
+            .await
+            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
 
         self.evaluate_fields(fields, threshold).await
     }
@@ -1126,7 +1160,12 @@ impl RuleEngine {
                     "less_than" | "<" => ComparisonOperator::LessThan,
                     "greater_than_or_equal" | ">=" => ComparisonOperator::GreaterThanOrEqual,
                     "less_than_or_equal" | "<=" => ComparisonOperator::LessThanOrEqual,
-                    _ => return Err(anyhow!("Invalid flowstate counter operator: {}", op_str)),
+                    _ => {
+                        return Err(ParapetCoreError::evaluation(format!(
+                            "Invalid flowstate counter operator: {}",
+                            op_str
+                        )))
+                    }
                 };
 
                 let count = state_lock.get_counter(wallet, &condition.flowstate);
@@ -1256,12 +1295,12 @@ impl RuleEngine {
                         true
                     }
                     "error" | "strict" => {
-                        return Err(anyhow::anyhow!(
+                        return Err(ParapetCoreError::evaluation(format!(
                             "Field '{}' required by rule but analyzer unavailable (strict mode)",
                             condition.field
-                        ));
+                        )));
                     }
-                    "auto" | _ => {
+                    _ => {
                         // Fall through to smart defaults
                         self.get_smart_default_for_missing_field(condition)?
                     }
@@ -1274,7 +1313,12 @@ impl RuleEngine {
             return Ok(missing_field_result);
         }
 
-        self.compare(field_value.unwrap(), &condition.operator, &condition.value)
+        let Some(field_value) = field_value else {
+            return Err(ParapetCoreError::evaluation(
+                "internal error: field missing after presence check".to_string(),
+            ));
+        };
+        self.compare(field_value, &condition.operator, &condition.value)
     }
 
     fn get_smart_default_for_missing_field(&self, condition: &SimpleCondition) -> Result<bool> {
@@ -1427,17 +1471,28 @@ impl RuleEngine {
 
     fn to_number(&self, value: &Value) -> Result<f64> {
         match value {
-            Value::Number(n) => n.as_f64().ok_or_else(|| anyhow!("Invalid number")),
-            Value::String(s) => s.parse::<f64>().map_err(|e| anyhow!("Parse error: {}", e)),
+            Value::Number(n) => n.as_f64().ok_or_else(|| {
+                ParapetCoreError::evaluation("Invalid number in JSON value".to_string())
+            }),
+            Value::String(s) => s.parse::<f64>().map_err(|e| {
+                ParapetCoreError::evaluation(format!(
+                    "Parse error converting string to number: {}",
+                    e
+                ))
+            }),
             Value::Null => Ok(0.0), // Treat null as zero for numeric comparisons
-            _ => Err(anyhow!("Value is not a number")),
+            _ => Err(ParapetCoreError::evaluation(
+                "Value is not a number".to_string(),
+            )),
         }
     }
 
     fn in_array(&self, needle: &Value, haystack: &Value) -> Result<bool> {
         match haystack {
             Value::Array(arr) => Ok(arr.contains(needle)),
-            _ => Err(anyhow!("Expected array for 'in' operator")),
+            _ => Err(ParapetCoreError::evaluation(
+                "Expected array for 'in' operator".to_string(),
+            )),
         }
     }
 
@@ -1452,15 +1507,24 @@ impl RuleEngine {
                 if let Value::String(n) = needle {
                     Ok(s.contains(n))
                 } else {
-                    Err(anyhow!("Expected string needle for contains"))
+                    Err(ParapetCoreError::evaluation(
+                        "Expected string needle for contains".to_string(),
+                    ))
                 }
             }
-            _ => Err(anyhow!("Contains operator requires array or string")),
+            _ => Err(ParapetCoreError::evaluation(
+                "Contains operator requires array or string".to_string(),
+            )),
         }
     }
 
     pub fn rule_count(&self) -> usize {
         self.rules.len()
+    }
+
+    /// Snapshot of loaded rule definitions (for UIs / diagnostics).
+    pub fn rules(&self) -> &[RuleDefinition] {
+        &self.rules
     }
 
     pub fn enabled_rule_count(&self) -> usize {
@@ -1488,7 +1552,8 @@ impl RuleEngine {
         let structural_fields = if let Some(legacy_tx) = tx.clone().into_legacy_transaction() {
             self.registry
                 .analyze_selected(&legacy_tx, &required_analyzers)
-                .await?
+                .await
+                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
         } else {
             log::warn!("⚠️  Limited structural analysis for v0 transaction");
             HashMap::new()
@@ -1496,7 +1561,10 @@ impl RuleEngine {
 
         // Phase 2: Simulation analysis
         log::debug!("Running simulation analyzers");
-        let simulation_fields = simulation_registry.analyze_all(simulation_result).await?;
+        let simulation_fields = simulation_registry
+            .analyze_all(simulation_result)
+            .await
+            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
 
         // Phase 3: Merge fields (simulation fields can override structural fields)
         let mut combined_fields = structural_fields.clone();
@@ -1821,7 +1889,7 @@ impl RuleEngine {
         let mut result = template.to_string();
 
         // Find all {variable} patterns
-        let re = regex::Regex::new(r"\{([^}]+)\}").unwrap();
+        let re = flowstate_variable_regex();
 
         for cap in re.captures_iter(template) {
             let var_spec = &cap[1];

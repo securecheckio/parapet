@@ -57,36 +57,37 @@ sequenceDiagram
 ```toml
 [dependencies]
 parapet-core = { path = "../core" }
-solana-sdk = "2.3"
+solana-sdk = "4.0"
 tokio = { version = "1", features = ["full"] }
 ```
 
-### Basic Usage
+### Basic usage
 
 ```rust
-use parapet_core::rules::{AnalyzerRegistry, RuleEngine, RiskLevel};
+use parapet_core::rules::analyzers::{BasicAnalyzer, CoreSecurityAnalyzer};
+use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use solana_sdk::transaction::Transaction;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    // Create analyzer registry (core analyzers auto-registered)
-    let registry = Arc::new(AnalyzerRegistry::new());
-    
-    // Load rules engine from config
-    let engine = RuleEngine::from_file("rules.json", registry)?;
-    
-    // Analyze transaction
-    let tx: Transaction = build_transaction();
-    let result = engine.evaluate(&tx).await?;
-    
-    // Handle result
-    match result.risk_level {
-        RiskLevel::Critical => println!("🚫 BLOCK: {}", result.message),
-        RiskLevel::High => println!("⚠️  WARN: {}", result.message),
-        RiskLevel::Low => println!("✅ PASS"),
+    let mut registry = AnalyzerRegistry::new();
+    registry.register(Arc::new(BasicAnalyzer::new()));
+    registry.register(Arc::new(CoreSecurityAnalyzer::new(HashSet::new())));
+
+    let mut engine = RuleEngine::new(registry);
+    engine.load_rules_from_file("rules.json")?;
+
+    let tx: Transaction = build_transaction(); // your test transaction
+    let decision = engine.evaluate(&tx).await?;
+
+    if decision.matched {
+        println!("matched rule {:?}: {}", decision.action, decision.message);
+    } else {
+        println!("no rule matched");
     }
-    
+
     Ok(())
 }
 ```

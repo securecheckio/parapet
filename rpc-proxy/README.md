@@ -21,13 +21,15 @@ cp config.toml.example config.toml
 nano config.toml  # Edit settings
 ```
 
-**Environment variables** override TOML values when set:
-- `HELIUS_API_KEY` - API key for Helius analyzer (secret, use env var)
-- `JUPITER_API_KEY` - API key for Jupiter analyzer (secret, use env var)
-- `UPSTREAM_RPC_URL` - Override upstream RPC endpoint
-- `REDIS_URL` - Override Redis connection
-- `PROXY_PORT` - Override server port
-- `RULES_PATH` - Override rules file path
+**Environment variables** override TOML values when set (non-exhaustive):
+
+- `HELIUS_API_KEY`, `JUPITER_API_KEY` — analyzer secrets (prefer env, not TOML)
+- `UPSTREAM_RPC_URL` — single upstream URL, or use `UPSTREAM_RPC_URLS` (comma-separated) for failover
+- `UPSTREAM_STRATEGY`, `UPSTREAM_SMART_MAX_SLOT_LAG` — optional smart routing (multi-URL)
+- `ALLOWED_RPC_METHODS`, `BLOCKED_RPC_METHODS` — optional JSON-RPC method policy (comma-separated)
+- `REDIS_URL`, `PROXY_PORT`, `RULES_PATH` — common overrides
+
+See **[Upstream RPC](#upstream-rpc-multi-url-and-method-policy)** below and [`docs/OPERATIONS_GUIDE.md`](../docs/OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api) for full guidance.
 
 **Without `config.toml`:** Falls back to environment-only mode (not recommended for production).
 
@@ -59,9 +61,9 @@ nano config.toml  # Edit settings
 
 Defaults match `proxy/src/config.rs` unless noted. See `config.toml.example` for a filled-in template.
 
-**With a config file loaded:** Values come from TOML. These environment variables **still override** the file when set: `PROXY_PORT`, `UPSTREAM_RPC_URL`, `REDIS_URL`, `RULES_PATH`.
+**With a config file loaded:** Values come from TOML. Environment variables **still override** the file when set for the same keys (for example `UPSTREAM_RPC_URL`, `UPSTREAM_RPC_URLS`, `PROXY_PORT`, `REDIS_URL`, `RULES_PATH`, and the other upstream / security vars listed below).
 
-**Without `config.toml`:** Everything is taken from environment variables (`config::Config::from_env`). `UPSTREAM_RPC_URL` is required. `[[rule_feeds.sources]]` entries are only available via TOML, not env-only mode.
+**Without `config.toml`:** Everything is taken from environment variables (`config::Config::from_env`). Set **`UPSTREAM_RPC_URL`** *or* **`UPSTREAM_RPC_URLS`**. `[[rule_feeds.sources]]` entries are only available via TOML, not env-only mode.
 
 ### `[server]`
 
@@ -74,22 +76,51 @@ Defaults match `proxy/src/config.rs` unless noted. See `config.toml.example` for
 
 Env-only: `PROXY_PORT`, `BIND_ADDRESS`.
 
-### `[upstream]`
+### Upstream RPC (multi-URL and method policy)
 
+The proxy uses the shared **`parapet-upstream`** stack: one HTTP client per URL, retries on transient errors, per-URL circuit breakers, and optional **failover** (default) or **`smart`** routing across multiple URLs.
 
-| Key                            | Type    | Default              | Description                       |
-| ------------------------------ | ------- | -------------------- | --------------------------------- |
-| `url`                          | string  | *(required in TOML)* | Upstream Solana JSON-RPC URL      |
-| `max_concurrent`               | integer | `10`                 | Max concurrent upstream requests  |
-| `delay_ms`                     | integer | `100`                | Delay between upstream calls (ms) |
-| `timeout_secs`                 | integer | `30`                 | Per-request timeout               |
-| `max_retries`                  | integer | `3`                  | Retries on transient failures     |
-| `retry_base_delay_ms`          | integer | `100`                | Exponential backoff base (ms)     |
-| `circuit_breaker_threshold`    | integer | `5`                  | Failures before circuit opens     |
-| `circuit_breaker_timeout_secs` | integer | `60`                 | Cool-down before half-open        |
+**Rules:**
 
+- Set **either** `[upstream].url` **or** one or more **`[[upstream.endpoint]]`** entries — not both (config validation fails if both are used).
+- With **`[[upstream.endpoint]]`**, omit `url`. Sort order for failover is by **`priority`** (lower = preferred). Each row may override HTTP fields; omitted fields inherit from `[upstream]` defaults.
 
-Env-only: `UPSTREAM_RPC_URL`, `UPSTREAM_MAX_CONCURRENT`, `UPSTREAM_DELAY_MS`, `UPSTREAM_TIMEOUT_SECS`, `UPSTREAM_MAX_RETRIES`, `UPSTREAM_RETRY_BASE_DELAY_MS`, `UPSTREAM_CIRCUIT_BREAKER_THRESHOLD`, `UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS`.
+**TOML keys on `[upstream]` (shared defaults + strategy):**
+
+| Key | Type | Default | Description |
+| --- | ---- | ------- | ----------- |
+| `url` | string | empty | Single Solana JSON-RPC URL (single-URL mode) |
+| `strategy` | string | unset | Multi-URL only: omit or `"failover"` for priority order; `"smart"` for latency/slot-aware selection |
+| `smart_max_slot_lag` | integer | `20` | With `smart`, max tolerated slot lag between endpoints |
+| `max_concurrent` | integer | `10` | Default max concurrent upstream requests per client |
+| `delay_ms` | integer | `100` | Default delay between upstream calls (ms) |
+| `timeout_secs` | integer | `30` | Default per-request timeout |
+| `max_retries` | integer | `3` | Default retries on transient failures |
+| `retry_base_delay_ms` | integer | `100` | Default exponential backoff base (ms) |
+| `circuit_breaker_threshold` | integer | `5` | Default failures before circuit opens |
+| `circuit_breaker_timeout_secs` | integer | `60` | Default cool-down before half-open |
+
+**`[[upstream.endpoint]]` (repeatable, multi-URL mode):**
+
+| Key | Type | Default | Description |
+| --- | ---- | ------- | ----------- |
+| `url` | string | *(required)* | Endpoint JSON-RPC URL |
+| `priority` | integer | `0` | Lower = tried first on failover |
+| `max_concurrent` | integer | *(inherits)* | Override for this endpoint only |
+| `delay_ms` | integer | *(inherits)* | Override |
+| `timeout_secs` | integer | *(inherits)* | Override |
+| `max_retries` | integer | *(inherits)* | Override |
+| `retry_base_delay_ms` | integer | *(inherits)* | Override |
+| `circuit_breaker_threshold` | integer | *(inherits)* | Override |
+| `circuit_breaker_timeout_secs` | integer | *(inherits)* | Override |
+
+**Environment (overrides TOML when set):**
+
+`UPSTREAM_RPC_URL`, `UPSTREAM_RPC_URLS` (comma-separated), `UPSTREAM_STRATEGY`, `UPSTREAM_SMART_MAX_SLOT_LAG`, `UPSTREAM_MAX_CONCURRENT`, `UPSTREAM_DELAY_MS`, `UPSTREAM_TIMEOUT_SECS`, `UPSTREAM_MAX_RETRIES`, `UPSTREAM_RETRY_BASE_DELAY_MS`, `UPSTREAM_CIRCUIT_BREAKER_THRESHOLD`, `UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS`.
+
+**Env-only mode:** same upstream variables; **`UPSTREAM_RPC_URL` or `UPSTREAM_RPC_URLS` is required.**
+
+Copy **`config.toml.example`** for commented single- vs multi-upstream examples.
 
 ### `[network]`
 
@@ -110,9 +141,11 @@ Env-only: `SOLANA_NETWORK`.
 | `rules_path`                 | string           | —       | Path to rules JSON bundle                                                |
 | `rule_action_override`       | string           | —       | If set, force every rule’s action (e.g. `"alert"`)                       |
 | `blocked_programs`           | array of strings | —       | Program IDs to always block (TOML only; env-only mode does not set this) |
+| `allowed_methods`            | array of strings | `[]`    | If non-empty, only these JSON-RPC methods are accepted                   |
+| `blocked_methods`            | array of strings | `[]`    | Methods always rejected (evaluated before `allowed_methods`)             |
 
 
-Env-only: `DEFAULT_BLOCKING_THRESHOLD`, `RULE_ACTION_OVERRIDE`, `RULES_PATH` (and `RULES_PATH` overrides TOML when a file is loaded).
+Env-only: `DEFAULT_BLOCKING_THRESHOLD`, `RULE_ACTION_OVERRIDE`, `RULES_PATH` (and `RULES_PATH` overrides TOML when a file is loaded), `ALLOWED_RPC_METHODS`, `BLOCKED_RPC_METHODS` (comma-separated method names).
 
 ### `[auth]`
 

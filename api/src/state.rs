@@ -1,6 +1,7 @@
 use crate::middleware::McpRateLimiter;
 use crate::ApiStateAccess;
 use anyhow::Result;
+use parapet_upstream::{build_upstream_stack_with_strategy, UpstreamHttpSettings};
 use redis::aio::ConnectionManager;
 use std::sync::Arc;
 
@@ -9,6 +10,7 @@ pub struct AppState {
     pub redis: Arc<Option<ConnectionManager>>,
     pub config: Arc<Config>,
     pub mcp_rate_limiter: McpRateLimiter,
+    pub upstream_rpc: Arc<dyn parapet_upstream::UpstreamProvider>,
 }
 
 #[derive(Clone)]
@@ -27,6 +29,8 @@ pub struct Config {
 
     // Solana configuration
     pub solana_rpc_url: String,
+    /// Ordered RPC URLs (failover); first entry matches `solana_rpc_url`.
+    pub solana_rpc_urls: Vec<String>,
     pub solana_network: String,
 
     // Auth configuration
@@ -39,6 +43,13 @@ pub struct Config {
 
 impl AppState {
     pub async fn new(config: Config) -> Result<Self> {
+        let upstream_rpc = build_upstream_stack_with_strategy(
+            config.solana_rpc_urls.clone(),
+            UpstreamHttpSettings::default(),
+            None,
+            20,
+        )?;
+
         log::info!("🔗 Connecting to Redis: {}", config.redis_url);
 
         // Attempt Redis connection with graceful degradation
@@ -92,12 +103,20 @@ impl AppState {
                 config_arc.max_concurrent_scans,
                 config_arc.scans_per_hour_per_key,
             ),
+            upstream_rpc,
         })
     }
 
     /// Create AppState without Redis connection (for testing)
     pub fn new_without_redis(config: Config) -> Self {
         let config_arc = Arc::new(config);
+        let upstream_rpc = build_upstream_stack_with_strategy(
+            config_arc.solana_rpc_urls.clone(),
+            UpstreamHttpSettings::default(),
+            None,
+            20,
+        )
+        .expect("upstream RPC stack");
 
         Self {
             redis: Arc::new(None),
@@ -106,6 +125,7 @@ impl AppState {
                 config_arc.max_concurrent_scans,
                 config_arc.scans_per_hour_per_key,
             ),
+            upstream_rpc,
         }
     }
 }
@@ -122,5 +142,9 @@ impl ApiStateAccess for AppState {
 
     fn mcp_rate_limiter(&self) -> &McpRateLimiter {
         &self.mcp_rate_limiter
+    }
+
+    fn upstream_rpc(&self) -> &Arc<dyn parapet_upstream::UpstreamProvider> {
+        &self.upstream_rpc
     }
 }

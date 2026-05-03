@@ -67,7 +67,7 @@ Example: `system:sol_recipients` empty → skip; two recipients → only `sol_re
 
 **Global** (`"scope": "global"`): one counter namespace across all wallets.
 
-### Flowbit operations
+### Flowstate operations
 
 **Set** — boolean flag for a TTL:
 

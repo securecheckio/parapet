@@ -7,10 +7,14 @@ port = 8899
 bind_address = "0.0.0.0"
 
 [upstream]
-# REQUIRED: Set via UPSTREAM_RPC_URL env var or here
+# Single URL (default): use `url` OR multiple `[[upstream.endpoint]]` — not both.
+# Env: UPSTREAM_RPC_URL (single) or comma-separated UPSTREAM_RPC_URLS
 url = "https://api.mainnet-beta.solana.com"
+# Optional: UPSTREAM_STRATEGY=smart for latency/slot-aware routing (multi-endpoint only)
+# strategy = "smart"
+# smart_max_slot_lag = 20
 
-# Rate limiting
+# Rate limiting (defaults for single-url mode; per-endpoint overrides below)
 max_concurrent = 10
 delay_ms = 100
 
@@ -22,6 +26,15 @@ retry_base_delay_ms = 100
 # Circuit Breaker (Prevents Cascading Failures)
 circuit_breaker_threshold = 5
 circuit_breaker_timeout_secs = 60
+
+# Multi-upstream example (uncomment and remove `url` above):
+# [[upstream.endpoint]]
+# url = "https://api.mainnet-beta.solana.com"
+# priority = 0
+# circuit_breaker_threshold = 3
+# [[upstream.endpoint]]
+# url = "https://rpc.ankr.com/solana"
+# priority = 1
 
 [network]
 network = "mainnet-beta"
@@ -41,6 +54,11 @@ network = "mainnet-beta"
 default_blocking_threshold = 70
 rules_path = "./rules/presets/default-protection.json"
 # rule_action_override = "alert"  # Uncomment to override all rule actions
+
+# Optional JSON-RPC method policy (public RPC): empty lists = allow all (default).
+# Env: ALLOWED_RPC_METHODS / BLOCKED_RPC_METHODS (comma-separated)
+# allowed_methods = ["getAccountInfo", "getTransaction", "getSignaturesForAddress"]
+# blocked_methods = ["sendTransaction", "simulateTransaction", "requestAirdrop"]
 
 # Optional: Block specific programs by ID
 # blocked_programs = [

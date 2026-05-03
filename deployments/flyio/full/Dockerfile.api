@@ -2,11 +2,14 @@
 
 FROM rustlang/rust:nightly as builder
 WORKDIR /build
+# Full workspace members must exist for `cargo` to load the workspace root manifest.
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
+COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
 COPY api ./api
-COPY rpc-proxy/rules ./rpc-proxy/rules
+COPY mcp ./mcp
+COPY tools ./tools
 RUN cargo build --release -p parapet-api --bin parapet-api
 
 FROM debian:bookworm-slim

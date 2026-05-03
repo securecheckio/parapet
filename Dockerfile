@@ -1,6 +1,9 @@
 # Parapet - Unified Multi-Binary Docker Image
 # Builds all Parapet binaries in a single image for flexible deployment
 # Docker Compose can use this single image with different CMD values
+#
+# Build from the `parapet/` directory (this file lives next to Cargo.toml):
+#   docker build -t parapet:latest .
 
 # ============================================
 # Builder Stage: Compile all Rust binaries
@@ -51,7 +54,7 @@ COPY --from=builder /build/target/release/keygen /usr/local/bin/
 COPY --from=builder /build/target/release/rpc-perf /usr/local/bin/
 
 # Copy rules (config files should be mounted at runtime or use env vars)
-COPY rpc-proxy/rules ./rules
+COPY rules ./rules
 
 # Create non-root user for security
 RUN useradd -m -u 1000 parapet && \

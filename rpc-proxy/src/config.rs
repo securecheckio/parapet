@@ -1,4 +1,5 @@
 use anyhow::Result;
+use parapet_upstream::parse_upstream_urls_list;
 use serde::Deserialize;
 use std::path::Path;
 
@@ -38,7 +39,17 @@ pub struct ServerConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct UpstreamConfig {
+    /// Single RPC URL (mutually exclusive with `endpoint` when non-empty).
+    #[serde(default)]
     pub url: String,
+    /// Multiple RPC endpoints with priority (lower `priority` tried first).
+    #[serde(default)]
+    pub endpoint: Vec<UpstreamEndpoint>,
+    /// Optional routing strategy: `failover` (default) or `smart` (latency / slot hints).
+    #[serde(default)]
+    pub strategy: Option<String>,
+    #[serde(default = "default_upstream_smart_max_slot_lag")]
+    pub smart_max_slot_lag: u64,
     #[serde(default = "default_max_concurrent")]
     pub max_concurrent: usize,
     #[serde(default = "default_delay_ms")]
@@ -53,6 +64,20 @@ pub struct UpstreamConfig {
     pub circuit_breaker_threshold: usize,
     #[serde(default = "default_circuit_breaker_timeout_secs")]
     pub circuit_breaker_timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct UpstreamEndpoint {
+    pub url: String,
+    #[serde(default)]
+    pub priority: u32,
+    pub max_concurrent: Option<usize>,
+    pub delay_ms: Option<u64>,
+    pub timeout_secs: Option<u64>,
+    pub max_retries: Option<usize>,
+    pub retry_base_delay_ms: Option<u64>,
+    pub circuit_breaker_threshold: Option<usize>,
+    pub circuit_breaker_timeout_secs: Option<u64>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,6 +103,12 @@ pub struct SecurityConfig {
     pub blocked_program_feeds: Option<Vec<String>>,
     #[serde(default = "default_feed_poll_interval")]
     pub feed_poll_interval_secs: u64,
+    /// When non-empty, only these JSON-RPC methods are accepted (public allowlist).
+    #[serde(default)]
+    pub allowed_methods: Vec<String>,
+    /// Methods always rejected (applied before `allowed_methods`).
+    #[serde(default)]
+    pub blocked_methods: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -214,6 +245,10 @@ fn default_ttl_seconds() -> u64 {
     86400 // 24 hours
 }
 
+fn default_upstream_smart_max_slot_lag() -> u64 {
+    20
+}
+
 impl Default for ServerConfig {
     fn default() -> Self {
         Self {
@@ -227,6 +262,9 @@ impl Default for UpstreamConfig {
     fn default() -> Self {
         Self {
             url: String::new(),
+            endpoint: Vec::new(),
+            strategy: None,
+            smart_max_slot_lag: default_upstream_smart_max_slot_lag(),
             max_concurrent: default_max_concurrent(),
             delay_ms: default_delay_ms(),
             timeout_secs: default_timeout_secs(),
@@ -258,6 +296,8 @@ impl Default for SecurityConfig {
             blocked_hashes: None,
             blocked_program_feeds: None,
             feed_poll_interval_secs: default_feed_poll_interval(),
+            allowed_methods: Vec::new(),
+            blocked_methods: Vec::new(),
         }
     }
 }
@@ -327,11 +367,95 @@ impl Default for ActivityFeedConfig {
     }
 }
 
+impl UpstreamConfig {
+    pub fn validate(&self) -> Result<()> {
+        let has_url = !self.url.trim().is_empty();
+        let has_ep = !self.endpoint.is_empty();
+        if has_url && has_ep {
+            anyhow::bail!("upstream: specify either `url` or `[[upstream.endpoint]]`, not both");
+        }
+        if !has_url && !has_ep {
+            anyhow::bail!("upstream: set `url` or at least one `[[upstream.endpoint]]`");
+        }
+        Ok(())
+    }
+
+    /// First URL in priority order (for ProgramAnalyzer and similar).
+    pub fn primary_url(&self) -> String {
+        self.ordered_rpc_urls()
+            .into_iter()
+            .next()
+            .unwrap_or_default()
+    }
+
+    pub fn ordered_rpc_urls(&self) -> Vec<String> {
+        if !self.endpoint.is_empty() {
+            let mut eps = self.endpoint.clone();
+            eps.sort_by(|a, b| a.priority.cmp(&b.priority));
+            eps.into_iter().map(|e| e.url).collect()
+        } else {
+            vec![self.url.clone()]
+                .into_iter()
+                .filter(|u| !u.trim().is_empty())
+                .collect()
+        }
+    }
+
+    /// `(url, per-endpoint HTTP settings)` sorted by priority.
+    pub fn ordered_upstream_http_settings(
+        &self,
+    ) -> Vec<(String, parapet_upstream::UpstreamHttpSettings)> {
+        let base = parapet_upstream::UpstreamHttpSettings {
+            max_concurrent: self.max_concurrent,
+            delay_ms: self.delay_ms,
+            timeout_secs: self.timeout_secs,
+            max_retries: self.max_retries,
+            retry_base_delay_ms: self.retry_base_delay_ms,
+            circuit_breaker_threshold: self.circuit_breaker_threshold,
+            circuit_breaker_timeout_secs: self.circuit_breaker_timeout_secs,
+        };
+        if !self.endpoint.is_empty() {
+            let mut eps = self.endpoint.clone();
+            eps.sort_by(|a, b| a.priority.cmp(&b.priority));
+            eps.into_iter()
+                .map(|e| {
+                    let mut s = base.clone();
+                    if let Some(v) = e.max_concurrent {
+                        s.max_concurrent = v;
+                    }
+                    if let Some(v) = e.delay_ms {
+                        s.delay_ms = v;
+                    }
+                    if let Some(v) = e.timeout_secs {
+                        s.timeout_secs = v;
+                    }
+                    if let Some(v) = e.max_retries {
+                        s.max_retries = v;
+                    }
+                    if let Some(v) = e.retry_base_delay_ms {
+                        s.retry_base_delay_ms = v;
+                    }
+                    if let Some(v) = e.circuit_breaker_threshold {
+                        s.circuit_breaker_threshold = v;
+                    }
+                    if let Some(v) = e.circuit_breaker_timeout_secs {
+                        s.circuit_breaker_timeout_secs = v;
+                    }
+                    (e.url, s)
+                })
+                .collect()
+        } else {
+            vec![(self.url.clone(), base)]
+        }
+    }
+}
+
 impl Config {
     /// Load config from TOML file
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let content = std::fs::read_to_string(path)?;
         let config: Config = toml::from_str(&content)?;
+        config.upstream.validate()?;
         Ok(config)
     }
 
@@ -346,8 +470,41 @@ impl Config {
             }
         }
 
-        if let Ok(url) = std::env::var("UPSTREAM_RPC_URL") {
+        if let Ok(urls) = std::env::var("UPSTREAM_RPC_URLS") {
+            config.upstream.url.clear();
+            config.upstream.endpoint = parse_upstream_urls_list(&urls)
+                .into_iter()
+                .enumerate()
+                .map(|(i, url)| UpstreamEndpoint {
+                    url,
+                    priority: i as u32,
+                    max_concurrent: None,
+                    delay_ms: None,
+                    timeout_secs: None,
+                    max_retries: None,
+                    retry_base_delay_ms: None,
+                    circuit_breaker_threshold: None,
+                    circuit_breaker_timeout_secs: None,
+                })
+                .collect();
+        } else if let Ok(url) = std::env::var("UPSTREAM_RPC_URL") {
             config.upstream.url = url;
+            config.upstream.endpoint.clear();
+        }
+
+        if let Ok(allowed) = std::env::var("ALLOWED_RPC_METHODS") {
+            config.security.allowed_methods = allowed
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+        }
+        if let Ok(blocked) = std::env::var("BLOCKED_RPC_METHODS") {
+            config.security.blocked_methods = blocked
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
         }
 
         if let Ok(redis_url) = std::env::var("REDIS_URL") {
@@ -358,6 +515,7 @@ impl Config {
             config.security.rules_path = Some(rules_path);
         }
 
+        config.upstream.validate()?;
         Ok(config)
     }
 
@@ -372,38 +530,67 @@ impl Config {
                 bind_address: std::env::var("BIND_ADDRESS")
                     .unwrap_or_else(|_| "0.0.0.0".to_string()),
             },
-            upstream: UpstreamConfig {
-                url: std::env::var("UPSTREAM_RPC_URL").expect("UPSTREAM_RPC_URL must be set"),
-                max_concurrent: std::env::var("UPSTREAM_MAX_CONCURRENT")
+            upstream: {
+                let mut u = UpstreamConfig {
+                    url: String::new(),
+                    endpoint: Vec::new(),
+                    strategy: std::env::var("UPSTREAM_STRATEGY").ok(),
+                    smart_max_slot_lag: std::env::var("UPSTREAM_SMART_MAX_SLOT_LAG")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or_else(default_upstream_smart_max_slot_lag),
+                    max_concurrent: std::env::var("UPSTREAM_MAX_CONCURRENT")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(10),
+                    delay_ms: std::env::var("UPSTREAM_DELAY_MS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(100),
+                    timeout_secs: std::env::var("UPSTREAM_TIMEOUT_SECS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(30),
+                    max_retries: std::env::var("UPSTREAM_MAX_RETRIES")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(3),
+                    retry_base_delay_ms: std::env::var("UPSTREAM_RETRY_BASE_DELAY_MS")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(100),
+                    circuit_breaker_threshold: std::env::var("UPSTREAM_CIRCUIT_BREAKER_THRESHOLD")
+                        .ok()
+                        .and_then(|v| v.parse().ok())
+                        .unwrap_or(5),
+                    circuit_breaker_timeout_secs: std::env::var(
+                        "UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS",
+                    )
                     .ok()
                     .and_then(|v| v.parse().ok())
-                    .unwrap_or(10),
-                delay_ms: std::env::var("UPSTREAM_DELAY_MS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(100),
-                timeout_secs: std::env::var("UPSTREAM_TIMEOUT_SECS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(30),
-                max_retries: std::env::var("UPSTREAM_MAX_RETRIES")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(3),
-                retry_base_delay_ms: std::env::var("UPSTREAM_RETRY_BASE_DELAY_MS")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(100),
-                circuit_breaker_threshold: std::env::var("UPSTREAM_CIRCUIT_BREAKER_THRESHOLD")
-                    .ok()
-                    .and_then(|v| v.parse().ok())
-                    .unwrap_or(5),
-                circuit_breaker_timeout_secs: std::env::var(
-                    "UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS",
-                )
-                .ok()
-                .and_then(|v| v.parse().ok())
-                .unwrap_or(60),
+                    .unwrap_or(60),
+                };
+                if let Ok(urls) = std::env::var("UPSTREAM_RPC_URLS") {
+                    u.endpoint = parse_upstream_urls_list(&urls)
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, url)| UpstreamEndpoint {
+                            url,
+                            priority: i as u32,
+                            max_concurrent: None,
+                            delay_ms: None,
+                            timeout_secs: None,
+                            max_retries: None,
+                            retry_base_delay_ms: None,
+                            circuit_breaker_threshold: None,
+                            circuit_breaker_timeout_secs: None,
+                        })
+                        .collect();
+                } else {
+                    u.url = std::env::var("UPSTREAM_RPC_URL")
+                        .expect("UPSTREAM_RPC_URL or UPSTREAM_RPC_URLS must be set");
+                }
+                u
             },
             network: NetworkConfig {
                 network: std::env::var("SOLANA_NETWORK")
@@ -422,6 +609,24 @@ impl Config {
                 blocked_hashes: None,
                 blocked_program_feeds: None,
                 feed_poll_interval_secs: default_feed_poll_interval(),
+                allowed_methods: std::env::var("ALLOWED_RPC_METHODS")
+                    .ok()
+                    .map(|s| {
+                        s.split(',')
+                            .map(|x| x.trim().to_string())
+                            .filter(|x| !x.is_empty())
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                blocked_methods: std::env::var("BLOCKED_RPC_METHODS")
+                    .ok()
+                    .map(|s| {
+                        s.split(',')
+                            .map(|x| x.trim().to_string())
+                            .filter(|x| !x.is_empty())
+                            .collect()
+                    })
+                    .unwrap_or_default(),
             },
             auth: AuthConfig {
                 mode: std::env::var("AUTH_MODE").unwrap_or_else(|_| "none".to_string()),
@@ -489,6 +694,7 @@ impl Config {
             },
         };
 
+        config.upstream.validate()?;
         Ok(config)
     }
 }

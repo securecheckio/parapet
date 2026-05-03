@@ -1,9 +1,10 @@
 use solana_sdk::{
-    instruction::CompiledInstruction,
+    message::compiled_instruction::CompiledInstruction,
     message::VersionedMessage,
     pubkey::Pubkey,
     transaction::{Transaction, VersionedTransaction},
 };
+use solana_sdk_ids::{compute_budget, system_program};
 use std::collections::HashMap;
 
 /// Trait for program-specific decoders (pluggable architecture)
@@ -76,6 +77,10 @@ impl DecoderRegistry {
             VersionedMessage::Legacy(legacy_msg) => (
                 legacy_msg.instructions.as_slice(),
                 legacy_msg.account_keys.as_slice(),
+            ),
+            VersionedMessage::V1(v1_msg) => (
+                v1_msg.instructions.as_slice(),
+                v1_msg.account_keys.as_slice(),
             ),
         };
 
@@ -259,7 +264,7 @@ pub struct SystemProgramDecoder;
 
 impl ProgramDecoder for SystemProgramDecoder {
     fn program_id(&self) -> Pubkey {
-        solana_sdk::system_program::id()
+        system_program::id()
     }
 
     fn program_name(&self) -> &str {
@@ -304,7 +309,9 @@ pub struct TokenProgramDecoder;
 
 impl ProgramDecoder for TokenProgramDecoder {
     fn program_id(&self) -> Pubkey {
-        spl_token::ID
+        // `spl_token_interface::id()` is the canonical SPL Token program address; bridge to
+        // `solana_sdk::Pubkey` (different `solana-pubkey` major lines in the dependency graph).
+        Pubkey::new_from_array(*spl_token_interface::id().as_array())
     }
 
     fn program_name(&self) -> &str {
@@ -366,7 +373,7 @@ pub struct ComputeBudgetDecoder;
 
 impl ProgramDecoder for ComputeBudgetDecoder {
     fn program_id(&self) -> Pubkey {
-        solana_sdk::compute_budget::ID
+        compute_budget::id()
     }
 
     fn program_name(&self) -> &str {
@@ -423,14 +430,4 @@ impl ProgramDecoder for ComputeBudgetDecoder {
             _ => None,
         }
     }
-}
-
-// Stub SPL token ID (normally from spl_token crate)
-mod spl_token {
-    use solana_sdk::pubkey::Pubkey;
-
-    pub const ID: Pubkey = Pubkey::new_from_array([
-        6, 221, 246, 225, 215, 101, 161, 147, 217, 203, 225, 70, 206, 235, 121, 172, 28, 180, 133,
-        237, 95, 91, 55, 145, 58, 140, 245, 133, 126, 255, 0, 169,
-    ]);
 }

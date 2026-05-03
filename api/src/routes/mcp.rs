@@ -8,7 +8,7 @@ use futures::stream::{self, Stream};
 use parapet_scanner::{ScanConfig, WalletScanner};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_commitment_config::CommitmentConfig;
 use std::{convert::Infallible, time::Duration};
 
 use crate::ApiStateAccess;

@@ -4,9 +4,8 @@ use serde_json::{json, Value};
 use solana_sdk::pubkey::Pubkey;
 use solana_sdk::transaction::Transaction;
 use std::collections::HashMap;
-use std::str::FromStr;
 
-const SYSTEM_PROGRAM: &str = "11111111111111111111111111111111";
+const SYSTEM_PROGRAM: Pubkey = solana_sdk::pubkey!("11111111111111111111111111111111");
 
 // System program instruction discriminators
 const CREATE_ACCOUNT: u32 = 0;
@@ -47,7 +46,6 @@ impl SystemProgramAnalyzer {
 
     fn analyze_system_instructions(tx: &Transaction) -> SystemStats {
         let mut stats = SystemStats::default();
-        let system_program = Pubkey::from_str(SYSTEM_PROGRAM).unwrap();
 
         for instruction in &tx.message.instructions {
             if let Some(program_id) = tx
@@ -55,7 +53,7 @@ impl SystemProgramAnalyzer {
                 .account_keys
                 .get(instruction.program_id_index as usize)
             {
-                if program_id != &system_program {
+                if program_id != &SYSTEM_PROGRAM {
                     continue;
                 }
 
@@ -95,7 +93,7 @@ impl SystemProgramAnalyzer {
                             stats.uses_durable_nonce = true;
                             stats.advances_nonce = true;
                             // Extract nonce account (accounts[0])
-                            if let Some(&nonce_idx) = instruction.accounts.get(0) {
+                            if let Some(&nonce_idx) = instruction.accounts.first() {
                                 if let Some(nonce_account) =
                                     tx.message.account_keys.get(nonce_idx as usize)
                                 {

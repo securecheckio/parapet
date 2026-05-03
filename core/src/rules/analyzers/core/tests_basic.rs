@@ -6,6 +6,7 @@ mod tests {
         instruction::Instruction, message::Message, pubkey::Pubkey, signature::Keypair,
         signer::Signer, transaction::Transaction,
     };
+    use solana_sdk_ids::system_program;
     use solana_system_interface::instruction as system_instruction;
 
     #[tokio::test]
@@ -70,12 +71,35 @@ mod tests {
         assert_eq!(fields.get("signers_count").unwrap(), &serde_json::json!(1));
     }
 
+    /// System transfer: payer (writable signer) + recipient (writable) + system program (readonly).
+    #[tokio::test]
+    async fn test_basic_analyzer_writable_accounts_count_transfer() {
+        let analyzer = BasicAnalyzer::new();
+        let payer = Keypair::new();
+        let recipient = Pubkey::new_unique();
+
+        let transfer = system_instruction::transfer(&payer.pubkey(), &recipient, 1000);
+        let message = Message::new(&[transfer], Some(&payer.pubkey()));
+        let tx = Transaction::new_unsigned(message);
+
+        let fields = analyzer.analyze(&tx).await.unwrap();
+
+        assert_eq!(
+            fields
+                .get("writable_accounts_count")
+                .unwrap()
+                .as_u64()
+                .unwrap(),
+            2
+        );
+    }
+
     #[tokio::test]
     async fn test_basic_analyzer_program_ids() {
         let analyzer = BasicAnalyzer::new();
         let payer = Keypair::new();
 
-        let system_program = solana_sdk::system_program::id();
+        let system_program = system_program::id();
         let transfer = system_instruction::transfer(&payer.pubkey(), &Pubkey::new_unique(), 1000);
 
         let message = Message::new(&[transfer], Some(&payer.pubkey()));
@@ -167,7 +191,7 @@ mod tests {
 
     #[test]
     fn test_basic_analyzer_default() {
-        let analyzer = BasicAnalyzer::default();
+        let analyzer = BasicAnalyzer;
         assert_eq!(analyzer.name(), "basic");
     }
 }

@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod rule_tests {
     use super::super::*;
     use crate::rules::analyzers::BasicAnalyzer;
     use solana_sdk::{message::Message, pubkey::Pubkey, transaction::Transaction};

@@ -50,31 +50,46 @@ cargo run -p parapet-scanner -- \
 Run the RPC proxy to protect transactions in real-time:
 
 ```bash
-# Start proxy
+# Recommended: TOML (see rpc-proxy/config.toml.example)
+cp rpc-proxy/config.toml.example rpc-proxy/config.toml
+# Edit [upstream] then:
+cargo run -p parapet-rpc-proxy --bin parapet-rpc-proxy
+
+# CLI override (single URL)
 cargo run -p parapet-rpc-proxy -- \
   --upstream-rpc https://api.mainnet-beta.solana.com \
   --port 8899
 
-# Or use environment variables
+# Or environment variables (overrides TOML when set)
 export UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
-cargo run -p parapet-rpc-proxy
+# Multi-endpoint failover (comma-separated):
+# export UPSTREAM_RPC_URLS=https://primary.example.com,https://backup.example.com
+# Optional: UPSTREAM_STRATEGY=smart  UPSTREAM_SMART_MAX_SLOT_LAG=20
+cargo run -p parapet-rpc-proxy --bin parapet-rpc-proxy
 ```
 
 Then point your Solana client to `http://localhost:8899`.
 
+For **multi-upstream**, method allow/block lists, and production notes, see [Operations Guide — Multi-upstream RPC](OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api) and [rpc-proxy/README.md](../rpc-proxy/README.md#upstream-rpc-multi-url-and-method-policy).
+
 ## Configuration
 
-### Environment Variables
+Prefer **`rpc-proxy/config.toml`** (copy from `config.toml.example`) so upstream URLs, retries, circuit breakers, and optional **`[security].allowed_methods` / `blocked_methods`** live in one place. Use environment variables for secrets and for **overrides** in containers.
+
+### Environment Variables (proxy)
 
 ```bash
-# Required
+# Upstream: set ONE of these (not both)
 UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
+# UPSTREAM_RPC_URLS=https://a.example.com,https://b.example.com
 
 # Optional
 PROXY_PORT=8899
-DEFAULT_BLOCK_THRESHOLD=70        # 0-100, higher = more permissive
-REDIS_URL=redis://localhost:6379  # For caching/rate limiting
-RUST_LOG=info                     # Log level
+DEFAULT_BLOCKING_THRESHOLD=70     # 0–255 risk threshold (see rpc-proxy config reference)
+REDIS_URL=redis://localhost:6379  # For caching / usage / escalations when enabled
+ALLOWED_RPC_METHODS=getHealth,getAccountInfo   # Optional allowlist (comma-separated)
+BLOCKED_RPC_METHODS=sendTransaction            # Optional blocklist
+RUST_LOG=info
 ```
 
 ### Rules Configuration
@@ -120,7 +135,7 @@ Transactions are blocked when `risk_score >= threshold` (default: 70).
 ```bash
 # Run proxy with bot-essentials rules
 export UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com
-export DEFAULT_BLOCK_THRESHOLD=60  # Block more aggressively
+export DEFAULT_BLOCKING_THRESHOLD=60  # Block more aggressively
 cargo run -p parapet-rpc-proxy -- --rules rpc-proxy/rules/presets/bot-essentials.json
 
 # Configure bot to use http://localhost:8899
@@ -166,11 +181,11 @@ cargo run -p parapet-rpc-proxy 2>&1 | tee parapet.log
 ## Troubleshooting
 
 ### Proxy won't start
-- Check `UPSTREAM_RPC_URL` is set and reachable
+- Check **`UPSTREAM_RPC_URL`** or **`UPSTREAM_RPC_URLS`** is set (env-only), or `[upstream]` is filled in `config.toml`
 - Verify port 8899 is not in use: `lsof -i :8899`
 
 ### Too many false positives
-- Increase threshold: `DEFAULT_BLOCK_THRESHOLD=80`
+- Increase threshold: `DEFAULT_BLOCKING_THRESHOLD=80`
 - Use a less restrictive preset or create custom rules
 
 ### Missing Redis errors

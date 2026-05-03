@@ -5,18 +5,18 @@ use log::{debug, info, warn};
 use parapet_core::rules::{AnalyzerRegistry, RuleAction, RuleDecision, RuleEngine};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcTransactionConfig;
+use solana_client::rpc_config::UiTransactionEncoding;
+use solana_client::rpc_response::{
+    EncodedTransaction, EncodedTransactionWithStatusMeta, OptionSerializer, UiInstruction,
+};
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
     bs58,
-    commitment_config::CommitmentConfig,
     message::{Message, VersionedMessage},
     pubkey::Pubkey,
     signature::Signature,
     transaction::Transaction,
     transaction::VersionedTransaction,
-};
-use solana_transaction_status::{
-    option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta,
-    UiInstruction, UiTransactionEncoding,
 };
 use std::io::Write;
 use std::str::FromStr;
@@ -507,6 +507,9 @@ impl HistoryScanner {
                     message,
                 })
             }
+            VersionedMessage::V1(_) => Err(anyhow!(
+                "V1 transaction messages are not supported for legacy conversion in this scanner path"
+            )),
         }
     }
 

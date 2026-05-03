@@ -13,7 +13,7 @@ A complete security layer for Solana transactions with:
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- A Solana RPC endpoint (or use public: `https://api.mainnet-beta.solana.com`)
+- A Solana RPC endpoint (or use public: `https://api.mainnet-beta.solana.com`). For **multiple RPC endpoints** (failover) on the proxy or API, see [Operations Guide — Multi-upstream RPC](OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api).
 - Your wallet address (for approving risky transactions)
 
 ## Start Parapet

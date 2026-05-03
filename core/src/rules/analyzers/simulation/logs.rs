@@ -65,11 +65,8 @@ impl SimulationLogAnalyzer {
     /// Extract instruction name from "Program log: Instruction: X"
     fn extract_instruction_name(log: &str) -> Option<String> {
         let prefix = "Program log: Instruction: ";
-        if log.starts_with(prefix) {
-            Some(log[prefix.len()..].trim().to_string())
-        } else {
-            None
-        }
+        log.strip_prefix(prefix)
+            .map(|stripped| stripped.trim().to_string())
     }
 }
 

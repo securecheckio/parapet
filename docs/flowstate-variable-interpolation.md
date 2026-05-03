@@ -57,11 +57,11 @@ When a variable maps to an array field:
 
 **Transaction with no SOL transfers**:
 - `system:sol_recipients` = `[]` (empty array)
-- **Result**: Flowbit operation skipped (no increment)
+- **Result**: Flowstate operation skipped (no increment)
 
 **Transaction with 2 SOL transfers**:
 - `system:sol_recipients` = `["7xK...9mP", "3vQ...2nR"]`
-- **Result**: Flowbit `transfers_to:7xK...9mP` incremented (first element only)
+- **Result**: Flowstate `transfers_to:7xK...9mP` incremented (first element only)
 
 ## Use Cases
 
@@ -94,7 +94,7 @@ When a variable maps to an array field:
 
 **How it works**:
 1. Transaction sends to `7xK...9mP`
-2. Flowbit `transfers_to:7xK...9mP` = 1
+2. Flowstate `transfers_to:7xK...9mP` = 1
 3. Next transaction to same address: `transfers_to:7xK...9mP` = 2
 4. Transaction to different address `3vQ...2nR`: `transfers_to:3vQ...2nR` = 1
 5. Fourth transaction to `7xK...9mP`: `transfers_to:7xK...9mP` = 4 → **BLOCKED**
@@ -201,8 +201,8 @@ When a variable maps to an array field:
 
 **How it works**:
 1. Transaction advances nonce `NonceAcc123`: `nonce_advanced:NonceAcc123` = true (TTL: 30 min)
-2. High-value transfer uses `NonceAcc123`: Flowbit is set → **ALLOWED**
-3. 31 minutes later, transfer uses `NonceAcc123`: Flowbit expired → **BLOCKED**
+2. High-value transfer uses `NonceAcc123`: Flowstate is set → **ALLOWED**
+3. 31 minutes later, transfer uses `NonceAcc123`: Flowstate expired → **BLOCKED**
 
 ### 5. Track Unknown Program Interaction
 
@@ -299,7 +299,7 @@ Tracks flowstate across all wallets.
 - Wallet B → Recipient X: `suspicious_recipient:RecipientX` (global) = 2
 - **Shared counter across all wallets**
 
-## Flowbit Operations
+## Flowstate Operations
 
 ### Set
 
@@ -415,7 +415,7 @@ If variable doesn't use `analyzer:field_name` format:
 ```
 WARN: Invalid variable format 'foo' - use 'analyzer:field_name' or 'analyzer:field_name[index]'
 ```
-**Result**: Flowbit operation skipped
+**Result**: Flowstate operation skipped
 
 ### Field Not Found
 
@@ -423,7 +423,7 @@ If the mapped field doesn't exist:
 ```
 WARN: Field system:sol_recipients not found for variable {recipient}
 ```
-**Result**: Flowbit operation skipped
+**Result**: Flowstate operation skipped
 
 ### Empty Array
 
@@ -431,7 +431,7 @@ If the array field is empty:
 ```
 // No warning - expected behavior
 ```
-**Result**: Flowbit operation skipped
+**Result**: Flowstate operation skipped
 
 ### Unsupported Type
 
@@ -439,7 +439,7 @@ If the field value cannot be converted to string:
 ```
 WARN: Field analyzer:field has unsupported type for interpolation
 ```
-**Result**: Flowbit operation skipped
+**Result**: Flowstate operation skipped
 
 **Note**: Strings, numbers, and booleans are automatically converted to strings. Complex types (objects, null) are not supported.
 
@@ -472,7 +472,7 @@ Each unique interpolated flowstate name consumes:
 ### Enable Debug Logging
 
 ```bash
-RUST_LOG=sol_shield_core::rules::engine=debug parapet-rpc-proxy
+RUST_LOG=parapet_core::rules::engine=debug parapet-rpc-proxy
 ```
 
 ### Check Interpolation
@@ -484,7 +484,7 @@ WARN: Unknown variable in flowstate template: {invalid}
 WARN: Field not found for variable {recipient}
 ```
 
-### Inspect Flowbit State
+### Inspect Flowstate State
 
 Add a debug endpoint to your proxy:
 ```rust

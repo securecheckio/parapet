@@ -368,7 +368,7 @@ mod tests {
     fn test_spl_set_authority_does_not_match_advance_nonce() {
         // System Program AdvanceNonceAccount is [4,0,0,0] — must NOT match set_authority_spl
         // which requires [4,0,0,0,1] (5 bytes)
-        use solana_sdk::instruction::CompiledInstruction;
+        use solana_sdk::message::compiled_instruction::CompiledInstruction;
         use solana_sdk::message::Message;
         use solana_sdk::pubkey::Pubkey;
 
@@ -406,7 +406,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_scan_detects_matching_instruction() {
-        use solana_sdk::instruction::CompiledInstruction;
+        use solana_sdk::message::compiled_instruction::CompiledInstruction;
         use solana_sdk::message::Message;
         use solana_sdk::pubkey::Pubkey;
 
@@ -448,7 +448,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_scan_no_match_on_empty_data() {
-        use solana_sdk::instruction::CompiledInstruction;
+        use solana_sdk::message::compiled_instruction::CompiledInstruction;
         use solana_sdk::message::Message;
         use solana_sdk::pubkey::Pubkey;
 

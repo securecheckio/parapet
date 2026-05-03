@@ -18,21 +18,15 @@ This guide explains how to configure Parapet's flowstate system for different de
 ### Core FlowState Settings
 
 ```bash
-# Enable/disable flowstate (default: enabled if not set)
-SOLSHIELD_FLOWBITS_ENABLED=true
+# Enable flowstate in the rule engine (parapet-core)
+PARAPET_FLOWSTATE_ENABLED=true
 
-# Maximum number of wallets to track (default: unlimited)
-# For AI agents: Set to 1
-# For enterprise: Set based on number of internal wallets (e.g., 100, 1000)
-SOLSHIELD_FLOWBITS_MAX_WALLETS=unlimited
+# Optional: max wallets tracked in memory (omit for no limit)
+# PARAPET_FLOWSTATE_MAX_WALLETS=1   # AI agent: single wallet
+# PARAPET_FLOWSTATE_MAX_WALLETS=1000  # Enterprise: many internal wallets
 
-# Default TTL for flowstate in seconds (default: 3600 = 1 hour)
-# Can be overridden per-rule
-SOLSHIELD_FLOWBITS_DEFAULT_TTL=3600
-
-# Maximum global flowstate keys (default: 10000)
-# For enterprise cross-wallet detection
-SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=10000
+# Optional: default TTL for new flowstate entries (seconds; per-rule ttl can override)
+PARAPET_FLOWSTATE_DEFAULT_TTL=3600
 ```
 
 ## AI Agent Deployment
@@ -49,9 +43,9 @@ Protect autonomous AI agents from:
 
 ```bash
 # AI Agent specific settings
-SOLSHIELD_FLOWBITS_ENABLED=true
-SOLSHIELD_FLOWBITS_MAX_WALLETS=1  # Single wallet per agent
-SOLSHIELD_FLOWBITS_DEFAULT_TTL=3600  # 1 hour default
+PARAPET_FLOWSTATE_ENABLED=true
+PARAPET_FLOWSTATE_MAX_WALLETS=1        # Single wallet per agent
+PARAPET_FLOWSTATE_DEFAULT_TTL=3600     # 1 hour default
 ```
 
 ### Recommended Rules
@@ -85,7 +79,7 @@ parapet-rpc-proxy \
 
 ```bash
 # Higher velocity limit for HFT agents
-SOLSHIELD_FLOWBITS_DEFAULT_TTL=600  # 10 minutes (shorter window)
+PARAPET_FLOWSTATE_DEFAULT_TTL=600  # 10 minutes (shorter window)
 ```
 
 Edit `ai-agent-protection.json`:
@@ -118,10 +112,9 @@ Protect organization's internal wallets from:
 
 ```bash
 # Enterprise specific settings
-SOLSHIELD_FLOWBITS_ENABLED=true
-SOLSHIELD_FLOWBITS_MAX_WALLETS=1000  # Number of internal wallets
-SOLSHIELD_FLOWBITS_DEFAULT_TTL=3600  # 1 hour default
-SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=50000  # For cross-wallet tracking
+PARAPET_FLOWSTATE_ENABLED=true
+PARAPET_FLOWSTATE_MAX_WALLETS=1000     # Number of internal wallets
+PARAPET_FLOWSTATE_DEFAULT_TTL=3600     # 1 hour default
 ```
 
 ### Recommended Rules
@@ -224,8 +217,8 @@ parapet-rpc-proxy \
 ### Memory Usage
 
 FlowState memory usage scales with:
-- Number of tracked wallets (`SOLSHIELD_FLOWBITS_MAX_WALLETS`)
-- Number of global flowstate keys (`SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS`)
+- Number of tracked wallets (when `PARAPET_FLOWSTATE_MAX_WALLETS` is set)
+- Number of unique global and per-wallet flowstate keys created by your rules
 - Number of unique recipients/mints/programs tracked
 
 **Estimated Memory Usage**:
@@ -246,7 +239,7 @@ FlowState add minimal latency:
 FlowState automatically clean up expired entries every 60 seconds. To adjust:
 
 ```rust
-// In FlowbitStateManager::new()
+// In FlowStateManager::new() (source: parapet-core)
 self.cleanup_interval = Duration::from_secs(120); // 2 minutes
 ```
 
@@ -256,7 +249,7 @@ self.cleanup_interval = Duration::from_secs(120); // 2 minutes
 
 **Symptoms**: Rules with flowstate don't trigger
 **Causes**:
-1. FlowState disabled: Check `SOLSHIELD_FLOWBITS_ENABLED=true`
+1. FlowState disabled: Check `PARAPET_FLOWSTATE_ENABLED=true`
 2. Rule loading warning: Check logs for "flowstate-dependent rules loaded but flowstate disabled"
 
 **Solution**:
@@ -285,15 +278,15 @@ grep "flowstate" logs/parapet.log
 
 **Symptoms**: Memory grows unbounded
 **Causes**:
-1. `SOLSHIELD_FLOWBITS_MAX_WALLETS` set too high or unlimited
-2. `SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS` set too high
-3. Variable interpolation creating too many unique keys
+1. `PARAPET_FLOWSTATE_MAX_WALLETS` unset or set very high while traffic is diverse
+2. Variable interpolation creating too many unique keys
+3. Long TTLs keeping stale keys resident
 
 **Solution**:
 ```bash
 # Set reasonable limits
-SOLSHIELD_FLOWBITS_MAX_WALLETS=1000
-SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=10000
+PARAPET_FLOWSTATE_MAX_WALLETS=1000
+PARAPET_FLOWSTATE_MAX_GLOBAL_KEYS=10000
 
 # Monitor memory usage
 ps aux | grep parapet-rpc-proxy
@@ -301,7 +294,7 @@ ps aux | grep parapet-rpc-proxy
 
 ### Issue: Variable interpolation not working
 
-**Symptoms**: Flowbit names contain literal `{recipient}` instead of addresses
+**Symptoms**: Flowstate key names contain literal `{recipient}` instead of addresses
 **Causes**:
 1. Field not available (analyzer not enabled)
 2. Array empty (no recipients in transaction)

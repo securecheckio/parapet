@@ -9,7 +9,7 @@ description = "Criterion benchmarks for parapet_core flowstate (FlowStateManager
 
 [dependencies]
 parapet-core = { path = "../../core" }
-solana-sdk = "2.3"
+solana-sdk = { workspace = true }
 
 [dev-dependencies]
 criterion = "0.5"

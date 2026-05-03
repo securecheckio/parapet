@@ -175,18 +175,18 @@ fn test_memory_limit_with_ai_agent() {
 }
 
 #[test]
-fn test_cleanup_removes_expired_flowbits() {
+fn test_cleanup_removes_expired_flowstate() {
     let mut manager = FlowStateManager::new(None);
     let wallet = Pubkey::new_unique();
 
-    // Set flowbit with short TTL
+    // Set flowstate with short TTL
     manager.increment(&wallet, "short_lived", Some(Duration::from_millis(10)));
     assert_eq!(manager.get_counter(&wallet, "short_lived"), 1);
 
     // Wait for expiration
     std::thread::sleep(Duration::from_millis(20));
 
-    // Flowbit should be expired (returns 0)
+    // Flowstate should be expired (returns 0)
     assert_eq!(manager.get_counter(&wallet, "short_lived"), 0);
 }
 

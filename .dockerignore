@@ -1,0 +1,20 @@
+# Used when build context is `parapet/` (e.g. `docker build -t parapet .` next to this file).
+
+target/
+**/target/
+
+**/.git/
+.git/
+
+deployments/
+docs/
+dashboard/
+dev-tools/
+.github/
+.githooks/
+
+**/.DS_Store
+.env
+.env.*
+!.env.example
+*.log

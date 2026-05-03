@@ -29,11 +29,8 @@ impl TransactionLogAnalyzer {
         logs.iter()
             .filter_map(|line| {
                 let prefix = "Program log: Instruction: ";
-                if line.starts_with(prefix) {
-                    Some(line[prefix.len()..].trim().to_string())
-                } else {
-                    None
-                }
+                line.strip_prefix(prefix)
+                    .map(|stripped| stripped.trim().to_string())
             })
             .collect()
     }

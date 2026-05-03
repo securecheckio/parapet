@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod simulation_tests {
     use super::super::*;
     use serde_json::json;
 
@@ -158,13 +158,10 @@ mod tests {
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
         assert_eq!(fields.get("log_count").unwrap().as_u64().unwrap(), 5);
-        assert_eq!(
-            fields.get("has_error_logs").unwrap().as_bool().unwrap(),
-            true
-        );
+        assert!(fields.get("has_error_logs").unwrap().as_bool().unwrap());
 
         let error_messages = fields.get("error_messages").unwrap().as_array().unwrap();
-        assert!(error_messages.len() > 0);
+        assert!(!error_messages.is_empty());
     }
 
     #[tokio::test]
@@ -180,14 +177,11 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(
-            fields
-                .get("suspicious_keywords")
-                .unwrap()
-                .as_bool()
-                .unwrap(),
-            true
-        );
+        assert!(fields
+            .get("suspicious_keywords")
+            .unwrap()
+            .as_bool()
+            .unwrap());
 
         let error_messages = fields.get("error_messages").unwrap().as_array().unwrap();
         assert!(error_messages
@@ -221,10 +215,7 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(
-            fields.get("has_cpi_calls").unwrap().as_bool().unwrap(),
-            true
-        );
+        assert!(fields.get("has_cpi_calls").unwrap().as_bool().unwrap());
         assert_eq!(
             fields
                 .get("cpi_instruction_count")
@@ -253,18 +244,12 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(
-            fields.get("simulation_failed").unwrap().as_bool().unwrap(),
-            true
-        );
-        assert_eq!(
-            fields
-                .get("has_simulation_error")
-                .unwrap()
-                .as_bool()
-                .unwrap(),
-            true
-        );
+        assert!(fields.get("simulation_failed").unwrap().as_bool().unwrap());
+        assert!(fields
+            .get("has_simulation_error")
+            .unwrap()
+            .as_bool()
+            .unwrap());
 
         let error_msg = fields.get("simulation_error").unwrap().as_str().unwrap();
         assert!(error_msg.contains("InstructionError"));
@@ -287,10 +272,7 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(
-            fields.get("partial_failure").unwrap().as_bool().unwrap(),
-            true
-        );
+        assert!(fields.get("partial_failure").unwrap().as_bool().unwrap());
     }
 
     #[tokio::test]
@@ -335,10 +317,7 @@ mod tests {
 
         let fields = analyzer.analyze(&simulation_result).await.unwrap();
 
-        assert_eq!(
-            fields.get("excessive_compute").unwrap().as_bool().unwrap(),
-            true
-        );
+        assert!(fields.get("excessive_compute").unwrap().as_bool().unwrap());
     }
 
     #[tokio::test]

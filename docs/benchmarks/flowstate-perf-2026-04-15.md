@@ -99,7 +99,7 @@ Performance benchmarks for Parapet's flowstate system, measuring latency and sca
 
 ### Global State
 
-- **Per unique key**: ~100 bytes (key string + FlowbitValue + HashMap overhead)
+- **Per unique key**: ~100 bytes (key string + FlowStateValue + HashMap overhead)
 - **1000 keys**: ~100KB
 - **10000 keys**: ~1MB
 - **50000 keys**: ~5MB
@@ -145,14 +145,14 @@ Performance benchmarks for Parapet's flowstate system, measuring latency and sca
 
 ### For AI Agents
 
-1. **Single Wallet Deployment**: Set `SOLSHIELD_FLOWBITS_MAX_WALLETS=1` for optimal memory usage
+1. **Single Wallet Deployment**: Set `PARAPET_FLOWSTATE_MAX_WALLETS=1` for optimal memory usage
 2. **Velocity Limits**: Use simple counters (no variable interpolation) for fastest performance
 3. **Exfiltration Detection**: Variable interpolation adds ~163ns but is acceptable for security benefit
 
 ### For Enterprise
 
-1. **Memory Limits**: Set `SOLSHIELD_FLOWBITS_MAX_WALLETS` based on number of internal wallets
-2. **Global Keys**: Set `SOLSHIELD_FLOWBITS_MAX_GLOBAL_KEYS=50000` for large deployments
+1. **Memory Limits**: Set `PARAPET_FLOWSTATE_MAX_WALLETS` based on number of internal wallets
+2. **Global Keys**: Set `PARAPET_FLOWSTATE_MAX_GLOBAL_KEYS=50000` for large deployments
 3. **Allowlists**: Use allowlists to reduce number of tracked recipients/mints
 4. **TTL Tuning**: Shorter TTLs reduce memory usage and improve cleanup efficiency
 

@@ -16,7 +16,7 @@ pub struct AnalyzerConfig {
 }
 
 /// Top-level analyzer configuration
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
 pub struct AnalyzersConfig {
     pub analyzers: HashMap<String, AnalyzerConfig>,
 }
@@ -106,14 +106,6 @@ impl AnalyzersConfig {
             .filter(|(_, config)| !config.enabled)
             .map(|(name, _)| name.clone())
             .collect()
-    }
-}
-
-impl Default for AnalyzersConfig {
-    fn default() -> Self {
-        Self {
-            analyzers: HashMap::new(),
-        }
     }
 }
 

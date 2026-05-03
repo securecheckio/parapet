@@ -242,7 +242,7 @@ async fn test_analyze_selected_single() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &vec!["test".to_string()])
+        .analyze_selected(&tx, &["test".to_string()])
         .await
         .unwrap();
 
@@ -263,7 +263,7 @@ async fn test_analyze_selected_multiple() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &vec!["analyzer1".to_string(), "analyzer2".to_string()])
+        .analyze_selected(&tx, &["analyzer1".to_string(), "analyzer2".to_string()])
         .await
         .unwrap();
 
@@ -287,10 +287,7 @@ async fn test_analyze_selected_filters_unavailable() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(
-            &tx,
-            &vec!["available".to_string(), "unavailable".to_string()],
-        )
+        .analyze_selected(&tx, &["available".to_string(), "unavailable".to_string()])
         .await
         .unwrap();
 
@@ -310,7 +307,7 @@ async fn test_analyze_selected_only_requested() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &vec!["requested".to_string()])
+        .analyze_selected(&tx, &["requested".to_string()])
         .await
         .unwrap();
 
@@ -355,7 +352,7 @@ async fn test_analyze_with_metadata() {
     };
 
     let result = registry
-        .analyze_selected_with_metadata(&tx, &vec!["metadata_analyzer".to_string()], &metadata)
+        .analyze_selected_with_metadata(&tx, &["metadata_analyzer".to_string()], &metadata)
         .await
         .unwrap();
 
@@ -374,7 +371,7 @@ async fn test_analyze_with_logs() {
     let logs = vec!["log1".to_string(), "log2".to_string()];
 
     let result = registry
-        .analyze_selected_with_logs(&tx, &vec!["metadata_analyzer".to_string()], &logs)
+        .analyze_selected_with_logs(&tx, &["metadata_analyzer".to_string()], &logs)
         .await
         .unwrap();
 
@@ -555,7 +552,7 @@ async fn test_analyze_empty_selection() {
     registry.register(Arc::new(MockAnalyzer::new("test")));
 
     let tx = create_test_transaction();
-    let result = registry.analyze_selected(&tx, &vec![]).await.unwrap();
+    let result = registry.analyze_selected(&tx, &[]).await.unwrap();
 
     // No analyzers selected, should return empty
     assert!(result.is_empty());

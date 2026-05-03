@@ -53,8 +53,8 @@ pub struct ProgramDisassembler {
 }
 
 impl ProgramDisassembler {
-    pub fn new() -> Result<Self> {
-        Ok(Self {})
+    pub fn new() -> Self {
+        Self {}
     }
 
     pub fn disassemble(&self, program_data: &[u8]) -> Result<DisassemblyResult> {
@@ -495,7 +495,7 @@ mod tests {
 
     #[test]
     fn detects_msc_and_acpi_patterns() {
-        let disassembler = ProgramDisassembler::new().expect("disassembler");
+        let disassembler = ProgramDisassembler::new();
         // two 8-byte instructions + symbol payload markers used by heuristic detection
         let mut data = vec![
             0x05, 0x10, 0x01, 0x00, 0, 0, 0, 0, 0x03, 0x00, 0, 0, 0, 0, 0, 0,
@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn detects_token_2022_markers() {
-        let disassembler = ProgramDisassembler::new().expect("disassembler");
+        let disassembler = ProgramDisassembler::new();
         let mut data = vec![0x05, 0x10, 0x00, 0x00, 0, 0, 0, 0];
         data.extend_from_slice(b"spl_token_2022 TransferHook");
 

@@ -22,6 +22,7 @@ pub trait ApiStateAccess: Clone + Send + Sync + 'static {
     fn redis(&self) -> &Arc<Option<ConnectionManager>>;
     fn config(&self) -> &Arc<state::Config>;
     fn mcp_rate_limiter(&self) -> &middleware::McpRateLimiter;
+    fn upstream_rpc(&self) -> &Arc<dyn parapet_upstream::UpstreamProvider>;
 }
 
 /// Create the core API router with all routes
@@ -164,7 +165,10 @@ pub mod config {
 
         #[derive(Deserialize)]
         struct SolanaConfig {
-            rpc_url: String,
+            #[serde(default)]
+            rpc_url: Option<String>,
+            #[serde(default)]
+            rpc_urls: Vec<String>,
             network: Option<String>,
         }
 
@@ -198,6 +202,17 @@ pub mod config {
         let toml_config: TomlConfig = toml::from_str(&content)
             .with_context(|| format!("Failed to parse TOML config from {}", path))?;
 
+        let solana_rpc_urls = if !toml_config.solana.rpc_urls.is_empty() {
+            toml_config.solana.rpc_urls.clone()
+        } else if let Some(u) = &toml_config.solana.rpc_url {
+            vec![u.clone()]
+        } else {
+            Vec::new()
+        };
+        if solana_rpc_urls.is_empty() {
+            anyhow::bail!("config [solana]: set `rpc_url` or non-empty `rpc_urls`");
+        }
+
         // Apply environment variable overrides
         let mut config = Config {
             server_host: toml_config.server.host,
@@ -206,7 +221,8 @@ pub mod config {
             max_concurrent_scans: toml_config.runtime.max_concurrent_scans,
             scans_per_hour_per_key: toml_config.runtime.scans_per_hour_per_key,
             redis_url: toml_config.redis.url,
-            solana_rpc_url: toml_config.solana.rpc_url,
+            solana_rpc_url: solana_rpc_urls[0].clone(),
+            solana_rpc_urls,
             solana_network: toml_config
                 .solana
                 .network
@@ -239,8 +255,14 @@ pub mod config {
                 .filter(|w| !w.is_empty())
                 .collect();
         }
-        if let Ok(rpc_url) = std::env::var("SOLANA_RPC_URL") {
-            config.solana_rpc_url = rpc_url;
+        if let Ok(urls) = std::env::var("SOLANA_RPC_URLS") {
+            config.solana_rpc_urls = parapet_upstream::parse_upstream_urls_list(&urls);
+            if !config.solana_rpc_urls.is_empty() {
+                config.solana_rpc_url = config.solana_rpc_urls[0].clone();
+            }
+        } else if let Ok(rpc_url) = std::env::var("SOLANA_RPC_URL") {
+            config.solana_rpc_url = rpc_url.clone();
+            config.solana_rpc_urls = vec![rpc_url];
         }
         if let Ok(keys) = std::env::var("MCP_API_KEYS") {
             config.mcp_api_keys = keys

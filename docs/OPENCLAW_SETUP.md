@@ -122,7 +122,7 @@ export PARAPET_API_URL=http://localhost:3000
 
 ### Proxy Configuration
 
-Create `rpc-proxy/config.toml`:
+Create `rpc-proxy/config.toml` (paths below assume you run the proxy with working directory `rpc-proxy/`; adjust `rules_path` if not):
 
 ```toml
 [server]
@@ -134,17 +134,20 @@ url = "https://api.mainnet-beta.solana.com"
 timeout_secs = 30
 
 [network]
-current = "mainnet-beta"
+network = "mainnet-beta"
 
-[rules]
-path = "./rpc-proxy/rules/presets/balanced.json"
+[security]
+rules_path = "./rules/presets/default-protection.json"
+
+[redis]
+url = "redis://localhost:6379"
 
 [escalations]
 enabled = true
-redis_url = "redis://localhost:6379"
 approver_wallet = "YOUR_WALLET_ADDRESS_HERE"
-timeout_secs = 300  # 5 minutes
 ```
+
+**Multi-upstream (failover):** omit `[upstream].url` and use repeated `[[upstream.endpoint]]` blocks with `url` and `priority`, or set `UPSTREAM_RPC_URLS` in the environment. Optional `strategy = "smart"` or `UPSTREAM_STRATEGY=smart` enables latency/slot-aware routing when multiple URLs are configured. Full tables: [`rpc-proxy/README.md`](../rpc-proxy/README.md), narrative guide: [`OPERATIONS_GUIDE.md`](OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api).
 
 ### API Configuration
 
@@ -168,6 +171,7 @@ url = "redis://localhost:6379"
 
 [solana]
 rpc_url = "https://api.mainnet-beta.solana.com"
+# Or ordered failover: rpc_urls = ["https://primary/...", "https://backup/..."]
 network = "mainnet-beta"
 
 [auth]
@@ -199,8 +203,11 @@ export JUPITER_API_KEY=your_jupiter_key
 export MCP_API_KEYS=your_mcp_key_1,your_mcp_key_2
 
 # Optional overrides (when TOML config isn't sufficient)
-export UPSTREAM_RPC_URL=https://custom-rpc.example.com  # Override upstream
-export REDIS_URL=redis://production-redis:6379          # Override Redis
+export UPSTREAM_RPC_URL=https://custom-rpc.example.com   # Single upstream
+# export UPSTREAM_RPC_URLS=https://a.example.com,https://b.example.com  # Failover list
+# export UPSTREAM_STRATEGY=smart
+export REDIS_URL=redis://production-redis:6379           # Override Redis
+export SOLANA_RPC_URLS=https://a.example.com,https://b.example.com     # API: same pattern as [solana].rpc_urls
 ```
 
 **Not recommended:** Using env vars for all configuration. Use TOML config files instead.
@@ -643,20 +650,26 @@ mkdir -p logs config
 cat > config/proxy.toml <<EOF
 [server]
 port = 8899
+bind_address = "0.0.0.0"
 
 [upstream]
 url = "https://api.mainnet-beta.solana.com"
 
-[rules]
-path = "./rpc-proxy/rules/presets/balanced.json"
+[network]
+network = "mainnet-beta"
+
+[security]
+rules_path = "./rpc-proxy/rules/presets/default-protection.json"
+
+[redis]
+url = "redis://localhost:6379"
 
 [escalations]
 enabled = true
-redis_url = "redis://localhost:6379"
-timeout_secs = 300
+approver_wallet = "YOUR_WALLET_ADDRESS_HERE"
 EOF
 
-# Start services
+# Start services (run this script from the repository root that contains rpc-proxy/)
 echo "Starting Parapet services..."
 ./parapet proxy --config config/proxy.toml > logs/proxy.log 2>&1 &
 PROXY_PID=$!

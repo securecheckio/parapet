@@ -91,7 +91,7 @@ redis-cli slowlog get 10
 RUST_LOG=info
 
 # Debug
-RUST_LOG=debug,sol_shield_proxy=trace
+RUST_LOG=debug,parapet_rpc_proxy=trace
 
 # Quiet
 RUST_LOG=warn
@@ -252,4 +252,60 @@ Set up alerts for:
 4. Perform maintenance
 5. Test
 6. Resume traffic
+
+## Multi-upstream RPC (proxy and API)
+
+Shared logic lives in the **`parapet-upstream`** crate: HTTP JSON-RPC to Solana with retries, per-endpoint circuit breakers, and pluggable routing (`UpstreamProvider`). Production guidance below is for operators and for agents editing config.
+
+### What you get
+
+- **Failover (default):** If the primary returns retryable errors (HTTP 429, 5xx), DNS/connect failures, or timeouts, the proxy or API tries the next endpoint in priority order. Each URL has its own circuit breaker so one bad host does not poison the whole stack.
+- **Smart routing (optional):** With `strategy = "smart"` (proxy) or `UPSTREAM_STRATEGY=smart`, requests can be steered using latency and slot hints between endpoints. Tune **`smart_max_slot_lag`** (default `20`) / **`UPSTREAM_SMART_MAX_SLOT_LAG`** when endpoints disagree on slot by more than you tolerate.
+- **Method policy (proxy):** Optional allowlist or blocklist for JSON-RPC method names (useful when exposing the proxy like a public RPC). Blocklist is applied before allowlist.
+
+### RPC proxy (`parapet-rpc-proxy`)
+
+**Choose one shape for upstream (validation enforces this):**
+
+1. **Single URL** — Set `[upstream].url` and leave `[[upstream.endpoint]]` empty.
+2. **Multiple endpoints** — Omit `url` (or leave empty) and define one or more `[[upstream.endpoint]]` blocks. **`priority`** is ascending order (lower number = tried first).
+
+Shared HTTP tuning on `[upstream]` (`max_concurrent`, `delay_ms`, `timeout_secs`, retries, circuit breaker) applies to single-URL mode and is the **default** for each endpoint in multi-endpoint mode. An endpoint may override any of those fields with its own keys on `[[upstream.endpoint]]`.
+
+**Strategy (multi-endpoint only):**
+
+- Omit or use failover semantics: priority-ordered failover (default).
+- `strategy = "smart"` in TOML or `UPSTREAM_STRATEGY=smart` in the environment for smart routing (ignored when only one URL is configured).
+
+**Environment overrides** (when set, they override TOML for the same fields):
+
+| Purpose | Variables |
+| --------| ----------|
+| Upstream URLs | `UPSTREAM_RPC_URL` (one URL) **or** `UPSTREAM_RPC_URLS` (comma-separated list). Do not rely on setting both; prefer one list. |
+| Strategy | `UPSTREAM_STRATEGY`, `UPSTREAM_SMART_MAX_SLOT_LAG` |
+| HTTP / breaker defaults | `UPSTREAM_MAX_CONCURRENT`, `UPSTREAM_DELAY_MS`, `UPSTREAM_TIMEOUT_SECS`, `UPSTREAM_MAX_RETRIES`, `UPSTREAM_RETRY_BASE_DELAY_MS`, `UPSTREAM_CIRCUIT_BREAKER_THRESHOLD`, `UPSTREAM_CIRCUIT_BREAKER_TIMEOUT_SECS` |
+| Method policy | `ALLOWED_RPC_METHODS`, `BLOCKED_RPC_METHODS` (comma-separated method names) |
+
+**Env-only mode** (no `config.toml`): `UPSTREAM_RPC_URL` **or** `UPSTREAM_RPC_URLS` is required, plus the other proxy env vars documented in `rpc-proxy/README.md`.
+
+**Authoritative templates:** `rpc-proxy/config.toml.example`, full key tables in `rpc-proxy/README.md`.
+
+### API (`parapet-api`)
+
+Escalations and other flows that **forward JSON-RPC** use the same upstream stack as the proxy crate pattern:
+
+- TOML: `[solana].rpc_url` for a single endpoint, **or** `rpc_urls = ["https://...", "https://..."]` for ordered failover.
+- Environment: `SOLANA_RPC_URL` or comma-separated `SOLANA_RPC_URLS`.
+
+See `api/config.example.toml` for comments. **`upstream_rpc()`** in application state is an `Arc<dyn UpstreamProvider>` built from those URLs.
+
+### Scanner and MCP
+
+- **Best resilience:** Point **`SOLANA_RPC_URL`** (or the scanner’s `--rpc` / comma-separated list) at **your Parapet RPC proxy** so failover and policy live in one place.
+- **Comma-separated URLs** in CLI or env: the stack may use them where HTTP forwarding exists; **blocking Solana `RpcClient` paths still use the first URL only** — document that limitation for operators automating with the raw SDK client.
+
+### Related docs
+
+- [rpc-proxy/README.md](../rpc-proxy/README.md) — `[upstream]`, `[[upstream.endpoint]]`, `[security]` method lists, env-only table.
+- [USER_GUIDE.md](USER_GUIDE.md) — Quick env examples for local runs.
 

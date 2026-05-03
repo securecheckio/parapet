@@ -424,7 +424,7 @@ impl Default for InstructionPaddingAnalyzer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use solana_sdk::instruction::CompiledInstruction;
+    use solana_sdk::message::compiled_instruction::CompiledInstruction;
     use solana_sdk::message::Message;
     use solana_sdk::pubkey::Pubkey;
 
@@ -596,7 +596,7 @@ mod tests {
 
         // Anchor instruction: 8-byte discriminator + 200 bytes args (reasonable)
         let mut data = vec![0xa1, 0xb0, 0x28, 0xd5, 0x3c, 0xb8, 0xb3, 0xe4]; // discriminator
-        data.extend_from_slice(&vec![1u8; 200]); // reasonable args
+        data.extend_from_slice(&[1u8; 200]); // reasonable args
 
         let program = Pubkey::new_unique();
         let ix = CompiledInstruction {

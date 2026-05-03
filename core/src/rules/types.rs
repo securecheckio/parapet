@@ -26,7 +26,6 @@ pub struct Rule {
     pub message: String,
 
     #[serde(default)]
-    #[serde(alias = "flowbits")]
     pub flowstate: Option<FlowStateActions>,
 }
 
@@ -47,18 +46,13 @@ pub struct FlowStateActions {
     pub ttl_seconds: Option<u64>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum FlowStateScope {
     #[serde(rename = "perwallet")]
+    #[default]
     PerWallet,
     Global,
-}
-
-impl Default for FlowStateScope {
-    fn default() -> Self {
-        FlowStateScope::PerWallet
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -176,7 +170,6 @@ pub enum RuleCondition {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FlowStateCondition {
-    #[serde(alias = "flowbit")]
     pub flowstate: String,
 
     #[serde(default)]

@@ -7,7 +7,7 @@
 **Perimeter security for Solana wallets, AI agents 🦞, and trading firms**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Rust](https://img.shields.io/badge/rust-1.85+-orange.svg?logo=rust)](https://www.rust-lang.org/)
+[![Rust](https://img.shields.io/badge/rust-1.89+-orange.svg?logo=rust)](https://www.rust-lang.org/)
 [![Solana](https://img.shields.io/badge/Solana-9945FF?logo=solana&logoColor=white)](https://solana.com/)
 
   [Quick Start](#quick-start) • [Documentation](#documentation) • [Contributing](#contributing) • [Community](#community--support)
@@ -50,26 +50,28 @@ Open-source security for Solana with:
 
 ## 🚀 Quick Start
 
-### CLI Usage
+### CLI usage (from workspace root)
+
+Binaries are built with Cargo from this repository:
 
 ```bash
-# Scan a wallet for threats
-./parapet wallet <WALLET_ADDRESS>
+# Wallet scanner (mainnet RPC default)
+cargo run -p parapet-scanner --bin wallet-scanner -- <WALLET_ADDRESS>
 
-# Check a transaction
-./parapet tx <SIGNATURE>
+# Transaction check (see scanner for other bins: tx-check, program-analyzer, …)
+cargo run -p parapet-scanner --bin tx-check -- --help
 
-# Analyze a program
-./parapet program <PROGRAM_ID>
+# RPC proxy
+cargo run -p parapet-rpc-proxy --bin parapet-rpc-proxy
 
-# Start RPC proxy
-./parapet proxy
+# Rule / MCP API server
+cargo run -p parapet-api --bin parapet-api
 
-# See all commands
-./parapet --help
+# MCP (stdio)
+cargo run -p parapet-mcp-server --bin parapet-mcp -- --help
 ```
 
-### Local Development
+### Local development
 
 ```bash
 # 1. Configure using TOML files (recommended for local dev)
@@ -81,7 +83,7 @@ export HELIUS_API_KEY=your_key
 export JUPITER_API_KEY=your_key
 
 # 3. Run proxy
-./parapet proxy
+cargo run -p parapet-rpc-proxy --bin parapet-rpc-proxy
 ```
 
 ### Docker Deployment (Recommended)
@@ -89,6 +91,7 @@ export JUPITER_API_KEY=your_key
 Pull and run from GitHub Container Registry with community security rules:
 
 ```bash
+# Single upstream URL (or use UPSTREAM_RPC_URLS=comma,separated,list for failover)
 docker run -d -p 8899:8899 \
   -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
   -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
@@ -139,7 +142,7 @@ Parapet uses **JSON-based declarative rules** with condition trees, pluggable an
 ### Prerequisites
 
 **Required:**
-- Rust 1.85+ (required by Solana SDK 4.0)
+- Rust 1.89+ (workspace `rust-version`; Solana SDK 4.x)
 
 **Optional:**
 - Redis 7+ (only needed for escalations, activity feed, or multi-instance caching)
@@ -159,6 +162,8 @@ cp api/config.example.toml api/config.toml
 nano api/config.toml
 ```
 
+Upstream RPC (single URL, multi-endpoint failover, optional smart routing, method allow/block) is documented in **[docs/OPERATIONS_GUIDE.md](docs/OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api)** and **[rpc-proxy/README.md](rpc-proxy/README.md)**.
+
 **Environment variables** for secrets only:
 
 ```bash
@@ -166,6 +171,8 @@ export HELIUS_API_KEY=your_key
 export JUPITER_API_KEY=your_key
 export MCP_API_KEYS=your_key
 ```
+
+Use **`UPSTREAM_RPC_URL`** / **`UPSTREAM_RPC_URLS`** (proxy) or **`SOLANA_RPC_URL`** / **`SOLANA_RPC_URLS`** (API) when you need container overrides instead of baking URLs into TOML.
 
 ### Build
 
@@ -207,6 +214,7 @@ parapet/
 
 - [OpenClaw Integration Guide](docs/OPENCLAW_SETUP.md) - Complete guide for AI agents
 - [Quick Start](docs/QUICKSTART.md) - Get running in 5 minutes
+- [Operations Guide](docs/OPERATIONS_GUIDE.md) - Production operations, including **multi-upstream RPC**
 
 ### Deployment
 

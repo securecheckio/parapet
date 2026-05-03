@@ -5,11 +5,11 @@ use owo_colors::OwoColorize;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use parapet_scanner::{ScanConfig, ScanReport, Severity, ThreatType, WalletScanner};
 use solana_client::rpc_client::RpcClient;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::{
-    commitment_config::CommitmentConfig, message::Message, pubkey::Pubkey,
-    signature::read_keypair_file, transaction::Transaction,
+    message::Message, pubkey::Pubkey, signature::read_keypair_file, transaction::Transaction,
 };
-use spl_token::instruction as token_instruction;
+use spl_token_interface::instruction as token_instruction;
 use std::{
     io::{self, Write},
     str::FromStr,
@@ -87,6 +87,18 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
+    let rpc_url_candidates = parapet_upstream::parse_upstream_urls_list(&args.rpc_url);
+    let rpc_url = rpc_url_candidates
+        .first()
+        .cloned()
+        .unwrap_or_else(|| args.rpc_url.clone());
+    if rpc_url_candidates.len() > 1 {
+        eprintln!(
+            "Note: {} RPC URLs in --rpc-url; using first only. For multi-upstream failover, point --rpc-url at parapet-rpc-proxy.",
+            rpc_url_candidates.len()
+        );
+    }
+
     println!();
     println!(
         "{}",
@@ -115,7 +127,7 @@ async fn main() -> Result<()> {
 
     println!("🔍 Scanning wallet: {}", args.wallet.bright_cyan());
     println!("🌐 Network: {}", args.network.bright_yellow());
-    println!("📡 RPC: {}", args.rpc_url.bright_black());
+    println!("📡 RPC: {}", rpc_url.bright_black());
     println!(
         "📊 Scope: {} transactions, {} days back",
         args.max_transactions.to_string().bright_yellow(),
@@ -126,7 +138,7 @@ async fn main() -> Result<()> {
     // Initialize analyzers and rule engine (just like the proxy does)
     println!("⚙️  Initializing analyzers and rule engine...");
     let (registry, engine) =
-        initialize_analyzers_and_rules(args.safe_programs_file.clone(), args.rpc_url.clone())?;
+        initialize_analyzers_and_rules(args.safe_programs_file.clone(), rpc_url.clone()).await?;
 
     // Calculate recommended delay based on active analyzers (dynamic!)
     let analyzer_delay = registry.get_recommended_delay_ms();
@@ -155,7 +167,7 @@ async fn main() -> Result<()> {
     println!();
 
     // Create scanner WITH analyzers for full capability
-    let scanner = WalletScanner::with_analyzers(args.rpc_url.clone(), registry, engine)
+    let scanner = WalletScanner::with_analyzers(rpc_url.clone(), registry, engine)
         .context("Failed to create wallet scanner")?;
 
     // Configure scan - full historical analysis
@@ -189,7 +201,7 @@ async fn main() -> Result<()> {
 
     // Handle revoke if requested
     if args.revoke {
-        handle_revoke(&args, &report).await?;
+        handle_revoke(&args, &report, &rpc_url).await?;
     }
 
     // Exit with appropriate code
@@ -197,7 +209,7 @@ async fn main() -> Result<()> {
 }
 
 /// Initialize analyzers and rule engine (same as proxy does)
-fn initialize_analyzers_and_rules(
+async fn initialize_analyzers_and_rules(
     safe_programs_file: Option<String>,
     rpc_url: String,
 ) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
@@ -312,17 +324,21 @@ fn initialize_analyzers_and_rules(
             };
 
             let updater = FeedUpdater::new(feed_config);
-            let engine_arc = Arc::new(engine);
 
-            // Start background updater
-            updater.start_background_updates(engine_arc.clone());
+            // One-shot fetch and apply at scan start (wallet-scanner is a short-lived CLI;
+            // continuous feed polling is provided by parapet-rpc-proxy).
+            let merged = updater
+                .fetch_all_sources()
+                .await
+                .map_err(|e| anyhow::anyhow!("Rules feed fetch failed: {}", e))?;
+            engine
+                .load_rules(merged.rules)
+                .map_err(|e| anyhow::anyhow!("Failed to load merged rules from feed: {}", e))?;
 
             println!(
-                "✅ Rules feed enabled - auto-updating from {} sources",
+                "✅ Rules feed enabled — loaded rules from {} source(s)",
                 feed_sources.len()
             );
-
-            engine = Arc::try_unwrap(engine_arc).unwrap_or_else(|arc| (*arc).clone());
         } else {
             eprintln!("⚠️  RULES_FEED_ENABLED=true but no RULES_FEED_URLS provided");
         }
@@ -780,7 +796,7 @@ fn print_brief_report(report: &ScanReport) {
 }
 
 /// Handle revoke functionality after scan
-async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
+async fn handle_revoke(args: &Args, report: &ScanReport, rpc_url: &str) -> Result<()> {
     // Parse severity threshold
     let min_severity = match args.severity_threshold.to_lowercase().as_str() {
         "critical" => Severity::Critical,
@@ -940,7 +956,7 @@ async fn handle_revoke(args: &Args, report: &ScanReport) -> Result<()> {
         .collect();
 
     // Build revoke transactions
-    let rpc_client = RpcClient::new(args.rpc_url.clone());
+    let rpc_client = RpcClient::new(rpc_url.to_string());
     let revoke_txs =
         build_batch_revoke_transactions(&args.wallet, &token_accounts, &rpc_client).await?;
 
@@ -981,8 +997,12 @@ async fn build_batch_revoke_transactions(
                 anyhow!("Invalid token account address {}: {}", token_account_str, e)
             })?;
 
-            let revoke_ix =
-                token_instruction::revoke(&spl_token::id(), &token_account_pubkey, &owner, &[])?;
+            let revoke_ix = token_instruction::revoke(
+                &spl_token_interface::id(),
+                &token_account_pubkey,
+                &owner,
+                &[],
+            )?;
 
             instructions.push(revoke_ix);
         }
@@ -1021,8 +1041,20 @@ async fn sign_and_submit_transactions(
         let mut signed_tx = tx.clone();
         signed_tx.sign(&[&keypair], signed_tx.message.recent_blockhash);
 
+        // RpcClient beta pins `solana-transaction` 3.x for send APIs; bridge from SDK 4.x wire format.
+        let wire = bincode::serialize(&signed_tx)
+            .map_err(|e| anyhow!("Failed to serialize transaction: {}", e))?;
+        let for_rpc: solana_transaction_rpc::Transaction = bincode::deserialize(&wire).map_err(
+            |e| {
+                anyhow!(
+                    "Transaction wire format incompatible with RPC client (solana-transaction 3.x): {}",
+                    e
+                )
+            },
+        )?;
+
         // Submit transaction
-        match rpc_client.send_and_confirm_transaction(&signed_tx) {
+        match rpc_client.send_and_confirm_transaction(&for_rpc) {
             Ok(signature) => {
                 println!(
                     "{} {}",

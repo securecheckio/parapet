@@ -7,14 +7,15 @@ use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::RpcTransactionConfig;
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_client::rpc_config::UiTransactionEncoding;
+use solana_client::rpc_response::{
+    EncodedTransaction, EncodedTransactionWithStatusMeta, OptionSerializer, UiCompiledInstruction,
+    UiInstruction,
+};
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::message::{Message, VersionedMessage};
 use solana_sdk::signature::Signature;
 use solana_sdk::transaction::{Transaction, VersionedTransaction};
-use solana_transaction_status::{
-    option_serializer::OptionSerializer, EncodedTransaction, EncodedTransactionWithStatusMeta,
-    UiCompiledInstruction, UiInstruction, UiTransactionEncoding,
-};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -379,6 +380,11 @@ async fn main() -> Result<()> {
                 instructions: v0_message.instructions,
             },
         },
+        VersionedMessage::V1(_) => {
+            return Err(anyhow!(
+                "V1 transaction messages are not supported in tx-check yet"
+            ));
+        }
     };
 
     // Parse inner (CPI) instructions — needs account_keys for program ID resolution

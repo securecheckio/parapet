@@ -15,9 +15,9 @@ COPY api ./api
 COPY mcp ./mcp
 COPY tools ./tools
 
-# Build release binaries for proxy and utilities
+# Build release binaries for proxy and wallet scanner (see `parapet-scanner` crate bin `wallet-scanner`)
 RUN cargo build --release -p parapet-rpc-proxy --bin parapet-rpc-proxy && \
-    cargo build --release -p parapet-scanner --bin parapet-scanner
+    cargo build --release -p parapet-scanner --bin wallet-scanner
 
 FROM debian:trixie-slim
 
@@ -28,7 +28,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 COPY --from=builder /build/target/release/parapet-rpc-proxy /usr/local/bin/parapet-rpc-proxy
-COPY --from=builder /build/target/release/parapet-scanner /usr/local/bin/parapet-scanner
+COPY --from=builder /build/target/release/wallet-scanner /usr/local/bin/wallet-scanner
 COPY rpc-proxy/rules /app/rules
 
 # No config.toml in image - use environment variables

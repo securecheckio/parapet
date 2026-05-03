@@ -19,83 +19,42 @@ Parapet is a Rust library for analyzing Solana transactions in real-time. It com
 
 ```toml
 [dependencies]
-# Basic security (fast, local only)
-parapet = "0.1"
-
-# With external verification (Helius, OtterSec, security.txt)
-parapet = { version = "0.1", features = ["all-analyzers"] }
-
-# Or pick specific analyzers
-parapet = { version = "0.1", features = ["helius", "ottersec"] }
+# Path when developing in the Parapet workspace; use a crates.io version when published.
+parapet-core = { path = "../core", features = ["helius", "ottersec"] }
 ```
 
-## Available Features
+## Available features
 
 | Feature | Description | Requires |
 |---------|-------------|----------|
-| `helius` | Helius Identity API (wallet reputation) | HELIUS_API_KEY |
-| `security-txt` | RFC 9116 security disclosure | None |
-| `ottersec` | OtterSec cryptographic verification | None |
-| `all-analyzers` | Enable all external analyzers | HELIUS_API_KEY |
+| `helius` | Helius Identity API (wallet reputation) | `HELIUS_API_KEY` |
+| `ottersec` | OtterSec cryptographic verification | network |
+| `all-analyzers` | Umbrella for optional analyzers | per-analyzer keys where applicable |
 
-## Quick Start
+## Quick start
 
-### Basic Usage (Fast, Local)
+### Rules engine (recommended)
 
 ```rust
-use sol_shield::{SecurityEngine, RiskLevel, EngineConfig};
+use parapet_core::rules::analyzers::{BasicAnalyzer, CoreSecurityAnalyzer};
+use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use std::collections::HashSet;
+use std::sync::Arc;
 
-// Create engine with blocklist
-let blocklist = HashSet::new(); // Add known malicious programs
-let engine = SecurityEngine::new(blocklist, EngineConfig::default());
+let mut registry = AnalyzerRegistry::new();
+registry.register(Arc::new(BasicAnalyzer::new()));
+registry.register(Arc::new(CoreSecurityAnalyzer::new(HashSet::new())));
 
-// Analyze transaction
-let result = engine.analyze(&transaction);
+let mut engine = RuleEngine::new(registry);
+engine.load_rules_from_file("./rules/default.json").expect("rules");
 
-if result.risk_level == RiskLevel::Critical {
-    println!("🚨 Blocked: {:?}", result.issues);
-}
+// let decision = engine.evaluate(&transaction).await.expect("eval");
 ```
 
-### Using Rules Engine
+### With optional analyzers
 
-```rust
-use sol_shield::rules::{RuleEngine, analyzers::*};
-
-// Create rule engine
-let mut engine = RuleEngine::new();
-
-// Register analyzers
-engine.register_analyzer(Arc::new(BasicAnalyzer::new()));
-engine.register_analyzer(Arc::new(SecurityAnalyzer::new(security_engine)));
-
-// Load rules from JSON
-engine.load_rules_from_file("./rules.json")?;
-
-// Evaluate transaction
-let decision = engine.evaluate(&transaction)?;
-```
-
-### With External Analyzers
-
-```rust
-use sol_shield::rules::{RuleEngine, analyzers::*};
-
-let mut engine = RuleEngine::new();
-
-// Built-in analyzers
-engine.register_analyzer(Arc::new(BasicAnalyzer::new()));
-
-// External analyzers (requires features)
-#[cfg(feature = "helius")]
-engine.register_analyzer(Arc::new(HeliusIdentityAnalyzer::new()));
-
-#[cfg(feature = "ottersec")]
-engine.register_analyzer(Arc::new(OtterSecVerifiedAnalyzer::new()));
-
-engine.load_rules_from_file("./comprehensive-rules.json")?;
-```
+Enable Cargo features (e.g. `helius`, `ottersec`) and register the corresponding analyzers from
+`parapet_core::rules::analyzers::third_party` — see crate source and `docs/RULES_*.md` for field names.
 
 ## Available Analyzers
 
@@ -105,10 +64,8 @@ engine.load_rules_from_file("./comprehensive-rules.json")?;
 Transaction metrics:
 - `instruction_count`, `account_keys_count`, `amount`, `program_ids`
 
-#### SecurityAnalyzer
-Pattern detection (wraps SecurityEngine):
-- `risk_score`, `risk_level`, `delegation_detected`, `delegation_is_unlimited`
-- `delegation_count`, `authority_changes`, `blocklisted_program_detected`
+#### CoreSecurityAnalyzer
+Pattern detection and structural risk signals (see `core_security` analyzer fields in source).
 
 ### Optional (Require Features)
 
@@ -117,11 +74,6 @@ Wallet reputation via Helius Identity API:
 - `signer_classifications`, `other_classifications`
 - Detects: Scammers, Hackers, Ruggers, Exploiters
 - Coverage: 5100+ tagged accounts
-
-#### SecurityTxtAnalyzer (feature="security-txt")
-RFC 9116 security disclosure verification:
-- `programs_with_security_txt`, `all_programs_verified`
-- Validates programs have /.well-known/security.txt
 
 #### OtterSecVerifiedAnalyzer (feature="ottersec")
 Cryptographic source code verification:
@@ -157,10 +109,9 @@ Define security policies in JSON:
 - No network calls
 - Zero external dependencies
 
-### With External Analyzers
-- Helius Identity: ~150ms (cached: <1ms)
-- Security.txt: ~100ms (cached: <1ms)
-- OtterSec: ~150ms (cached: <1ms)
+### With external analyzers
+- Helius Identity: ~150ms (cached: <1ms when applicable)
+- OtterSec: ~150ms (cached: <1ms when applicable)
 
 All analyzers cache results to minimize latency.
 
@@ -170,32 +121,29 @@ All analyzers cache results to minimize latency.
 
 Parapet provides RPC-level transaction verification for users requiring enhanced security.
 
-#### Mobile Wallet Developers
+#### Mobile wallet developers
 ```toml
-parapet = "0.1"  # Fast, local analysis (no external APIs)
+parapet-core = { path = "../core", default-features = true }
 ```
 **Provides:**
 - Pattern detection for unlimited approvals and authority changes
 - Sub-50ms analysis overhead
 - No network dependencies for core security checks
 
-#### Trading Bot Operators
+#### Trading bot operators
 ```toml
-parapet = { version = "0.1", features = ["ottersec"] }
+parapet-core = { path = "../core", features = ["ottersec"] }
 ```
 **Enables:**
 - Program allowlist enforcement (verified programs only)
 - Configurable JSON security policies
 - Programmatic access to structured risk data
 
-#### RPC Providers
+#### RPC providers
 ```toml
-parapet = { version = "0.1", features = ["all-analyzers"] }
+parapet-core = { path = "../core", features = ["all-analyzers"] }
 ```
-**Includes:**
-- Helius address reputation checking
-- OtterSec program verification
-- security.txt validation per RFC 9116
+**Includes:** optional analyzers such as Helius, OtterSec, Jupiter, Rugcheck (see `Cargo.toml` features).
 
 ## Documentation
 
@@ -210,14 +158,10 @@ See the [integrations/](../integrations/) directory for integration examples and
 ## Development
 
 ```bash
-# Run tests
-cargo test
-
-# Build with all features
-cargo build --features all-analyzers
-
-# Check code
-cargo clippy
+# From the `parapet/` workspace root:
+cargo test -p parapet-core
+cargo build -p parapet-core --features all-analyzers
+cargo clippy -p parapet-core --all-targets --all-features
 ```
 
 ## License

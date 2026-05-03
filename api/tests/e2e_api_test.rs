@@ -19,6 +19,7 @@ fn create_test_config() -> Config {
         scans_per_hour_per_key: 10,
         redis_url: "redis://localhost:6379".to_string(), // Not used in tests without Redis
         solana_rpc_url: "https://api.devnet.solana.com".to_string(),
+        solana_rpc_urls: vec!["https://api.devnet.solana.com".to_string()],
         solana_network: "devnet".to_string(),
         authorized_wallets: vec!["test_wallet".to_string()],
         nonce_ttl_seconds: 300,

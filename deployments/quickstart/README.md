@@ -45,12 +45,15 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
 
 | Variable           | Required | Default | Description                                                 |
 | ------------------ | -------- | ------- | ----------------------------------------------------------- |
-| `UPSTREAM_RPC_URL` | Yes      | -       | Your Solana RPC endpoint                                    |
+| `UPSTREAM_RPC_URL` | Yes*     | -       | Single Solana JSON-RPC URL (*or use `UPSTREAM_RPC_URLS` instead) |
+| `UPSTREAM_RPC_URLS` | Yes*    | -       | Comma-separated RPC URLs for priority failover (*or set `UPSTREAM_RPC_URL`*) |
+| `UPSTREAM_STRATEGY` | No      | -       | Set to `smart` for latency/slot-aware routing when multiple URLs are set |
 | `RULES_FEED_URLS`  | No       | -       | Comma-separated list of rule feed URLs (auto-enables feeds) |
 | `HELIUS_API_KEY`   | No       | -       | Enable Helius-powered rules                                 |
 | `JUPITER_API_KEY`  | No       | -       | Enable Jupiter-powered rules                                |
 | `RUST_LOG`         | No       | `info`  | Log level (debug, info, warn, error)                        |
 
+Set **either** `UPSTREAM_RPC_URL` **or** `UPSTREAM_RPC_URLS` (not both). Details: [`rpc-proxy/README.md`](../../rpc-proxy/README.md), [`docs/OPERATIONS_GUIDE.md`](../../docs/OPERATIONS_GUIDE.md#multi-upstream-rpc-proxy-and-api).
 
 ### Community Rule Feeds
 

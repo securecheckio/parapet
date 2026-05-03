@@ -19,8 +19,9 @@ scans_per_hour_per_key = 100
 url = "redis://localhost:6379"
 
 [solana]
-# Solana RPC endpoint
+# Single RPC URL, OR set `rpc_urls = ["https://...","https://..."]` for failover (escalations use parapet-upstream).
 rpc_url = "https://api.devnet.solana.com"
+# rpc_urls = ["https://api.devnet.solana.com", "https://rpc.ankr.com/solana"]
 network = "devnet"
 
 [auth]
@@ -39,7 +40,8 @@ api_keys = []
 
 # Environment Variable Overrides:
 # - REDIS_URL → overrides [redis].url
-# - SOLANA_RPC_URL → overrides [solana].rpc_url
+# - SOLANA_RPC_URL → overrides [solana] primary URL (single-endpoint list)
+# - SOLANA_RPC_URLS → comma-separated list (failover for escalations / sendTransaction)
 # - SOLANA_NETWORK → overrides [solana].network
 # - AUTHORIZED_WALLETS → overrides [auth].authorized_wallets (comma-separated)
 # - MCP_API_KEYS → overrides [mcp].api_keys (comma-separated)

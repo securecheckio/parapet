@@ -179,7 +179,7 @@ impl FeedUpdater {
 
         let now = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .map_err(|e| anyhow::anyhow!("system clock before UNIX_EPOCH: {}", e))?
             .as_secs();
 
         for source in &self.config.feed_sources {

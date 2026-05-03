@@ -2,10 +2,14 @@
 
 FROM rustlang/rust:nightly as builder
 WORKDIR /build
+# Full workspace layout is required: root Cargo.toml lists all members.
 COPY Cargo.toml Cargo.lock ./
 COPY core ./core
 COPY rpc-proxy ./rpc-proxy
 COPY scanner ./scanner
+COPY api ./api
+COPY mcp ./mcp
+COPY tools ./tools
 RUN cargo build --release -p parapet-rpc-proxy --bin parapet-rpc-proxy
 
 FROM debian:bookworm-slim

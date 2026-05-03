@@ -8,13 +8,18 @@ license = "MIT"
 [dependencies]
 # Reuse parapet-core for analyzers and rules with all third-party analyzers enabled
 parapet-core = { path = "../core", features = ["helius", "ottersec", "jupiter", "rugcheck", "program-analysis"] }
+parapet-upstream = { path = "../upstream" }
 
-# RPC client (matching versions from txfilter proven to work)
-solana-client = "2.3"
-solana-sdk = "2.3"
-solana-transaction-status = "2.3"
-solana-account-decoder = "2.3"
-spl-token = "8.0"
+# RPC client
+solana-client = { workspace = true }
+# RpcClient 4.0.0-beta still targets `solana-transaction` 3.x for `SerializableTransaction`;
+# bridge signed `solana_sdk` 4.x transactions through bincode for submit helpers.
+solana_transaction_rpc = { package = "solana-transaction", version = "3.1.0" }
+solana-sdk = { workspace = true }
+solana-account-decoder = { workspace = true }
+solana-commitment-config = { workspace = true }
+spl-token-interface = { workspace = true }
+solana-program-option = { workspace = true }
 
 # Utilities (reuse workspace versions)
 tokio = { workspace = true }
@@ -68,3 +73,4 @@ debug-fields = []
 
 [dev-dependencies]
 env_logger = { workspace = true }
+wiremock = "0.6"

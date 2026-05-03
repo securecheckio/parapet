@@ -6,7 +6,7 @@ use parapet_core::rules::analyzers::*;
 use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use parapet_rpc_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
 use parapet_rpc_proxy::types::AppState;
-use parapet_rpc_proxy::upstream;
+use parapet_rpc_proxy::upstream::{self, UpstreamProvider};
 use serde_json::{json, Value};
 use solana_sdk::{
     message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
@@ -39,12 +39,12 @@ fn create_test_state() -> Arc<AppState> {
         parapet_core::rules::analyzers::simulation::SimulationLogAnalyzer::new(),
     ));
 
-    // Create upstream client with default config
-    let upstream_client =
-        upstream::UpstreamClient::new("https://api.devnet.solana.com".to_string());
+    let upstream_provider: Arc<dyn UpstreamProvider> = Arc::new(upstream::UpstreamClient::new(
+        "https://api.devnet.solana.com".to_string(),
+    ));
 
     Arc::new(AppState {
-        upstream_client,
+        upstream_provider,
         rule_engine: Arc::new(tokio::sync::RwLock::new(engine)),
         auth_provider: None,
         usage_tracker: None,
@@ -54,6 +54,8 @@ fn create_test_state() -> Arc<AppState> {
         simulation_registry: Arc::new(sim_registry),
         escalation_config: None,
         activity_feed_config: None,
+        rpc_allowed_methods: Vec::new(),
+        rpc_blocked_methods: Vec::new(),
     })
 }
 

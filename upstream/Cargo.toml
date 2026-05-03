@@ -1,0 +1,19 @@
+[package]
+name = "parapet-upstream"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared Solana JSON-RPC upstream client with failover and pluggable routing"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+reqwest = { workspace = true }
+async-trait = "0.1"
+log = { workspace = true }
+base64 = { workspace = true }

@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use owo_colors::OwoColorize;
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 
@@ -223,6 +223,7 @@ async fn run_program_analysis(
     service
         .analyze_program(&args.program_id, tier, AnalysisMode::Synchronous)
         .await
+        .map_err(anyhow::Error::from)
 }
 
 #[cfg(feature = "program-analysis")]

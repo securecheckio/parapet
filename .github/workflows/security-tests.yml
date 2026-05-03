@@ -32,8 +32,8 @@ jobs:
       - name: Run api auth security tests
         run: cargo test -p parapet-api auth::tests --lib
 
-      - name: Run proxy flowbits integration tests
-        run: cargo test -p parapet-rpc-proxy --test test_flowbits_integration
+      - name: Run proxy flowstate integration tests
+        run: cargo test -p parapet-rpc-proxy --test test_flowstate_integration
 
-      - name: Run proxy upstream resilience tests
-        run: cargo test -p parapet-rpc-proxy upstream::tests --lib
+      - name: Run upstream crate tests
+        run: cargo test -p parapet-upstream --lib

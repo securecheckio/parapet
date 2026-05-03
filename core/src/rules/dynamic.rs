@@ -3,7 +3,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::RwLock;
 
 /// Source of a dynamic rule
@@ -33,7 +33,7 @@ impl DynamicRule {
         if let Some(expires_at) = self.expires_at {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(Duration::ZERO)
                 .as_secs();
             return now > expires_at;
         }
@@ -138,21 +138,23 @@ impl DynamicRuleStore {
 
         all_rules
             .into_iter()
-            .filter(|rule| {
-                // Check if rule matches canonical hash
-                if let Some(hash) = canonical_hash {
-                    if let Some(rule_hash) = rule.rule.metadata.get("canonical_transaction_hash") {
-                        if let Some(rule_hash_str) = rule_hash.as_str() {
-                            if rule_hash_str == hash {
-                                return true;
-                            }
-                        }
+            .filter(|rule| match canonical_hash {
+                None => {
+                    // No hash available (e.g. analyzer missing): evaluate all dynamic rules.
+                    true
+                }
+                Some(hash) => {
+                    match rule
+                        .rule
+                        .metadata
+                        .get("canonical_transaction_hash")
+                        .and_then(|v| v.as_str())
+                    {
+                        Some(rule_hash) => rule_hash == hash,
+                        // Rule is not pinned to a specific transaction hash — include it.
+                        None => true,
                     }
                 }
-
-                // For now, return all valid rules
-                // TODO: Add more sophisticated matching logic
-                true
             })
             .collect()
     }
@@ -207,7 +209,7 @@ impl DynamicRuleStore {
         if let Some(expires_at) = rule.expires_at {
             let now = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .unwrap()
+                .unwrap_or(Duration::ZERO)
                 .as_secs();
             let ttl = expires_at.saturating_sub(now);
 

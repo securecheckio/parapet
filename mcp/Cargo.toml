@@ -18,12 +18,13 @@ path = "src/lib.rs"
 [dependencies]
 # Parapet scanner library with all features
 parapet-scanner = { path = "../scanner" }
+parapet-upstream = { path = "../upstream" }
 parapet-core = { path = "../core", features = ["helius", "ottersec", "jupiter", "program-analysis", "rugcheck"] }
 
 # Solana dependencies
-solana-client = "2.3"
-solana-sdk = "2.3"
-solana-transaction-status = "2.3"
+solana-client = { workspace = true }
+solana-sdk = { workspace = true }
+solana-commitment-config = { workspace = true }
 
 # Async runtime
 tokio = { workspace = true }

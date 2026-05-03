@@ -16,6 +16,7 @@ async fn setup_test_state() -> Result<AppState> {
         scans_per_hour_per_key: 10,
         redis_url: "redis://localhost:6379".to_string(),
         solana_rpc_url: "https://api.devnet.solana.com".to_string(),
+        solana_rpc_urls: vec!["https://api.devnet.solana.com".to_string()],
         solana_network: "devnet".to_string(),
         authorized_wallets: vec!["test_wallet".to_string()],
         nonce_ttl_seconds: 300,
@@ -307,7 +308,8 @@ mod canonical_hash_tests {
     use super::*;
     use parapet_core::rules::analyzers::core::CanonicalTransactionAnalyzer;
     use solana_sdk::{
-        instruction::CompiledInstruction, message::Message, pubkey::Pubkey, signature::Keypair,
+        message::compiled_instruction::CompiledInstruction, message::Message, pubkey::Pubkey,
+        signature::Keypair,
     };
     use solana_system_interface::instruction as system_instruction;
 

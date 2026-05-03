@@ -20,6 +20,7 @@ fn create_test_config() -> Config {
         redis_url: std::env::var("REDIS_URL")
             .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         solana_rpc_url: "https://api.devnet.solana.com".to_string(),
+        solana_rpc_urls: vec!["https://api.devnet.solana.com".to_string()],
         solana_network: "devnet".to_string(),
         authorized_wallets: vec!["test_wallet".to_string()],
         nonce_ttl_seconds: 300,

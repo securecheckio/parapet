@@ -1,13 +1,16 @@
 # Minimal cargo-deny configuration for supply chain security
 # https://embarkstudios.github.io/cargo-deny/
+#
+# Advisory rationale and narrative notes: keep in sync with `audit.toml` and
+# `.github/workflows/dependency-security.yml` (cargo-audit --ignore flags).
 
 [advisories]
-# Check for security vulnerabilities
-# All ignored advisories are from Solana SDK v2.3.13 dependencies
-# that we cannot directly control. Risks are documented and will be
-# resolved when Solana updates their dependencies.
+# Check for security vulnerabilities. Most ignores are transitive via Solana 4.x
+# RPC / crypto stacks; we cannot fix them in-tree without upstream releases.
 ignore = [
     # === TLS/Certificate Validation (rustls-webpki) ===
+    # RUSTSEC-2026-0104: CRL parsing panic (rustls-webpki)
+    "RUSTSEC-2026-0104",
     # RUSTSEC-2026-0098: Name constraints for URI names were ignored
     # RUSTSEC-2026-0099: Wildcard DNS name constraint validation
     # Source: solana-pubsub-client -> rustls v0.21.12 -> rustls-webpki v0.101.7
@@ -19,7 +22,6 @@ ignore = [
     # RUSTSEC-2022-0093: ed25519-dalek v1.0.1 - Double Public Key Signing Oracle
     # Source: solana-keypair, solana-signature, solana-ed25519-program
     # Risk: Medium - affects signature verification, Solana SDK uses this internally
-    # Note: Solana v2.3.13 still uses old ed25519-dalek; track Solana updates
     "RUSTSEC-2022-0093",
     
     # RUSTSEC-2024-0344: curve25519-dalek - Timing variability in scalar operations
@@ -64,6 +66,9 @@ ignore = [
     # Source: Solana dependencies
     # Risk: Low - only affects custom logger implementations
     "RUSTSEC-2026-0097",
+
+    # RUSTSEC-2021-0145: atty potential unaligned read (transitive / terminal detection)
+    "RUSTSEC-2021-0145",
 ]
 
 [licenses]

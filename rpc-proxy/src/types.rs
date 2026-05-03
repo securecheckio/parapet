@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 pub struct AppState {
-    pub upstream_client: upstream::UpstreamClient,
+    pub upstream_provider: Arc<dyn upstream::UpstreamProvider>,
     /// Rule engine wrapped in RwLock for live updates
     pub rule_engine: Arc<tokio::sync::RwLock<rules::RuleEngine>>,
 
@@ -32,6 +32,32 @@ pub struct AppState {
 
     /// Activity feed configuration (when Redis is enabled)
     pub activity_feed_config: Option<ActivityFeedConfig>,
+
+    /// When non-empty, only these JSON-RPC methods are accepted.
+    pub rpc_allowed_methods: Vec<String>,
+    /// Methods always rejected (checked first).
+    pub rpc_blocked_methods: Vec<String>,
+}
+
+impl AppState {
+    pub fn is_method_allowed(&self, method: &str) -> bool {
+        if self
+            .rpc_blocked_methods
+            .iter()
+            .any(|m| m.as_str() == method)
+        {
+            return false;
+        }
+        if !self.rpc_allowed_methods.is_empty()
+            && !self
+                .rpc_allowed_methods
+                .iter()
+                .any(|m| m.as_str() == method)
+        {
+            return false;
+        }
+        true
+    }
 }
 
 #[derive(Clone)]

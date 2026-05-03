@@ -12,6 +12,24 @@ impl BasicAnalyzer {
         Self
     }
 
+    /// Count writable accounts per Solana legacy message header semantics.
+    ///
+    /// Account order: `[signers...][writable unsigned...][readonly unsigned...]`
+    /// - Writable signed: `num_required_signatures - num_readonly_signed_accounts`
+    /// - Writable unsigned: remaining accounts minus `num_readonly_unsigned_accounts`
+    fn writable_accounts_count(tx: &Transaction) -> usize {
+        let h = &tx.message.header;
+        let num_signers = h.num_required_signatures as usize;
+        let num_readonly_signed = h.num_readonly_signed_accounts as usize;
+        let num_readonly_unsigned = h.num_readonly_unsigned_accounts as usize;
+        let total = tx.message.account_keys.len();
+
+        let writable_signed = num_signers.saturating_sub(num_readonly_signed);
+        let unsigned = total.saturating_sub(num_signers);
+        let writable_unsigned = unsigned.saturating_sub(num_readonly_unsigned);
+        writable_signed.saturating_add(writable_unsigned)
+    }
+
     fn extract_amount(tx: &Transaction) -> u64 {
         // Try to extract transfer amount from instruction data
         // This is a simplified version - real implementation would parse specific instruction types
@@ -48,8 +66,7 @@ impl TransactionAnalyzer for BasicAnalyzer {
     }
 
     async fn analyze(&self, tx: &Transaction) -> Result<HashMap<String, Value>> {
-        let writable_count = tx.message.header.num_required_signatures as usize
-            + tx.message.header.num_readonly_signed_accounts as usize;
+        let writable_count = Self::writable_accounts_count(tx);
 
         // Extract unique program IDs from instructions
         let program_ids: Vec<String> = tx

@@ -25,6 +25,8 @@ use parapet_core::rules::analyzers::OtterSecVerifiedAnalyzer;
 use parapet_core::rules::analyzers::TokenMintAnalyzer;
 
 // Helper to check if integration tests should run
+// Only compiled when at least one feature that uses it is enabled
+#[cfg(any(feature = "helius", feature = "rugcheck", feature = "ottersec", feature = "token-mint"))]
 fn should_run_integration_tests() -> bool {
     std::env::var("RUN_INTEGRATION_TESTS").is_ok()
 }

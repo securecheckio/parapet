@@ -10,7 +10,7 @@ use parapet_core::enrichment::EnrichmentService;
 use parapet_core::rules::{AnalyzerRegistry, FeedConfig, FeedSource, FeedUpdater, RuleEngine};
 use parapet_scanner::{ScanReport, ThreatType};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -517,10 +517,10 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
 pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String> {
     use base64::engine::general_purpose;
     use base64::Engine;
-    use solana_client::rpc_config::RpcTransactionConfig;
+    use solana_client::rpc_config::{RpcTransactionConfig, UiTransactionEncoding};
+    use solana_client::rpc_response::{EncodedTransaction, EncodedTransactionWithStatusMeta};
     use solana_sdk::signature::Signature;
     use solana_sdk::transaction::VersionedTransaction;
-    use solana_transaction_status::UiTransactionEncoding;
 
     let mut output = String::new();
     output.push_str(&format!("# Transaction Analysis: {}\n\n", signature));
@@ -548,12 +548,12 @@ pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String>
     // Parse transaction
     let tx_with_meta = tx_response.transaction;
     let encoded_tx = match &tx_with_meta {
-        solana_transaction_status::EncodedTransactionWithStatusMeta {
-            transaction: solana_transaction_status::EncodedTransaction::LegacyBinary(encoded_data),
+        EncodedTransactionWithStatusMeta {
+            transaction: EncodedTransaction::LegacyBinary(encoded_data),
             ..
         } => encoded_data,
-        solana_transaction_status::EncodedTransactionWithStatusMeta {
-            transaction: solana_transaction_status::EncodedTransaction::Binary(encoded_data, _),
+        EncodedTransactionWithStatusMeta {
+            transaction: EncodedTransaction::Binary(encoded_data, _),
             ..
         } => encoded_data,
         _ => return Err(anyhow::anyhow!("Unexpected transaction encoding")),
@@ -586,6 +586,11 @@ pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String>
                 signatures: versioned_tx.signatures,
                 message,
             }
+        }
+        VersionedMessage::V1(_) => {
+            return Err(anyhow::anyhow!(
+                "V1 transaction format is not supported in this MCP tool yet"
+            ));
         }
     };
 

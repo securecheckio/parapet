@@ -54,7 +54,7 @@ impl ProgramAnalyzer {
 
         Ok(Self {
             fetcher: ProgramFetcher::new(rpc_url),
-            disassembler: ProgramDisassembler::new()?,
+            disassembler: ProgramDisassembler::new(),
             blocklist_state,
         })
     }

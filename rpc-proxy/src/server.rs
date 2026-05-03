@@ -25,6 +25,12 @@ pub enum AuthMode {
 pub struct ServerConfig {
     pub port: u16,
     pub upstream_url: String,
+    /// Per-endpoint URLs and HTTP settings (priority order). Empty = derive from `upstream_url` + rate limits.
+    pub upstream_endpoint_configs: Vec<(String, upstream::UpstreamHttpSettings)>,
+    pub upstream_strategy: Option<String>,
+    pub upstream_smart_max_slot_lag: u64,
+    pub rpc_allowed_methods: Vec<String>,
+    pub rpc_blocked_methods: Vec<String>,
     pub redis_url: Option<String>,
     pub bind_address: [u8; 4],
 
@@ -101,6 +107,11 @@ impl Default for ServerConfig {
         Self {
             port: 8899,
             upstream_url: String::new(),
+            upstream_endpoint_configs: Vec::new(),
+            upstream_strategy: None,
+            upstream_smart_max_slot_lag: 20,
+            rpc_allowed_methods: Vec::new(),
+            rpc_blocked_methods: Vec::new(),
             redis_url: None,
             bind_address: [0, 0, 0, 0], // Bind to all interfaces by default
             auth_mode: AuthMode::None,  // No auth by default (backwards compatible)
@@ -243,24 +254,57 @@ async fn build_app_router_internal(
         }
     }
 
-    // Initialize upstream client
-    let upstream_config = upstream::UpstreamConfig {
-        max_concurrent: config.upstream_max_concurrent,
-        delay_ms: config.upstream_delay_ms,
-        timeout_secs: config.upstream_timeout_secs.unwrap_or(30),
-        max_retries: config.upstream_max_retries.unwrap_or(3),
-        retry_base_delay_ms: config.upstream_retry_base_delay_ms.unwrap_or(100),
-        circuit_breaker_threshold: config.upstream_circuit_breaker_threshold.unwrap_or(5),
-        circuit_breaker_timeout_secs: config.upstream_circuit_breaker_timeout_secs.unwrap_or(60),
-    };
+    let endpoint_configs: Vec<(String, upstream::UpstreamHttpSettings)> =
+        if !config.upstream_endpoint_configs.is_empty() {
+            config.upstream_endpoint_configs.clone()
+        } else {
+            let upstream_config = upstream::UpstreamHttpSettings {
+                max_concurrent: config.upstream_max_concurrent,
+                delay_ms: config.upstream_delay_ms,
+                timeout_secs: config.upstream_timeout_secs.unwrap_or(30),
+                max_retries: config.upstream_max_retries.unwrap_or(3),
+                retry_base_delay_ms: config.upstream_retry_base_delay_ms.unwrap_or(100),
+                circuit_breaker_threshold: config.upstream_circuit_breaker_threshold.unwrap_or(5),
+                circuit_breaker_timeout_secs: config
+                    .upstream_circuit_breaker_timeout_secs
+                    .unwrap_or(60),
+            };
+            vec![(config.upstream_url.clone(), upstream_config)]
+        };
 
-    let upstream_client =
-        upstream::UpstreamClient::new_with_config(config.upstream_url.clone(), upstream_config);
-    log::info!("✅ Upstream client initialized");
+    let upstream_provider: Arc<dyn upstream::UpstreamProvider> = if endpoint_configs.len() == 1 {
+        let (url, settings) = &endpoint_configs[0];
+        log::info!("✅ Single upstream: {}", mask_api_key(url));
+        Arc::new(upstream::UpstreamClient::new_with_config(
+            url.clone(),
+            settings.clone(),
+        ))
+    } else if config.upstream_strategy.as_deref() == Some("smart") {
+        log::info!(
+            "✅ Smart multi-upstream ({} endpoints, max_slot_lag={})",
+            endpoint_configs.len(),
+            config.upstream_smart_max_slot_lag
+        );
+        Arc::new(upstream::SmartUpstreamProvider::new(
+            endpoint_configs.clone(),
+            config.upstream_smart_max_slot_lag,
+        ))
+    } else {
+        log::info!(
+            "✅ Failover multi-upstream: {} endpoints",
+            endpoint_configs.len()
+        );
+        for (i, (url, _)) in endpoint_configs.iter().enumerate() {
+            log::info!("   {}. {}", i + 1, mask_api_key(url));
+        }
+        Arc::new(upstream::FailoverUpstreamProvider::new(
+            endpoint_configs.clone(),
+        ))
+    };
 
     // Configure ALT resolution for v0 transactions (with caching and batch fetching)
     {
-        let upstream_for_alt = upstream_client.clone();
+        let upstream_for_alt = upstream_provider.clone();
 
         // Create batch fetcher (uses getMultipleAccounts)
         let batch_fetcher: rules::alt_resolver::BatchAccountFetcher =
@@ -279,7 +323,7 @@ async fn build_app_router_internal(
                 "📋 Pre-fetching {} ALTs from config",
                 config.prefetch_alts.len()
             );
-            match upstream_client
+            match upstream_provider
                 .get_multiple_accounts(&config.prefetch_alts)
                 .await
             {
@@ -493,7 +537,7 @@ async fn build_app_router_internal(
 
     // Create app state
     let state = Arc::new(AppState {
-        upstream_client,
+        upstream_provider,
         rule_engine,
         auth_provider,
         usage_tracker,
@@ -503,6 +547,8 @@ async fn build_app_router_internal(
         simulation_registry: Arc::new(simulation_registry),
         escalation_config,
         activity_feed_config,
+        rpc_allowed_methods: config.rpc_allowed_methods.clone(),
+        rpc_blocked_methods: config.rpc_blocked_methods.clone(),
     });
 
     let router = Router::new()

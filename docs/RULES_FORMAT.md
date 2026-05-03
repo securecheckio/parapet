@@ -58,7 +58,7 @@ An object with `**field`**, `**operator`**, and `**value**`:
 - `**operator**`: snake-case string; see [Comparison operators](#comparison-operators).
 - `**value**`: any JSON value appropriate to the operator (number, string, boolean, array for `in` / `not_in`, etc.).
 
-### 2. Flowbit condition (flowstate state)
+### 2. Flowstate condition
 
 An object with a `**flowstate**` string (the flowstate **name**, after any interpolation used when the flowstate was set/incremented), plus optional modifiers:
 

@@ -3,7 +3,7 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use solana_sdk::{
-    message::VersionedMessage,
+    message::{compiled_instruction::CompiledInstruction, VersionedMessage},
     pubkey::Pubkey,
     transaction::{Transaction, VersionedTransaction},
 };
@@ -14,6 +14,12 @@ use std::collections::HashMap;
 /// Computes a deterministic hash of transaction excluding blockhash and signatures.
 /// This allows consent to remain valid even when the transaction is rebuilt with a fresh blockhash.
 pub struct CanonicalTransactionAnalyzer;
+
+impl Default for CanonicalTransactionAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 impl CanonicalTransactionAnalyzer {
     pub fn new() -> Self {
@@ -117,6 +123,10 @@ impl CanonicalTransaction {
                 legacy_msg.instructions.as_slice(),
                 legacy_msg.account_keys.as_slice(),
             ),
+            VersionedMessage::V1(v1_msg) => (
+                v1_msg.instructions.as_slice(),
+                v1_msg.account_keys.as_slice(),
+            ),
         };
 
         // Normalize instructions
@@ -132,7 +142,7 @@ impl CanonicalTransaction {
     /// - Remove compute budget instructions (priority fees can vary)
     /// - Keep instruction order (security relevant)
     fn normalize_instructions(
-        instructions: &[solana_sdk::instruction::CompiledInstruction],
+        instructions: &[CompiledInstruction],
         account_keys: &[Pubkey],
     ) -> Vec<CanonicalInstruction> {
         const COMPUTE_BUDGET_PROGRAM: &str = "ComputeBudget111111111111111111111111111111";
@@ -172,10 +182,12 @@ mod tests {
         // Create two transactions with same instructions but different blockhashes
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
 
-        let mut tx1 = Transaction::new_with_payer(&[instruction.clone()], Some(&from.pubkey()));
+        let mut tx1 =
+            Transaction::new_with_payer(std::slice::from_ref(&instruction), Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
 
-        let mut tx2 = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
+        let mut tx2 =
+            Transaction::new_with_payer(std::slice::from_ref(&instruction), Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
 
         let analyzer = CanonicalTransactionAnalyzer::new();
@@ -260,11 +272,13 @@ mod tests {
 
         let instruction = system_instruction::transfer(&from.pubkey(), &to, 1_000_000);
 
-        let mut tx1 = Transaction::new_with_payer(&[instruction.clone()], Some(&from.pubkey()));
+        let mut tx1 =
+            Transaction::new_with_payer(std::slice::from_ref(&instruction), Some(&from.pubkey()));
         tx1.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
         tx1.sign(&[&from], tx1.message.recent_blockhash);
 
-        let mut tx2 = Transaction::new_with_payer(&[instruction], Some(&from.pubkey()));
+        let mut tx2 =
+            Transaction::new_with_payer(std::slice::from_ref(&instruction), Some(&from.pubkey()));
         tx2.message.recent_blockhash = solana_sdk::hash::Hash::new_unique();
         // Don't sign tx2
 

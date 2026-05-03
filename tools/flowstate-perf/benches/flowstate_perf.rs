@@ -13,7 +13,7 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
         b.iter(|| {
             manager.set(
                 black_box(&wallet),
-                black_box("test_flowbit"),
+                black_box("test_flowstate_key"),
                 Some(Duration::from_secs(3600)),
             );
         });
@@ -36,9 +36,13 @@ fn bench_per_wallet_operations(c: &mut Criterion) {
     group.bench_function("is_set", |b: &mut Bencher| {
         let mut manager = FlowStateManager::new(None);
         let wallet = Pubkey::new_unique();
-        manager.set(&wallet, "test_flowbit", Some(Duration::from_secs(3600)));
+        manager.set(
+            &wallet,
+            "test_flowstate_key",
+            Some(Duration::from_secs(3600)),
+        );
         b.iter(|| {
-            black_box(manager.is_set(black_box(&wallet), black_box("test_flowbit")));
+            black_box(manager.is_set(black_box(&wallet), black_box("test_flowstate_key")));
         });
     });
 
@@ -62,7 +66,10 @@ fn bench_global_operations(c: &mut Criterion) {
     group.bench_function("set_global", |b: &mut Bencher| {
         let mut manager = FlowStateManager::new(None);
         b.iter(|| {
-            manager.set_global(black_box("test_flowbit"), Some(Duration::from_secs(3600)));
+            manager.set_global(
+                black_box("test_flowstate_key"),
+                Some(Duration::from_secs(3600)),
+            );
         });
     });
 
@@ -77,9 +84,9 @@ fn bench_global_operations(c: &mut Criterion) {
     // Benchmark global is_set check
     group.bench_function("is_set_global", |b: &mut Bencher| {
         let mut manager = FlowStateManager::new(None);
-        manager.set_global("test_flowbit", Some(Duration::from_secs(3600)));
+        manager.set_global("test_flowstate_key", Some(Duration::from_secs(3600)));
         b.iter(|| {
-            black_box(manager.is_set_global(black_box("test_flowbit")));
+            black_box(manager.is_set_global(black_box("test_flowstate_key")));
         });
     });
 
@@ -107,7 +114,7 @@ fn bench_scaling(c: &mut Criterion) {
                 let mut manager = FlowStateManager::new(None);
                 let wallets: Vec<Pubkey> = (0..num_wallets).map(|_| Pubkey::new_unique()).collect();
 
-                // Pre-populate with flowbits
+                // Pre-populate with flowstate keys
                 for wallet in &wallets {
                     manager.increment(wallet, "transaction_count", Some(Duration::from_secs(3600)));
                 }
@@ -130,7 +137,7 @@ fn bench_scaling(c: &mut Criterion) {
             |b, &num_keys| {
                 let mut manager = FlowStateManager::new(None);
 
-                // Pre-populate with global flowbits
+                // Pre-populate with global flowstate keys
                 for i in 0..num_keys {
                     manager.increment_global(
                         &format!("recipient_{}", i),
@@ -154,7 +161,7 @@ fn bench_variable_interpolation(c: &mut Criterion) {
 
     // Benchmark simple interpolation (no variables)
     group.bench_function("no_variables", |b: &mut Bencher| {
-        let template = "simple_flowbit_name";
+        let template = "simple_flowstate_key";
         b.iter(|| {
             black_box(template.contains('{'));
         });

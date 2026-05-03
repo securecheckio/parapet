@@ -1,3 +1,6 @@
+//! JSON-RPC entrypoint. **Do not** put upstream or internal error chains in `JsonRpcError.message`;
+//! log details server-side and return generic text (see auth and upstream forward paths).
+
 use crate::auth::AuthContext;
 use crate::output::{emit_event, EventBuilder};
 use crate::types::AppState;
@@ -7,36 +10,14 @@ use axum::{
     Json,
 };
 use parapet_core::rules::types::RuleDecision;
-use serde::{Deserialize, Serialize};
+pub use parapet_upstream::{JsonRpcError, JsonRpcRequest, JsonRpcResponse};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::sync::Arc;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct JsonRpcRequest {
-    pub jsonrpc: String,
-    pub id: Value,
-    pub method: String,
-    #[serde(default)]
-    pub params: Vec<Value>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct JsonRpcResponse {
-    pub jsonrpc: String,
-    pub id: Value,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub result: Option<Value>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub error: Option<JsonRpcError>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct JsonRpcError {
-    pub code: i32,
-    pub message: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub data: Option<Value>,
+/// Opaque ID for correlating client-visible errors with server logs (do not log secrets in messages).
+fn new_correlation_id() -> String {
+    uuid::Uuid::new_v4().to_string()
 }
 
 pub async fn handle_rpc(
@@ -46,6 +27,23 @@ pub async fn handle_rpc(
     Json(req): Json<JsonRpcRequest>,
 ) -> (StatusCode, Json<JsonRpcResponse>) {
     log::debug!("📨 Received RPC request: method={}", req.method);
+
+    if !state.is_method_allowed(&req.method) {
+        log::warn!("🚫 Method '{}' blocked by proxy policy", req.method);
+        return (
+            StatusCode::OK,
+            Json(JsonRpcResponse {
+                jsonrpc: "2.0".to_string(),
+                id: req.id.clone(),
+                result: None,
+                error: Some(JsonRpcError {
+                    code: -32601,
+                    message: format!("Method '{}' not allowed", req.method),
+                    data: None,
+                }),
+            }),
+        );
+    }
 
     // Support URL query parameter authentication
     // If ?api-key= is present and no Authorization header, inject it as X-API-Key header
@@ -77,7 +75,12 @@ pub async fn handle_rpc(
                 result.context
             }
             Err(e) => {
-                log::warn!("🚫 Authentication failed: {}", e);
+                let correlation_id = new_correlation_id();
+                log::warn!(
+                    "🚫 Authentication failed (correlation_id={}): {}",
+                    correlation_id,
+                    e
+                );
 
                 // Notify auth provider of failure
                 let _ = auth_provider
@@ -92,8 +95,10 @@ pub async fn handle_rpc(
                         result: None,
                         error: Some(JsonRpcError {
                             code: -32001,
-                            message: format!("Authentication failed: {}", e),
-                            data: None,
+                            message: "Authentication failed".to_string(),
+                            data: Some(serde_json::json!({
+                                "correlation_id": correlation_id,
+                            })),
                         }),
                     }),
                 );
@@ -176,10 +181,15 @@ pub async fn handle_rpc(
     }
 
     // For all other methods, forward directly to upstream
-    match state.upstream_client.forward(&req).await {
+    match state.upstream_provider.forward(&req).await {
         Ok(response) => (StatusCode::OK, Json(response)),
         Err(e) => {
-            log::error!("❌ Error forwarding to upstream: {}", e);
+            let correlation_id = new_correlation_id();
+            log::error!(
+                "❌ Error forwarding to upstream (correlation_id={}): {}",
+                correlation_id,
+                e
+            );
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(JsonRpcResponse {
@@ -188,8 +198,10 @@ pub async fn handle_rpc(
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32603,
-                        message: format!("Internal error: {}", e),
-                        data: None,
+                        message: "Internal RPC error".to_string(),
+                        data: Some(serde_json::json!({
+                            "correlation_id": correlation_id,
+                        })),
                     }),
                 }),
             )
@@ -412,7 +424,7 @@ async fn handle_transaction_send(
 
     // Forward to upstream
     log::info!("📤 Forwarding transaction to upstream");
-    match state.upstream_client.forward(&req).await {
+    match state.upstream_provider.forward(&req).await {
         Ok(response) => {
             // Extract signature from response if available
             let signature = response
@@ -521,7 +533,12 @@ async fn handle_transaction_send(
             (StatusCode::OK, Json(response))
         }
         Err(e) => {
-            log::error!("❌ Error forwarding to upstream: {}", e);
+            let correlation_id = new_correlation_id();
+            log::error!(
+                "❌ Error forwarding to upstream (correlation_id={}): {}",
+                correlation_id,
+                e
+            );
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(JsonRpcResponse {
@@ -530,8 +547,10 @@ async fn handle_transaction_send(
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32603,
-                        message: format!("Internal error: {}", e),
-                        data: None,
+                        message: "Internal RPC error".to_string(),
+                        data: Some(serde_json::json!({
+                            "correlation_id": correlation_id,
+                        })),
                     }),
                 }),
             )
@@ -584,10 +603,15 @@ async fn handle_simulate_transaction(
         .unwrap_or(state.default_blocking_threshold);
 
     // Forward to upstream RPC for simulation
-    let mut response = match state.upstream_client.forward(&req).await {
+    let mut response = match state.upstream_provider.forward(&req).await {
         Ok(response) => response,
         Err(e) => {
-            log::error!("❌ Error forwarding simulation to upstream: {}", e);
+            let correlation_id = new_correlation_id();
+            log::error!(
+                "❌ Error forwarding simulation to upstream (correlation_id={}): {}",
+                correlation_id,
+                e
+            );
             return (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(JsonRpcResponse {
@@ -596,8 +620,10 @@ async fn handle_simulate_transaction(
                     result: None,
                     error: Some(JsonRpcError {
                         code: -32603,
-                        message: format!("Internal error: {}", e),
-                        data: None,
+                        message: "Internal RPC error".to_string(),
+                        data: Some(serde_json::json!({
+                            "correlation_id": correlation_id,
+                        })),
                     }),
                 }),
             );
@@ -748,12 +774,13 @@ fn decode_transaction_for_wallet(tx_data: &Value) -> anyhow::Result<String> {
     let transaction = decode_transaction(tx_data)?;
 
     // Get fee payer (first account) - handle both v0 and legacy
-    let account_keys = match &transaction.message {
-        VersionedMessage::V0(v0_msg) => &v0_msg.account_keys,
-        VersionedMessage::Legacy(legacy_msg) => &legacy_msg.account_keys,
+    let fee_payer = match &transaction.message {
+        VersionedMessage::V0(v0_msg) => v0_msg.account_keys.first(),
+        VersionedMessage::Legacy(legacy_msg) => legacy_msg.account_keys.first(),
+        VersionedMessage::V1(v1_msg) => v1_msg.account_keys.first(),
     };
 
-    if let Some(key) = account_keys.first() {
+    if let Some(key) = fee_payer {
         return Ok(key.to_string());
     }
 

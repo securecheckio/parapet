@@ -8,11 +8,13 @@ use tokio::sync::Mutex;
 #[cfg(feature = "redis")]
 use redis::{self, AsyncCommands};
 
+type FallbackCacheType = HashMap<String, (Vec<u8>, std::time::Instant)>;
+
 /// Shared cache that uses Redis when available, falls back to in-memory
 pub struct SharedCache {
     #[cfg(feature = "redis")]
     redis_client: Option<Arc<redis::Client>>,
-    fallback_cache: Arc<Mutex<HashMap<String, (Vec<u8>, std::time::Instant)>>>,
+    fallback_cache: Arc<Mutex<FallbackCacheType>>,
 }
 
 impl SharedCache {

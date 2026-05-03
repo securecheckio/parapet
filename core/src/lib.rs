@@ -12,24 +12,27 @@
 //!
 //! # Example
 //!
-//! ```ignore
-//! use sol_shield::rules::{RuleEngine, AnalyzerRegistry};
-//! use sol_shield::rules::analyzers::*;
+//! ```no_run
+//! use parapet_core::rules::analyzers::{BasicAnalyzer, CoreSecurityAnalyzer};
+//! use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 //! use std::sync::Arc;
 //!
-//! // Create analyzer registry
 //! let mut registry = AnalyzerRegistry::new();
 //! registry.register(Arc::new(BasicAnalyzer::new()));
 //! registry.register(Arc::new(CoreSecurityAnalyzer::new(std::collections::HashSet::new())));
 //!
-//! // Create rule engine and load rules
 //! let mut engine = RuleEngine::new(registry);
-//! engine.load_rules_from_file("./rules/default.json").unwrap();
+//! engine.load_rules_from_file("./rules/default.json").expect("load rules");
 //! ```
+
+// Typed errors for library consumers
+pub mod error;
 
 // Rules engine module
 pub mod enrichment;
 pub mod rules;
+
+pub use error::ParapetCoreError;
 
 // Program analysis module (optional)
 #[cfg(feature = "program-analysis")]

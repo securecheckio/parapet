@@ -1,8 +1,8 @@
 /// Address Lookup Table resolution for v0 transactions
 use anyhow::{anyhow, Result};
+use solana_address_lookup_table_interface::state::AddressLookupTable;
 use solana_sdk::{
-    address_lookup_table::state::AddressLookupTable,
-    message::{v0, VersionedMessage},
+    message::{compiled_instruction::CompiledInstruction, v0, VersionedMessage},
     pubkey::Pubkey,
     transaction::{Transaction, VersionedTransaction},
 };
@@ -53,6 +53,11 @@ impl AltResolver {
             VersionedMessage::Legacy(_) => {
                 return Err(anyhow!("Transaction is already legacy format"));
             }
+            VersionedMessage::V1(_) => {
+                return Err(anyhow!(
+                    "v1 messages do not use address lookup tables; nothing to resolve"
+                ));
+            }
         };
 
         // Resolve ALT addresses with caching
@@ -77,7 +82,7 @@ impl AltResolver {
             instructions: v0_message
                 .instructions
                 .iter()
-                .map(|ix| solana_sdk::instruction::CompiledInstruction {
+                .map(|ix| CompiledInstruction {
                     program_id_index: ix.program_id_index,
                     accounts: ix.accounts.clone(),
                     data: ix.data.clone(),
@@ -208,6 +213,11 @@ pub async fn resolve_v0_transaction(
         VersionedMessage::Legacy(_) => {
             return Err(anyhow!("Transaction is already legacy format"));
         }
+        VersionedMessage::V1(_) => {
+            return Err(anyhow!(
+                "v1 messages do not use address lookup tables; nothing to resolve"
+            ));
+        }
     };
 
     // Resolve ALT addresses
@@ -232,7 +242,7 @@ pub async fn resolve_v0_transaction(
         instructions: v0_message
             .instructions
             .iter()
-            .map(|ix| solana_sdk::instruction::CompiledInstruction {
+            .map(|ix| CompiledInstruction {
                 program_id_index: ix.program_id_index,
                 accounts: ix.accounts.clone(),
                 data: ix.data.clone(),

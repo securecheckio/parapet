@@ -4,6 +4,7 @@ use parapet_core::rules::{AnalyzerRegistry, RuleEngine};
 use solana_sdk::{
     message::Message, pubkey::Pubkey, signature::Keypair, signer::Signer, transaction::Transaction,
 };
+use solana_sdk_ids::system_program;
 use solana_system_interface::instruction as system_instruction;
 use std::sync::Arc;
 
@@ -79,7 +80,7 @@ async fn test_ai_agent_account_spam() {
             &new_account.pubkey(),
             1_000_000,
             0,
-            &solana_sdk::system_program::id(),
+            &system_program::id(),
         );
         let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
         let mut tx = Transaction::new_unsigned(message);
@@ -104,7 +105,7 @@ async fn test_ai_agent_account_spam() {
         &new_account.pubkey(),
         1_000_000,
         0,
-        &solana_sdk::system_program::id(),
+        &system_program::id(),
     );
     let message = Message::new(&[ix], Some(&agent_keypair.pubkey()));
     let mut tx = Transaction::new_unsigned(message);

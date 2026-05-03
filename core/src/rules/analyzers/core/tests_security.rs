@@ -3,7 +3,7 @@ use crate::rules::analyzer::TransactionAnalyzer;
 use serde_json::json;
 use solana_sdk::{
     hash::Hash,
-    instruction::CompiledInstruction,
+    message::compiled_instruction::CompiledInstruction,
     message::{Message, MessageHeader},
     pubkey::Pubkey,
     signature::Signature,

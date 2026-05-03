@@ -124,7 +124,7 @@ if [ -z "$WALLET" ]; then
     exit 1
 fi
 
-# Build the binary if needed (it goes to sol-shield/target, not scanner/target)
+# Build the binary if needed (workspace target is under parapet/target)
 BINARY_PATH="../target/release/wallet-scanner"
 if [ ! -f "$BINARY_PATH" ]; then
     echo "Building wallet scanner..."

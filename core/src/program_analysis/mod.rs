@@ -23,6 +23,7 @@ pub use ai_analyzer::{AiAnalyzer, AiProviderConfig};
 
 pub use types::*;
 
+use crate::ParapetCoreError;
 use anyhow::Result;
 
 /// Analysis tier determines depth of program inspection
@@ -60,7 +61,7 @@ impl ProgramAnalysisService {
     pub fn new(rpc_url: String) -> Self {
         Self {
             fetcher: ProgramFetcher::new(rpc_url),
-            disassembler: ProgramDisassembler::new().expect("Failed to initialize disassembler"),
+            disassembler: ProgramDisassembler::new(),
             semantic_analyzer: SemanticAnalyzer::new(),
             #[cfg(feature = "ai-analysis")]
             ai_analyzer: None, // Will be enabled if configured
@@ -72,7 +73,7 @@ impl ProgramAnalysisService {
     pub fn new_with_ai(rpc_url: String, ai_config: AiProviderConfig) -> Self {
         Self {
             fetcher: ProgramFetcher::new(rpc_url),
-            disassembler: ProgramDisassembler::new().expect("Failed to initialize disassembler"),
+            disassembler: ProgramDisassembler::new(),
             semantic_analyzer: SemanticAnalyzer::new(),
             ai_analyzer: Some(AiAnalyzer::new(ai_config)),
         }
@@ -84,17 +85,22 @@ impl ProgramAnalysisService {
         program_id: &str,
         tier: AnalysisTier,
         _mode: AnalysisMode, // TODO: Implement async mode with work queue
-    ) -> Result<ProgramAnalysisResult> {
+    ) -> std::result::Result<ProgramAnalysisResult, ParapetCoreError> {
         use chrono::Utc;
         use sha2::{Digest, Sha256};
         use solana_sdk::pubkey::Pubkey;
         use std::str::FromStr;
 
         let start_time = std::time::Instant::now();
-        let program_pubkey = Pubkey::from_str(program_id)?;
+        let program_pubkey = Pubkey::from_str(program_id)
+            .map_err(|e| ParapetCoreError::ProgramAnalysis(format!("invalid program id: {e}")))?;
 
         // Fetch program data
-        let program_data = self.fetcher.fetch_program(&program_pubkey).await?;
+        let program_data = self
+            .fetcher
+            .fetch_program(&program_pubkey)
+            .await
+            .map_err(|e| ParapetCoreError::ProgramAnalysis(e.to_string()))?;
 
         // Calculate bytecode hash
         let mut hasher = Sha256::new();
@@ -133,11 +139,13 @@ impl ProgramAnalysisService {
         // Tier 2: Deep analysis (+ disassembly + semantic)
         let disassembly = self
             .disassembler
-            .disassemble(&program_data.executable_data)?;
+            .disassemble(&program_data.executable_data)
+            .map_err(|e| ParapetCoreError::ProgramAnalysis(e.to_string()))?;
         let semantic = self
             .semantic_analyzer
             .analyze_program(&program_data, Some(&disassembly))
-            .await?;
+            .await
+            .map_err(|e| ParapetCoreError::ProgramAnalysis(e.to_string()))?;
 
         let bytecode_analysis = Some(BytecodeAnalysis {
             total_instructions: disassembly.total_instructions,
@@ -148,11 +156,11 @@ impl ProgramAnalysisService {
         });
 
         // Calculate risk score based on disassembly and semantic
-        let mut risk_score = 0.0;
+        let mut risk_score: f64 = 0.0;
         risk_score += disassembly.entropy_score * 20.0; // High entropy is suspicious
         risk_score += semantic.control_flow_complexity * 30.0;
         risk_score += (disassembly.suspicious_patterns.len() * 10) as f64;
-        risk_score = risk_score.min(100.0);
+        risk_score = risk_score.min(100.0_f64);
 
         let risk_level = match risk_score as u8 {
             0..=20 => RiskLevel::VeryLow,
@@ -192,7 +200,8 @@ impl ProgramAnalysisService {
             if let Some(ref ai_analyzer) = self.ai_analyzer {
                 let ai_result = ai_analyzer
                     .analyze_program(&program_data, &disassembly, Some(&semantic))
-                    .await?;
+                    .await
+                    .map_err(|e| ParapetCoreError::ProgramAnalysis(e.to_string()))?;
 
                 let ai_analysis = Some(AiAnalysis {
                     model_used: ai_result.model_used.clone(),
@@ -243,8 +252,9 @@ impl ProgramAnalysisService {
         }
 
         // Fallback if AI not available but requested
-        Err(anyhow::anyhow!(
+        Err(ParapetCoreError::ProgramAnalysis(
             "AI analysis requested but not available (compile with ai-analysis feature)"
+                .to_string(),
         ))
     }
 

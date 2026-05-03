@@ -4,7 +4,9 @@
 use anyhow::{anyhow, Result};
 use log::{debug, info, warn};
 use solana_client::rpc_client::RpcClient;
-use solana_sdk::{commitment_config::CommitmentConfig, pubkey::Pubkey};
+use solana_commitment_config::CommitmentConfig;
+use solana_sdk::pubkey::Pubkey;
+use solana_sdk_ids::bpf_loader_upgradeable;
 use std::time::Instant;
 
 use super::types::ProgramData;
@@ -163,7 +165,7 @@ impl ProgramFetcher {
 
     fn is_bpf_loader_upgradeable(&self, owner: &Pubkey) -> bool {
         // BPF Loader Upgradeable program ID
-        *owner == solana_sdk::bpf_loader_upgradeable::id()
+        *owner == bpf_loader_upgradeable::id()
     }
 
     fn is_bpf_loader(&self, owner: &Pubkey) -> bool {

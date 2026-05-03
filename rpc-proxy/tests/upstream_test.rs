@@ -1,17 +1,29 @@
 use parapet_rpc_proxy::rpc_handler::JsonRpcRequest;
 /// Upstream client tests for parapet-rpc-proxy
-use parapet_rpc_proxy::upstream::{UpstreamClient, UpstreamConfig};
+use parapet_rpc_proxy::upstream::{CircuitState, UpstreamClient, UpstreamHttpSettings};
 use serde_json::json;
+
+const DEVNET_RPC: &str = "https://api.devnet.solana.com";
 
 #[tokio::test]
 async fn test_upstream_client_creation() {
-    let client = UpstreamClient::new("https://api.devnet.solana.com".to_string());
-    assert!(true); // Just test construction
+    let url = DEVNET_RPC.to_string();
+    let client = UpstreamClient::new(url.clone());
+    assert_eq!(client.upstream_url, url);
+    assert!(
+        client.circuit_call_permitted().await,
+        "new client should permit calls (circuit closed)"
+    );
+    assert_eq!(
+        client.get_circuit_state().await,
+        CircuitState::Closed,
+        "circuit should start closed"
+    );
 }
 
 #[tokio::test]
 async fn test_upstream_client_with_config() {
-    let config = UpstreamConfig {
+    let config = UpstreamHttpSettings {
         max_concurrent: 5,
         delay_ms: 50,
         timeout_secs: 10,
@@ -21,10 +33,14 @@ async fn test_upstream_client_with_config() {
         circuit_breaker_timeout_secs: 30,
     };
 
-    let client =
-        UpstreamClient::new_with_config("https://api.devnet.solana.com".to_string(), config);
-
-    assert!(true); // Just test construction with config
+    let url = DEVNET_RPC.to_string();
+    let client = UpstreamClient::new_with_config(url.clone(), config);
+    assert_eq!(client.upstream_url, url);
+    assert!(
+        client.circuit_call_permitted().await,
+        "configured client should permit calls (circuit closed)"
+    );
+    assert_eq!(client.get_circuit_state().await, CircuitState::Closed);
 }
 
 #[tokio::test]
@@ -47,7 +63,7 @@ async fn test_upstream_forward_invalid_url() {
 
 #[tokio::test]
 async fn test_upstream_config_defaults() {
-    let config = UpstreamConfig {
+    let config = UpstreamHttpSettings {
         max_concurrent: 10,
         delay_ms: 100,
         timeout_secs: 30,

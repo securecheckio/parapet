@@ -7,6 +7,7 @@ use axum::{
     Json,
 };
 use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+use parapet_upstream::{JsonRpcRequest, UpstreamProvider};
 use redis::AsyncCommands;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -173,7 +174,7 @@ where
         );
 
         // Forward transaction to Solana network
-        match forward_transaction_to_network(&tx_bytes, &state.config().solana_rpc_url).await {
+        match forward_transaction_to_network(&tx_bytes, state.upstream_rpc().as_ref()).await {
             Ok(signature) => {
                 // Update escalation status
                 escalation.status = EscalationStatus::ApprovedFastPath;
@@ -490,8 +491,11 @@ where
     Ok(Json(escalations))
 }
 
-/// Forward transaction to Solana network
-async fn forward_transaction_to_network(tx_bytes: &[u8], rpc_url: &str) -> Result<String, String> {
+/// Forward transaction to Solana network (multi-upstream failover via `parapet-upstream`).
+async fn forward_transaction_to_network(
+    tx_bytes: &[u8],
+    upstream: &(dyn UpstreamProvider + Send + Sync),
+) -> Result<String, String> {
     // Deserialize transaction
     let _transaction: solana_sdk::transaction::Transaction = bincode::deserialize(tx_bytes)
         .map_err(|e| format!("Failed to deserialize transaction: {}", e))?;
@@ -499,36 +503,29 @@ async fn forward_transaction_to_network(tx_bytes: &[u8], rpc_url: &str) -> Resul
     // Encode to base64
     let tx_base64 = B64.encode(tx_bytes);
 
-    // Send via RPC
-    let client = reqwest::Client::new();
-    let response = client
-        .post(rpc_url)
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "sendTransaction",
-            "params": [
-                tx_base64,
-                {
-                    "encoding": "base64",
-                    "skipPreflight": false,
-                    "maxRetries": 3
-                }
-            ]
-        }))
-        .send()
-        .await
-        .map_err(|e| format!("Failed to send request: {}", e))?;
+    let req = JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        id: serde_json::json!(1),
+        method: "sendTransaction".to_string(),
+        params: vec![
+            serde_json::Value::String(tx_base64),
+            serde_json::json!({
+                "encoding": "base64",
+                "skipPreflight": false,
+                "maxRetries": 3
+            }),
+        ],
+    };
 
-    let result: serde_json::Value = response
-        .json()
+    let resp = upstream
+        .forward(&req)
         .await
-        .map_err(|e| format!("Failed to parse response: {}", e))?;
+        .map_err(|e| format!("Upstream forward failed: {}", e))?;
 
-    if let Some(signature) = result["result"].as_str() {
-        Ok(signature.to_string())
-    } else if let Some(error) = result["error"].as_object() {
-        Err(format!("RPC error: {:?}", error))
+    if let Some(signature) = resp.result.and_then(|r| r.as_str().map(|s| s.to_string())) {
+        Ok(signature)
+    } else if let Some(err) = resp.error {
+        Err(format!("RPC error: {}", err.message))
     } else {
         Err("Unknown error forwarding transaction".to_string())
     }

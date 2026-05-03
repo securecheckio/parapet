@@ -15,14 +15,17 @@ path = "src/lib.rs"
 
 [dependencies]
 # Solana
-solana-sdk = "2.3"
-solana-system-interface = "1.0"
-solana-client = { version = "2.3", optional = true }
+solana-sdk = { workspace = true }
+solana-system-interface = { workspace = true, features = ["bincode"] }
+solana-address-lookup-table-interface = { workspace = true, features = ["bincode", "bytemuck"] }
+solana-commitment-config = { workspace = true }
+solana-sdk-ids = { workspace = true }
+solana-client = { workspace = true, optional = true }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-borsh = "0.10"
+borsh = { version = "1.5", features = ["derive"] }
 toml = "0.8"
 
 # Utility
@@ -54,9 +57,9 @@ goblin = { version = "0.8", optional = true }
 [dev-dependencies]
 tokio = { version = "1.0", features = ["rt", "macros"] }
 serial_test = "3.0"
-criterion = "0.5"
 tempfile = "3.8"
 mockito = "1.0"
+proptest = "1.5"
 
 [features]
 default = []

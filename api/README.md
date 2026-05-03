@@ -26,7 +26,8 @@ Edit `config.toml` to match your environment. Key settings:
 
 - `server.host` / `server.port`: Where to listen (default: `0.0.0.0:3000`)
 - `redis.url`: Redis connection URL
-- `solana.rpc_url` / `solana.network`: Solana network configuration
+- `solana.rpc_url` **or** `solana.rpc_urls` (ordered list): Solana JSON-RPC for escalations and forwarding; environment **`SOLANA_RPC_URL`** or comma-separated **`SOLANA_RPC_URLS`** overrides when set (see `config.example.toml`)
+- `solana.network`: Cluster name (metadata)
 - `auth.authorized_wallets`: Wallet addresses allowed to manage rules/escalations
 - `auth.mcp_api_keys`: API keys for MCP endpoint access
 - `rate_limiting.max_concurrent_scans`: Concurrent MCP scan limit

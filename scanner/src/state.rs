@@ -4,11 +4,11 @@ use solana_account_decoder::UiAccountEncoding;
 use solana_client::rpc_client::RpcClient;
 use solana_client::rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig};
 use solana_client::rpc_filter::{Memcmp, MemcmpEncodedBytes, RpcFilterType};
-use solana_sdk::commitment_config::CommitmentConfig;
+use solana_commitment_config::CommitmentConfig;
+use solana_program_option::COption;
 use solana_sdk::program_pack::Pack;
 use solana_sdk::pubkey::Pubkey;
-use spl_token::solana_program::program_option::COption;
-use spl_token::state::Account as TokenAccount;
+use spl_token_interface::state::Account as TokenAccount;
 use std::io::Write;
 use std::str::FromStr;
 
@@ -55,7 +55,7 @@ impl StateScanner {
         commitment: CommitmentConfig,
     ) -> Result<Vec<(Pubkey, TokenAccount)>> {
         // SPL Token program ID
-        let token_program = spl_token::id();
+        let token_program = spl_token_interface::id();
 
         // Filter for accounts owned by this wallet
         let config = RpcProgramAccountsConfig {
@@ -74,12 +74,16 @@ impl StateScanner {
             ..Default::default()
         };
 
-        let accounts = rpc.get_program_accounts_with_config(&token_program, config)?;
+        let accounts = rpc.get_program_ui_accounts_with_config(&token_program, config)?;
 
         let mut token_accounts = Vec::new();
-        for (pubkey, account) in accounts {
+        for (pubkey, ui_account) in accounts {
+            let Some(raw) = ui_account.data.decode() else {
+                warn!("Could not decode token account data for {}", pubkey);
+                continue;
+            };
             // Unpack token account data using SPL Token's Pack trait
-            match TokenAccount::unpack(&account.data) {
+            match TokenAccount::unpack(&raw) {
                 Ok(token_account) => {
                     debug!(
                         "Token account {}: mint={}, amount={}, delegate={:?}",

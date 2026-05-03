@@ -1,6 +1,6 @@
 # flowstate-perf
 
-Criterion benchmarks for `FlowbitStateManager` in `parapet-core` (flowstate state only — not the RPC proxy).
+Criterion benchmarks for `FlowStateManager` in `parapet-core` (flowstate only — not the RPC proxy).
 
 **Run**
 
