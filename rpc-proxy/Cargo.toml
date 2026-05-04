@@ -33,7 +33,7 @@ tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "compression-gzip"] }
 
 # Async runtime
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 async-trait = "0.1"
 futures = "0.3"
 
@@ -79,7 +79,7 @@ wasm-analyzers = []
 tempfile = "3.0"
 serial_test = "3.0"
 serde_json = "1.0"
-tokio = { version = "1.0", features = ["full"] }
+tokio = { version = "1.52", features = ["full"] }
 wiremock = "0.6"
 solana-system-interface = { workspace = true }
 solana-sdk-ids = { workspace = true }
