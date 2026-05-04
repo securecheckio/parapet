@@ -21,6 +21,9 @@ fn create_full_registry() -> AnalyzerRegistry {
     registry.register(Arc::new(SystemProgramAnalyzer::new()));
     registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
 
+    // comprehensive-protection.json includes Helius-backed rules (optional at runtime).
+    registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
+
     registry
 }
 
