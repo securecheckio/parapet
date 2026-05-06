@@ -1,0 +1,30 @@
+# Parapet Security Audit Configuration
+# This file configures cargo-audit to handle known issues from third-party dependencies
+
+[advisories]
+# Vulnerabilities we're tracking but can't immediately fix without major upgrades.
+# Canonical config for `cargo audit` (run from the `parapet/` workspace root).
+
+# Advisory IDs to ignore (all from transitive Solana dependencies)
+ignore = [
+    "RUSTSEC-2026-0104",  # rustls-webpki CRL parsing panic
+    "RUSTSEC-2026-0097",  # rand / custom logger (transitive Solana)
+    "RUSTSEC-2026-0098",  # rustls-webpki constraints (transitive)
+    "RUSTSEC-2026-0099",  # rustls-webpki wildcards (transitive)
+    "RUSTSEC-2022-0093",  # ed25519-dalek (Solana)
+    "RUSTSEC-2024-0344",  # curve25519-dalek (Solana)
+    "RUSTSEC-2024-0384",  # instant unmaintained (fixed: notify v7 → v8.2)
+    "RUSTSEC-2024-0375",  # atty - unmaintained, from solana-logger
+    "RUSTSEC-2025-0141",  # bincode 1.3.3 - unmaintained, from Solana SDK
+    "RUSTSEC-2024-0388",  # derivative - unmaintained, from ark-* (Solana crypto)
+    "RUSTSEC-2025-0161",  # libsecp256k1 - unmaintained, from Solana secp256k1
+    "RUSTSEC-2025-0119",  # number_prefix - unmaintained, from indicatif (Solana progress bars)
+    "RUSTSEC-2024-0436",  # paste - unmaintained, from ark-ff (Solana crypto)
+    "RUSTSEC-2021-0145",  # atty unaligned read
+]
+
+# Rationale for ignores:
+# - All are transitive dependencies from Solana SDK 4.x
+# - Cannot fix without upstream Solana releases
+# - Low risk: mostly unmaintained crates with no known exploits, or timing/unsound issues
+#   requiring specific attack scenarios not applicable to our use case
