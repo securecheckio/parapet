@@ -1,0 +1,195 @@
+[
+  {
+    "version": "1.0",
+    "id": "block-drift-presigned-authority-fingerprint",
+    "name": "Block: Drift Attack - Pre-signed Authority Change (Fingerprint)",
+    "description": "Blocks any durable nonce transaction that contains an instruction whose first 8 bytes match a known authority/admin-transfer fingerprint. A pre-signed authority change has no legitimate operational justification.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "drift-attack", "durable-nonce", "authority-change", "fingerprint"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "instruction_data:has_authority_change",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed authority/admin change detected - durable nonce + known authority-transfer instruction fingerprint. Drift-style attack BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_presigned_authority_change",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.8,
+      "false_positive_rate": 0.001,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-drift-nonce-custom-program-outflow",
+    "name": "Block: Drift Attack - Durable Nonce + Custom Program + Outflow",
+    "description": "Blocks durable nonce transactions targeting a non-core custom program that also contain fund outflows. This combination is rare in legitimate use and matches the Drift Protocol exploit pattern.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "drift-attack", "durable-nonce", "custom-program", "outflow"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          {
+            "any": [
+              {
+                "field": "system:has_sol_transfer",
+                "operator": "equals",
+                "value": true
+              },
+              {
+                "field": "token_instructions:has_transfer",
+                "operator": "equals",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Drift-style attack detected! Durable nonce + custom program + fund outflow pattern. Transaction BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_exploit_with_drain",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.5,
+      "false_positive_rate": 0.005,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-drift-log-admin-change",
+    "name": "Block: Drift Attack - Admin Change in Logs + Durable Nonce",
+    "description": "Blocks when confirmed transaction logs contain an admin/authority-change instruction name AND a durable nonce was used. Catches Drift-style attacks by analyzing transaction execution logs.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "drift-attack", "durable-nonce", "log-analysis", "admin-change"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "any": [
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferOwnership"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetOwner"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "ChangeAuthority"
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Durable nonce transaction contains admin/authority-change instruction in logs - Drift-style exploit pattern BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_log_admin_change",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.7,
+      "false_positive_rate": 0.002,
+      "weight": 100,
+      "note": "Only fires when logs are available (confirmed tx or simulation)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-drift-nonce-custom-program",
+    "name": "Alert: Drift Attack - Durable Nonce Targeting Custom Program",
+    "description": "Alerts on any durable nonce transaction targeting a non-core custom program. Catches the Drift attack pre-signing step. May fire on legitimate multisig/governance workflows - operators should review.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["high", "drift-attack", "durable-nonce", "custom-program"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "complexity:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "⚠️ ALERT: Durable nonce transaction targeting non-core custom program - review for potential Drift-style pre-signed exploit."
+    },
+    "metadata": {
+      "attack_type": "drift_presign",
+      "severity": "high",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 7.5,
+      "weight": 60
+    }
+  }
+]
