@@ -23,7 +23,7 @@ runcmd:
     EOF
   
   # Pull latest Docker image from GitHub Container Registry
-  - docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  - docker pull ghcr.io/securecheckio/parapet:latest
   
   # Create systemd service for Docker container
   - |
@@ -43,7 +43,7 @@ runcmd:
       --env-file /opt/parapet/.env \\
       -p ${proxy_port}:${proxy_port} \\
       --restart unless-stopped \\
-      ghcr.io/securecheckio/parapet-rpc-proxy:latest
+      ghcr.io/securecheckio/parapet:latest
     ExecStop=/usr/bin/docker stop parapet-rpc-proxy
     
     [Install]

@@ -61,6 +61,10 @@ ignore = [
     # Note: Solana team aware and working on alternatives
     "RUSTSEC-2025-0161",
     
+    # RUSTSEC-2024-0384: instant - unmaintained (replaced by web-time)
+    # Status: Fixed - upgraded notify from v7 to v8 which uses web-time
+    "RUSTSEC-2024-0384",
+    
     # === Unsound Code ===
     # RUSTSEC-2026-0097: rand - unsound with custom logger using rand::rng()
     # Source: Solana dependencies
@@ -95,6 +99,11 @@ confidence-threshold = 0.8
 # Warn about duplicate dependencies
 multiple-versions = "warn"
 wildcards = "allow"
+
+# Allow specific duplicate versions (common transitive conflicts)
+skip = [
+    { name = "winnow" },  # toml 0.8 uses 0.7.x, borsh/proc-macro-crate use 1.x
+]
 
 [sources]
 # Only allow crates.io

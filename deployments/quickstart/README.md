@@ -10,8 +10,8 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
 ## Quick Start
 
 1. **Pull the latest image:**
-  ```bash
-   docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+   ```bash
+   docker pull ghcr.io/securecheckio/parapet:latest
   ```
 2. **Run with docker-compose:**
   ```bash
@@ -26,7 +26,7 @@ Deploy Parapet RPC proxy with community security rules in under 2 minutes.
      -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
      -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
      --restart unless-stopped \
-     ghcr.io/securecheckio/parapet-rpc-proxy:latest
+     ghcr.io/securecheckio/parapet:latest
   ```
 4. **Test your proxy:**
   ```bash
@@ -98,7 +98,7 @@ docker run -d \
   -e JUPITER_API_KEY=your_key_here \
   -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json,https://parapet-rules.securecheck.io/community/helius-protection.json,https://parapet-rules.securecheck.io/community/jupiter-protection.json \
   --restart unless-stopped \
-  ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  ghcr.io/securecheckio/parapet:latest
 ```
 
 ## Production Deployment

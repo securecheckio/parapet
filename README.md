@@ -95,7 +95,7 @@ Pull and run from GitHub Container Registry with community security rules:
 docker run -d -p 8899:8899 \
   -e UPSTREAM_RPC_URL=https://api.mainnet-beta.solana.com \
   -e RULES_FEED_URLS=https://parapet-rules.securecheck.io/community/core-protection.json \
-  ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  ghcr.io/securecheckio/parapet:latest
 ```
 
 Or use docker-compose:

@@ -16,6 +16,7 @@ ignore = [
     "RUSTSEC-2026-0099",  # rustls-webpki wildcards (transitive)
     "RUSTSEC-2022-0093",  # ed25519-dalek (Solana)
     "RUSTSEC-2024-0344",  # curve25519-dalek (Solana)
+    "RUSTSEC-2024-0384",  # instant unmaintained (fixed: notify v7 → v8.2)
 ]
 
 # RUSTSEC-2026-0097: rand unsoundness with custom logger

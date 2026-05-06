@@ -36,7 +36,7 @@ runcmd:
     EOF
   
   # Pull latest Docker image from GitHub Container Registry
-  - docker pull ghcr.io/securecheckio/parapet-rpc-proxy:latest
+  - docker pull ghcr.io/securecheckio/parapet:latest
   
   %{~ if rules_source == "local" ~}
   # Create local rules directory (user-managed rules)
@@ -124,7 +124,7 @@ runcmd:
       --memory=900m \\
       --memory-swap=900m \\
       --cpus=0.9 \\
-      ghcr.io/securecheckio/parapet-rpc-proxy:latest
+      ghcr.io/securecheckio/parapet:latest
     ExecStop=/usr/bin/docker stop parapet-rpc-proxy
     
     [Install]

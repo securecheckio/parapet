@@ -53,6 +53,8 @@ network = "mainnet-beta"
 [security]
 default_blocking_threshold = 70
 rules_path = "./rules/presets/default-protection.json"
+# Auto-reload rules when this file (or a sibling .json in a directory rules_path) changes on disk.
+# Disable with env: PARAPET_RULES_WATCH=0
 # rule_action_override = "alert"  # Uncomment to override all rule actions
 
 # Optional JSON-RPC method policy (public RPC): empty lists = allow all (default).
