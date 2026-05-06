@@ -1,5 +1,9 @@
 # Parapet Usage Examples
 
+## Custom rules workflow
+
+`list_analyzers` → read `parapet://rules-guide` → `scan_wallet({ wallet_address, custom_rules: [...] })` or `check_transaction({ signature, custom_rules: [...] })`.
+
 ## Example 1: Pre-Transaction Wallet Check
 
 **Scenario**: User wants to send tokens to a wallet

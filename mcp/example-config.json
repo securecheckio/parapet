@@ -5,7 +5,8 @@
       "env": {
         "SOLANA_RPC_URL": "https://api.mainnet-beta.solana.com",
         "HELIUS_API_KEY": "your-helius-api-key-here",
-        "RUST_LOG": "info"
+        "RUST_LOG": "info",
+        "RULES_PATH": "/optional/path/to/default-rules.json"
       }
     }
   }

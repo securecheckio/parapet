@@ -121,6 +121,7 @@ fn handle_resource_read(uri: &str) -> Result<Value> {
         "parapet://guide" => include_str!("../resources/guide.md"),
         "parapet://risk-scoring" => include_str!("../resources/risk-scoring.md"),
         "parapet://examples" => include_str!("../resources/examples.md"),
+        "parapet://rules-guide" => include_str!("../resources/rules-guide.md"),
         _ => return Err(anyhow::anyhow!("Unknown resource URI: {}", uri)),
     };
 
@@ -165,6 +166,12 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                     "name": "Usage Examples",
                     "description": "Example workflows for scanning wallets and analyzing programs",
                     "mimeType": "text/markdown"
+                },
+                {
+                    "uri": "parapet://rules-guide",
+                    "name": "Parapet Rules Guide - Custom Security Rules",
+                    "description": "JSON rule format, operators, templates, validation. Use before custom_rules on scan_wallet or check_transaction. Pair with list_analyzers for fields.",
+                    "mimeType": "text/markdown"
                 }
             ]
         })),
@@ -182,7 +189,7 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
             "tools": [
                 {
                     "name": "scan_wallet",
-                    "description": "Scan a Solana wallet for security threats, compromised accounts, and suspicious activity",
+                    "description": "Comprehensive wallet scan with optional ephemeral custom security rules (merged with configured rules). Read parapet://rules-guide; use list_analyzers for fields.",
                     "inputSchema": {
                         "type": "object",
                         "properties": {
@@ -206,9 +213,50 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                                 "type": "string",
                                 "description": "Output format: summary, detailed, or json (default: summary)",
                                 "enum": ["summary", "detailed", "json"]
+                            },
+                            "custom_rules": {
+                                "type": "array",
+                                "description": "Optional ephemeral rules (JSON objects). Read parapet://rules-guide. Use list_analyzers for valid analyzer:field names.",
+                                "items": { "type": "object" }
                             }
                         },
                         "required": ["wallet_address"]
+                    }
+                },
+                {
+                    "name": "check_transaction",
+                    "description": "Analyze one confirmed transaction by signature with the rule engine; optional custom_rules like scan_wallet. Read parapet://rules-guide; use list_analyzers first.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {
+                            "signature": {
+                                "type": "string",
+                                "description": "Solana transaction signature (base58)"
+                            },
+                            "rpc_url": {
+                                "type": "string",
+                                "description": "Solana RPC URL (optional, defaults to SOLANA_RPC_URL / mainnet)"
+                            },
+                            "format": {
+                                "type": "string",
+                                "description": "Reserved for future output modes (currently markdown analysis)",
+                                "enum": ["summary", "detailed", "json"]
+                            },
+                            "custom_rules": {
+                                "type": "array",
+                                "description": "Optional ephemeral rules (JSON objects). Read parapet://rules-guide.",
+                                "items": { "type": "object" }
+                            }
+                        },
+                        "required": ["signature"]
+                    }
+                },
+                {
+                    "name": "list_analyzers",
+                    "description": "List registered analyzers and rule fields for this process (core + third-party if enabled). Call before crafting custom_rules; read parapet://rules-guide for rule syntax.",
+                    "inputSchema": {
+                        "type": "object",
+                        "properties": {}
                     }
                 },
                 {
@@ -343,6 +391,10 @@ async fn handle_request(request: JsonRpcRequest) -> JsonRpcResponse {
                 Some("scan_wallet") => {
                     handle_scan_wallet(arguments.cloned().unwrap_or(json!({}))).await
                 }
+                Some("check_transaction") => {
+                    handle_check_transaction(arguments.cloned().unwrap_or(json!({}))).await
+                }
+                Some("list_analyzers") => handle_list_analyzers().await,
                 Some("analyze_program") => {
                     handle_analyze_program(arguments.cloned().unwrap_or(json!({}))).await
                 }
@@ -423,8 +475,10 @@ async fn handle_scan_wallet(params: Value) -> Result<Value> {
         time_window_days
     );
 
+    let custom_rules = tools::parse_custom_rules_arg(&params)?;
+
     // Initialize analyzers and rules
-    let (registry, engine) = tools::initialize_analyzers_and_rules(None).await?;
+    let (registry, engine) = tools::initialize_analyzers_and_rules(None, custom_rules).await?;
 
     // Create scanner
     let scanner = WalletScanner::with_analyzers(rpc_url.to_string(), registry, engine)?;
@@ -454,6 +508,43 @@ async fn handle_scan_wallet(params: Value) -> Result<Value> {
         "content": [{
             "type": "text",
             "text": output
+        }]
+    }))
+}
+
+async fn handle_check_transaction(params: Value) -> Result<Value> {
+    let signature = params
+        .get("signature")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| anyhow::anyhow!("Missing signature"))?;
+
+    let default_rpc = default_solana_rpc_primary();
+    let rpc_url = params
+        .get("rpc_url")
+        .and_then(|v| v.as_str())
+        .unwrap_or(default_rpc.as_str());
+
+    let custom_rules = tools::parse_custom_rules_arg(&params)?;
+
+    log::info!("Checking transaction: {}", signature);
+
+    let output = tools::check_transaction(signature, rpc_url, custom_rules).await?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": output
+        }]
+    }))
+}
+
+async fn handle_list_analyzers() -> Result<Value> {
+    let (registry, _) = tools::initialize_analyzers_and_rules(None, None).await?;
+    let text = tools::format_analyzer_registry(registry.as_ref());
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": text
         }]
     }))
 }

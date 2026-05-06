@@ -148,6 +148,12 @@ fn handle_list_resources() -> Result<Value, McpError> {
                 "name": "Usage Examples",
                 "description": "Example workflows for scanning wallets and analyzing programs",
                 "mimeType": "text/markdown"
+            },
+            {
+                "uri": "parapet://rules-guide",
+                "name": "Parapet Rules Guide - Custom Security Rules",
+                "description": "JSON rule format, operators, templates. Use with custom_rules on scan_wallet/check_transaction; pair with list_analyzers.",
+                "mimeType": "text/markdown"
             }
         ]
     }))
@@ -166,6 +172,7 @@ fn handle_resource_read(params: Value) -> Result<Value, McpError> {
         "parapet://guide" => include_str!("../../../mcp/resources/guide.md"),
         "parapet://risk-scoring" => include_str!("../../../mcp/resources/risk-scoring.md"),
         "parapet://examples" => include_str!("../../../mcp/resources/examples.md"),
+        "parapet://rules-guide" => include_str!("../../../mcp/resources/rules-guide.md"),
         _ => {
             return Err(McpError {
                 code: -32602,
@@ -188,7 +195,7 @@ fn handle_list_tools() -> Result<Value, McpError> {
         "tools": [
             {
                 "name": "scan_wallet",
-                "description": "Comprehensive wallet scan: on-chain analysis + reputation data from Rugcheck, Helius, Jupiter. Takes 5-10 minutes for 100 transactions.",
+                "description": "Comprehensive wallet scan with optional ephemeral custom_rules (merged with server rules). Read parapet://rules-guide; use list_analyzers for fields.",
                 "inputSchema": {
                     "type": "object",
                     "properties": {
@@ -208,9 +215,46 @@ fn handle_list_tools() -> Result<Value, McpError> {
                             "type": "string",
                             "description": "Output format: summary, detailed, or json",
                             "enum": ["summary", "detailed", "json"]
+                        },
+                        "custom_rules": {
+                            "type": "array",
+                            "description": "Optional ephemeral rule objects. Read parapet://rules-guide; use list_analyzers for analyzer:field names.",
+                            "items": { "type": "object" }
                         }
                     },
                     "required": ["wallet_address"]
+                }
+            },
+            {
+                "name": "check_transaction",
+                "description": "Analyze one confirmed transaction by signature with Parapet rules; optional custom_rules. Read parapet://rules-guide.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {
+                        "signature": {
+                            "type": "string",
+                            "description": "Transaction signature (base58)"
+                        },
+                        "format": {
+                            "type": "string",
+                            "description": "Reserved for future output variants",
+                            "enum": ["summary", "detailed", "json"]
+                        },
+                        "custom_rules": {
+                            "type": "array",
+                            "description": "Optional ephemeral rule objects. Read parapet://rules-guide.",
+                            "items": { "type": "object" }
+                        }
+                    },
+                    "required": ["signature"]
+                }
+            },
+            {
+                "name": "list_analyzers",
+                "description": "List analyzers and fields available in this API deployment. Call before custom_rules; read parapet://rules-guide for syntax.",
+                "inputSchema": {
+                    "type": "object",
+                    "properties": {}
                 }
             },
             {
@@ -342,6 +386,8 @@ where
 
     match tool_name {
         "scan_wallet" => scan_wallet_tool(arguments, state, api_key).await,
+        "check_transaction" => check_transaction_tool(arguments, state).await,
+        "list_analyzers" => list_analyzers_tool().await,
         "analyze_program" => analyze_program_tool(arguments, state).await,
         "check_token_reputation" => check_token_reputation_tool(arguments).await,
         "verify_program" => verify_program_tool(arguments).await,
@@ -421,13 +467,20 @@ where
         days
     );
 
-    // Initialize scanner with analyzers
-    let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None)
-        .await
-        .map_err(|e| McpError {
-            code: -32603,
-            message: format!("Failed to initialize analyzers: {}", e),
+    let custom_rules =
+        crate::routes::mcp_tools::parse_custom_rules_arg(&args).map_err(|e| McpError {
+            code: -32602,
+            message: e.to_string(),
         })?;
+
+    // Initialize scanner with analyzers
+    let (registry, engine) =
+        crate::routes::mcp_tools::initialize_analyzers_and_rules(None, custom_rules)
+            .await
+            .map_err(|e| McpError {
+                code: -32603,
+                message: format!("Failed to initialize analyzers: {}", e),
+            })?;
 
     let scanner =
         WalletScanner::with_analyzers(state.config().solana_rpc_url.clone(), registry, engine)
@@ -470,6 +523,63 @@ where
         "content": [{
             "type": "text",
             "text": output + &quota_info
+        }]
+    }))
+}
+
+async fn check_transaction_tool<S>(args: Value, state: &S) -> Result<Value, McpError>
+where
+    S: ApiStateAccess,
+{
+    let signature = args
+        .get("signature")
+        .and_then(|v| v.as_str())
+        .ok_or_else(|| McpError {
+            code: -32602,
+            message: "Missing signature".to_string(),
+        })?;
+
+    let custom_rules =
+        crate::routes::mcp_tools::parse_custom_rules_arg(&args).map_err(|e| McpError {
+            code: -32602,
+            message: e.to_string(),
+        })?;
+
+    log::info!("MCP check_transaction {}", signature);
+
+    let output = crate::routes::mcp_tools::check_transaction(
+        signature,
+        &state.config().solana_rpc_url,
+        custom_rules,
+    )
+    .await
+    .map_err(|e| McpError {
+        code: -32603,
+        message: format!("Transaction analysis failed: {}", e),
+    })?;
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": output
+        }]
+    }))
+}
+
+async fn list_analyzers_tool() -> Result<Value, McpError> {
+    let (registry, _) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None, None)
+        .await
+        .map_err(|e| McpError {
+            code: -32603,
+            message: format!("Failed to initialize analyzers: {}", e),
+        })?;
+
+    let text = crate::routes::mcp_tools::format_analyzer_registry(registry.as_ref());
+
+    Ok(json!({
+        "content": [{
+            "type": "text",
+            "text": text
         }]
     }))
 }
@@ -757,7 +867,7 @@ where
     };
 
     // Scan wallet for threats (using scan_wallet_tool logic but without quota)
-    let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None)
+    let (registry, engine) = crate::routes::mcp_tools::initialize_analyzers_and_rules(None, None)
         .await
         .map_err(|e| McpError {
             code: -32603,

@@ -10,6 +10,10 @@ Parapet is a comprehensive Solana security analysis system that protects wallets
 - Rug pulls and scam tokens
 - Suspicious Cross-Program Invocations (CPIs)
 
+## Custom rules (optional)
+
+Pass **`custom_rules`** on **`scan_wallet`** or **`check_transaction`** (JSON array of rule objects). Call **`list_analyzers`** for fields on this deployment, then read **`parapet://rules-guide`** for format and templates.
+
 ## Available Tools
 
 ### 1. scan_wallet

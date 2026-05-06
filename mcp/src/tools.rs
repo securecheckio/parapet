@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use parapet_core::enrichment::EnrichmentService;
+use parapet_core::rules::types::RuleDefinition;
 use parapet_core::rules::{AnalyzerRegistry, FeedConfig, FeedSource, FeedUpdater, RuleEngine};
 use parapet_scanner::{ScanReport, ThreatType};
 use solana_client::rpc_client::RpcClient;
@@ -15,9 +16,94 @@ use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use std::sync::Arc;
 
+/// Merge ephemeral custom rules onto the engine after base rules are loaded.
+fn merge_custom_rules(
+    engine: &mut RuleEngine,
+    custom_rules: Option<Vec<RuleDefinition>>,
+) -> Result<()> {
+    let Some(extra) = custom_rules else {
+        return Ok(());
+    };
+    if extra.is_empty() {
+        return Ok(());
+    }
+    let mut combined = engine.rules().to_vec();
+    combined.extend(extra);
+    engine.load_rules(combined).map_err(|e| {
+        anyhow::anyhow!(
+            "Custom rule validation failed: {}. Use list_analyzers for valid fields; read parapet://rules-guide.",
+            e
+        )
+    })?;
+    Ok(())
+}
+
+/// Markdown listing of registered analyzers and fields (for MCP `list_analyzers`).
+pub fn format_analyzer_registry(registry: &AnalyzerRegistry) -> String {
+    let mut out = String::from("# Available analyzers\n\n");
+    let mut fields_map = registry.get_all_fields();
+    let mut names: Vec<String> = fields_map.keys().cloned().collect();
+    names.sort();
+    for name in names {
+        let fields = fields_map.remove(&name).unwrap_or_default();
+        let status_line = registry
+            .get(&name)
+            .map(|a| {
+                if a.is_available() {
+                    "available".to_string()
+                } else {
+                    "unavailable (may require API keys or features)".to_string()
+                }
+            })
+            .unwrap_or_else(|| "unknown".to_string());
+        out.push_str(&format!("## `{}`\n", name));
+        out.push_str(&format!("**Status:** {}\n\n", status_line));
+        if fields.is_empty() {
+            out.push_str("- *(no fields declared)*\n\n");
+            continue;
+        }
+        for field in fields {
+            out.push_str(&format!(
+                "- `{}:{}` — reference as **`{}:{}`** in rule conditions\n",
+                name, field, name, field
+            ));
+        }
+        out.push('\n');
+    }
+    out.push_str(
+        "Use **`namespace:field`** in `conditions.field`. Run `list_analyzers` whenever deployment changes.\n",
+    );
+    out
+}
+
+/// Parse optional `custom_rules` from MCP tool arguments JSON.
+pub fn parse_custom_rules_arg(
+    args: &serde_json::Value,
+) -> anyhow::Result<Option<Vec<RuleDefinition>>> {
+    match args.get("custom_rules") {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::Array(arr)) if arr.is_empty() => Ok(None),
+        Some(serde_json::Value::Array(arr)) => {
+            let v = serde_json::Value::Array(arr.clone());
+            serde_json::from_value(v)
+                .map_err(|e| {
+                    anyhow::anyhow!(
+                        "custom_rules JSON parse error: {}. Read parapet://rules-guide for format.",
+                        e
+                    )
+                })
+                .map(Some)
+        }
+        Some(_) => Err(anyhow::anyhow!(
+            "custom_rules must be a JSON array of rule objects (see parapet://rules-guide)"
+        )),
+    }
+}
+
 /// Initialize analyzers and rule engine (same as wallet-scanner binary)
 pub async fn initialize_analyzers_and_rules(
     safe_programs_file: Option<String>,
+    custom_rules: Option<Vec<RuleDefinition>>,
 ) -> Result<(Arc<AnalyzerRegistry>, Arc<RuleEngine>)> {
     fn register_all_analyzers(registry: &mut AnalyzerRegistry, safe_programs_file: Option<String>) {
         use parapet_core::rules::analyzers::*;
@@ -114,6 +200,7 @@ pub async fn initialize_analyzers_and_rules(
             let mut scanner_registry = AnalyzerRegistry::new();
             register_all_analyzers(&mut scanner_registry, safe_programs_file);
 
+            merge_custom_rules(&mut engine, custom_rules)?;
             return Ok((Arc::new(scanner_registry), Arc::new(engine)));
         }
     }
@@ -139,6 +226,8 @@ pub async fn initialize_analyzers_and_rules(
     } else {
         log::warn!("⚠️  No rules file or feed found, using minimal built-in protection");
     }
+
+    merge_custom_rules(&mut engine, custom_rules)?;
 
     let mut scanner_registry = AnalyzerRegistry::new();
     register_all_analyzers(&mut scanner_registry, safe_programs_file);
@@ -514,7 +603,11 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
 }
 
 /// Check a specific transaction for security threats
-pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String> {
+pub async fn check_transaction(
+    signature: &str,
+    rpc_url: &str,
+    custom_rules: Option<Vec<RuleDefinition>>,
+) -> Result<String> {
     use base64::engine::general_purpose;
     use base64::Engine;
     use solana_client::rpc_config::{RpcTransactionConfig, UiTransactionEncoding};
@@ -618,7 +711,7 @@ pub async fn check_transaction(signature: &str, rpc_url: &str) -> Result<String>
 
     // Initialize analyzers and rules
     output.push_str("## Security Analysis\n");
-    let (registry, engine) = initialize_analyzers_and_rules(None).await?;
+    let (registry, engine) = initialize_analyzers_and_rules(None, custom_rules).await?;
 
     // Registry initialized and available for future extensions
     log::debug!(
