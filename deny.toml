@@ -1,7 +1,7 @@
 # Minimal cargo-deny configuration for supply chain security
 # https://embarkstudios.github.io/cargo-deny/
 #
-# Advisory rationale and narrative notes: keep in sync with `audit.toml` and
+# Advisory rationale and narrative notes: keep in sync with `.cargo/audit.toml` and
 # `.github/workflows/dependency-security.yml` (cargo-audit --ignore flags).
 
 [advisories]
