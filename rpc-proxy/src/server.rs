@@ -232,9 +232,9 @@ async fn build_app_router_internal(
 
                         let mut engine = engine.write().await;
 
-                        // Load new rules (merges with existing)
-                        if let Err(e) = engine.load_rules(merged.rules) {
-                            log::error!("Failed to load updated rules: {}", e);
+                        // Merge new rules with existing (preserves local rules)
+                        if let Err(e) = engine.merge_rules(merged.rules) {
+                            log::error!("Failed to merge updated rules: {}", e);
                             return;
                         }
 

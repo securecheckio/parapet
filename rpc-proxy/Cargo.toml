@@ -66,6 +66,7 @@ dotenvy = "0.15"
 uuid = { version = "1.0", features = ["v4"] }
 chrono = { version = "0.4", features = ["serde"] }
 hex = "0.4"
+notify = "7"
 
 [features]
 default = []

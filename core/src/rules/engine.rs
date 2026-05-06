@@ -360,6 +360,45 @@ impl RuleEngine {
         Ok(())
     }
 
+    /// Merge new rules with existing rules, preserving local rules
+    /// Local rules (with IDs starting with "custom-" or "local-") cannot be overridden
+    pub fn merge_rules(&mut self, new_rules: Vec<RuleDefinition>) -> Result<()> {
+        log::info!(
+            "🔄 Merging {} new rules with existing rules",
+            new_rules.len()
+        );
+
+        // Separate local rules (cannot be overridden) from feed rules
+        let local_rules: Vec<RuleDefinition> = self
+            .rules
+            .drain(..)
+            .filter(|r| r.id.starts_with("custom-") || r.id.starts_with("local-"))
+            .collect();
+
+        log::info!("📍 Preserving {} local rules", local_rules.len());
+
+        // Build a map of new rule IDs for quick lookup
+        let new_rule_ids: std::collections::HashSet<String> =
+            new_rules.iter().map(|r| r.id.clone()).collect();
+
+        // Keep existing feed rules that aren't being updated
+        let existing_feed_rules: Vec<RuleDefinition> = self
+            .rules
+            .drain(..)
+            .filter(|r| !new_rule_ids.contains(&r.id))
+            .collect();
+
+        // Combine: local rules + updated/new feed rules + unchanged feed rules
+        let mut all_rules = local_rules;
+        all_rules.extend(new_rules);
+        all_rules.extend(existing_feed_rules);
+
+        log::info!("✅ Merged rules: {} total", all_rules.len());
+
+        // Load the merged rules
+        self.load_rules(all_rules)
+    }
+
     fn rule_uses_flowstate(&self, rule: &Rule) -> bool {
         rule.flowstate.is_some() || self.condition_uses_flowstate(&rule.conditions)
     }
@@ -404,6 +443,11 @@ impl RuleEngine {
                 if simple.field.starts_with("flowstate:")
                     || simple.field.starts_with("flowstate_global:")
                 {
+                    self.validate_operator_value_compatibility(&simple.operator, &simple.value)?;
+                    return Ok(());
+                }
+                // Simulation fields are only available during simulation analysis
+                if simple.field.starts_with("simulation_") {
                     self.validate_operator_value_compatibility(&simple.operator, &simple.value)?;
                     return Ok(());
                 }
@@ -1548,14 +1592,31 @@ impl RuleEngine {
             required_analyzers.len()
         );
 
-        // Convert to legacy transaction if possible for analysis
+        // Convert to legacy transaction for analysis
         let structural_fields = if let Some(legacy_tx) = tx.clone().into_legacy_transaction() {
+            // Already a legacy transaction, analyze directly
             self.registry
                 .analyze_selected(&legacy_tx, &required_analyzers)
                 .await
                 .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+        } else if let Some(resolver) = &self.alt_resolver {
+            // V0 transaction - resolve ALTs and convert to legacy
+            log::debug!("🔍 Resolving ALTs for V0 transaction");
+            match resolver.resolve_v0_transaction(tx).await {
+                Ok(resolved_tx) => {
+                    log::debug!("✅ ALT resolution successful, running structural analysis");
+                    self.registry
+                        .analyze_selected(&resolved_tx, &required_analyzers)
+                        .await
+                        .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+                }
+                Err(e) => {
+                    log::warn!("⚠️  ALT resolution failed: {}", e);
+                    HashMap::new()
+                }
+            }
         } else {
-            log::warn!("⚠️  Limited structural analysis for v0 transaction");
+            log::warn!("⚠️  V0 transaction without ALT resolver - structural analysis skipped");
             HashMap::new()
         };
 

@@ -122,6 +122,11 @@ async fn main() -> anyhow::Result<()> {
     // Start server (returns the rule engine handle for hot-reloading)
     let (server_handle, rule_engine) = server::start_server_with_reload(server_config).await?;
 
+    parapet_rpc_proxy::rules_file_watcher::spawn_rules_file_watcher(
+        Arc::clone(&rules_path),
+        Arc::clone(&rule_engine),
+    );
+
     // Spawn signal handler for SIGHUP (Unix only)
     #[cfg(unix)]
     {

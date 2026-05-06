@@ -7,6 +7,7 @@ pub mod config;
 pub mod escalations;
 pub mod output;
 pub mod rpc_handler;
+pub mod rules_file_watcher;
 pub mod server;
 pub mod types;
 pub mod upstream;
