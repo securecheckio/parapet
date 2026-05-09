@@ -203,10 +203,10 @@ fn calculate_security_score(critical: usize, high: usize, medium: usize, low: us
     score -= medium as i32 * 5;
 
     // Deduct minimally for low threats
-    score -= low as i32 * 1;
+    score -= low as i32;
 
     // Clamp to 0-100 range
-    score.max(0).min(100) as u8
+    score.clamp(0, 100) as u8
 }
 
 #[cfg(test)]

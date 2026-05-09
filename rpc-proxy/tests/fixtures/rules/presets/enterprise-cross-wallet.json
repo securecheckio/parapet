@@ -43,7 +43,7 @@
     },
     "metadata": {
       "attack_type": "lateral_movement",
-      "false_positive_risk": "low",
+      
       "tuning_note": "Allowlist legitimate shared recipients (e.g., company treasury, exchange hot wallets)",
       "variable_bindings": {
         "recipient": "system:sol_recipients[0]"
@@ -75,7 +75,7 @@
     },
     "metadata": {
       "attack_type": "coordinated_token_drain",
-      "false_positive_risk": "low",
+      
       "tuning_note": "Adjust threshold based on organization's normal trading volume",
       "variable_bindings": {
         "mint": "token_instructions:mints[0]"
@@ -128,7 +128,7 @@
     },
     "metadata": {
       "attack_type": "stale_durable_nonce",
-      "false_positive_risk": "low",
+      
       "tuning_note": "Adjust TTL (30 min) and transfer threshold (1 SOL) based on organization's workflow",
       "variable_bindings": {
         "nonce_account": "system:nonce_account"

@@ -1,3 +1,4 @@
+pub mod accounts;
 pub mod basic;
 pub mod canonical_tx;
 pub mod core_security;
@@ -23,6 +24,7 @@ mod tests_system;
 #[cfg(test)]
 mod tests_token;
 
+pub use accounts::AccountsAnalyzer;
 pub use basic::BasicAnalyzer;
 pub use canonical_tx::CanonicalTransactionAnalyzer;
 pub use core_security::CoreSecurityAnalyzer;

@@ -1,0 +1,303 @@
+{
+  "analyzers": [
+    {
+      "name": "accounts",
+      "fields": [
+        "potential_authority_mismatch",
+        "writable_non_signer_count"
+      ]
+    },
+    {
+      "name": "basic",
+      "fields": [
+        "account_keys",
+        "account_keys_count",
+        "amount",
+        "has_instructions",
+        "instruction_count",
+        "loaded_readonly_count",
+        "loaded_writable_count",
+        "lookup_table_addresses",
+        "program_ids",
+        "signers_count",
+        "uses_lookup_tables",
+        "writable_accounts_count"
+      ]
+    },
+    {
+      "name": "canonical_tx",
+      "fields": [
+        "canonical_transaction_hash"
+      ]
+    },
+    {
+      "name": "cpi",
+      "fields": [
+        "cpi_depth",
+        "cpi_depth_score",
+        "cpi_risk_score",
+        "has_unknown_inner_programs",
+        "inner_program_count",
+        "inner_programs",
+        "unknown_inner_programs",
+        "unknown_program_count"
+      ]
+    },
+    {
+      "name": "fingerprint",
+      "fields": [
+        "authority_change_names",
+        "has_authority_change",
+        "matched_names"
+      ]
+    },
+    {
+      "name": "logs",
+      "fields": [
+        "instruction_names",
+        "program_invocations",
+        "raw"
+      ]
+    },
+    {
+      "name": "padding",
+      "fields": [
+        "has_repeated_padding",
+        "has_suspicious_padding",
+        "max_padding_bytes",
+        "max_padding_ratio",
+        "suspicious_instruction_count",
+        "suspicious_instructions"
+      ]
+    },
+    {
+      "name": "program_scan",
+      "fields": [
+        "account_read_count",
+        "account_write_count",
+        "analysis_cached",
+        "analysis_duration_ms",
+        "arbitrary_cpi",
+        "blocked_hashes",
+        "blocked_program_ids",
+        "bytecode_hashes",
+        "checked_account_count",
+        "cpi_call_count",
+        "entropy_score",
+        "has_account_write",
+        "has_cpi_call",
+        "has_key_check",
+        "has_owner_check",
+        "has_signer_check",
+        "instruction_count",
+        "is_in_blocklist",
+        "is_upgradeable",
+        "missing_owner_check",
+        "missing_signer_check",
+        "program_details",
+        "reads_account_data",
+        "spl_token_related",
+        "token_2022_related",
+        "unchecked_account_count"
+      ]
+    },
+    {
+      "name": "programs",
+      "fields": [
+        "all_programs",
+        "complexity_score",
+        "core_program_count",
+        "core_programs",
+        "is_complex_transaction",
+        "non_core_program_count",
+        "non_core_programs",
+        "unique_program_count",
+        "uses_system_program",
+        "uses_token_program"
+      ]
+    },
+    {
+      "name": "security",
+      "fields": [
+        "authority_changes",
+        "blocked_program_count",
+        "blocked_program_detected",
+        "delegation_count",
+        "delegation_detected",
+        "delegation_is_unlimited",
+        "has_issues",
+        "issue_count",
+        "risk_level",
+        "risk_score"
+      ]
+    },
+    {
+      "name": "squads_v4",
+      "fields": [
+        "concern_count",
+        "estimated_multisig_accounts",
+        "execution_count",
+        "governance_change_count",
+        "has_config_transaction_create",
+        "has_config_transaction_execute",
+        "has_governance_change",
+        "has_member_add",
+        "has_member_remove",
+        "has_multisig_create",
+        "has_proposal_approve",
+        "has_proposal_cancel",
+        "has_proposal_create",
+        "has_proposal_reject",
+        "has_security_concerns",
+        "has_spending_limit_add",
+        "has_spending_limit_remove",
+        "has_threshold_change",
+        "has_time_lock_set",
+        "has_vault_transaction_create",
+        "has_vault_transaction_execute",
+        "instruction_types",
+        "is_squads_transaction",
+        "primary_operation",
+        "proposal_action_count",
+        "security_concerns",
+        "squads_instruction_count",
+        "transaction_creation_count"
+      ]
+    },
+    {
+      "name": "system",
+      "fields": [
+        "account_creation_count",
+        "advances_nonce",
+        "allocate_count",
+        "assign_count",
+        "assigns_program_ownership",
+        "creates_accounts",
+        "has_sol_transfer",
+        "high_rent_spam",
+        "large_sol_transfer",
+        "max_sol_transfer",
+        "nonce_account",
+        "sol_recipients",
+        "sol_transfer_count",
+        "total_rent_required",
+        "total_sol_transferred",
+        "uses_durable_nonce"
+      ]
+    },
+    {
+      "name": "token_instructions",
+      "fields": [
+        "account_management_detected",
+        "approve_count",
+        "approves_non_owned_tokens",
+        "burn_count",
+        "close_count",
+        "closes_non_owned_account",
+        "creates_account_for_other",
+        "dangerous_operation_combo",
+        "delegate_addresses",
+        "freeze_count",
+        "has_approve",
+        "has_burn",
+        "has_close_account",
+        "has_freeze",
+        "has_initialize_account",
+        "has_initialize_mint",
+        "has_mint",
+        "has_revoke",
+        "has_set_authority",
+        "has_thaw",
+        "has_transfer",
+        "max_transfer_amount",
+        "mint_count",
+        "mints_involved",
+        "modifies_non_owned_authority",
+        "modifies_permissions",
+        "modifies_supply",
+        "net_delegation_change",
+        "new_account_owner_address",
+        "newly_created_account_owners",
+        "non_owned_operations_count",
+        "revoke_count",
+        "set_authority_count",
+        "thaw_count",
+        "total_burn_amount",
+        "total_mint_amount",
+        "total_transfer_amount",
+        "transfer_checked_count",
+        "transfer_count",
+        "transfer_recipients",
+        "transfers_from_non_owned",
+        "transfers_to_newly_created",
+        "unlimited_approve_count",
+        "uses_transfer_checked"
+      ]
+    }
+  ],
+  "simulation_analyzers": [
+    {
+      "name": "simulation_balance",
+      "fields": [
+        "accounts_losing_balance",
+        "fee_payer_balance_change",
+        "largest_balance_decrease",
+        "sol_balance_change",
+        "sol_balance_change_percent",
+        "total_sol_outflow"
+      ]
+    },
+    {
+      "name": "simulation_compute",
+      "fields": [
+        "compute_units_used",
+        "compute_usage_percent",
+        "excessive_compute",
+        "near_compute_limit"
+      ]
+    },
+    {
+      "name": "simulation_cpi",
+      "fields": [
+        "cpi_depth",
+        "cpi_instruction_count",
+        "cpi_program_indexes",
+        "has_cpi_calls"
+      ]
+    },
+    {
+      "name": "simulation_failure",
+      "fields": [
+        "has_simulation_error",
+        "partial_failure",
+        "simulation_error",
+        "simulation_failed"
+      ]
+    },
+    {
+      "name": "simulation_logs",
+      "fields": [
+        "error_messages",
+        "has_error_logs",
+        "instruction_names",
+        "log_count",
+        "program_invocations",
+        "program_warnings",
+        "programs_logged",
+        "suspicious_keywords"
+      ]
+    },
+    {
+      "name": "simulation_token",
+      "fields": [
+        "net_token_changes",
+        "nft_transfer_count",
+        "nft_transfers",
+        "token_mints_involved",
+        "token_transfers_in",
+        "token_transfers_out",
+        "tokens_fully_drained"
+      ]
+    }
+  ]
+}

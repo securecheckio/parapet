@@ -67,7 +67,7 @@ fn add_token_2022_program(tx: &mut Transaction) {
 #[tokio::test]
 async fn test_analyzer_name() {
     let analyzer = CoreSecurityAnalyzer::new(HashSet::new());
-    assert_eq!(analyzer.name(), "core_security");
+    assert_eq!(analyzer.name(), "security");
 }
 
 #[tokio::test]

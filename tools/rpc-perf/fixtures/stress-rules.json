@@ -21,8 +21,8 @@
           },
           {
             "any": [
-              {"field": "inner_instruction:cpi_depth", "operator": "greater_than", "value": 3},
-              {"field": "inner_instruction:unknown_program_count", "operator": "greater_than", "value": 1}
+              {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 3},
+              {"field": "cpi:unknown_program_count", "operator": "greater_than", "value": 1}
             ]
           }
         ]
@@ -42,7 +42,7 @@
           {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0},
           {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
           {"field": "security:risk_score", "operator": "greater_than", "value": 50},
-          {"field": "instruction_data:match_count", "operator": "greater_than", "value": 0},
+          {"field": "fingerprint:match_count", "operator": "greater_than", "value": 0},
           {"field": "canonical_tx:has_recent_blockhash", "operator": "equals", "value": true},
           {"field": "program_complexity:unique_program_count", "operator": "greater_than", "value": 2}
         ]
@@ -62,8 +62,8 @@
       "conditions": {
         "any": [
           {"field": "basic:program_ids", "operator": "contains", "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"},
-          {"field": "inner_instruction:inner_programs", "operator": "contains", "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"},
-          {"field": "instruction_data:matched_names", "operator": "contains", "value": "authority_change"}
+          {"field": "cpi:inner_programs", "operator": "contains", "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"},
+          {"field": "fingerprint:matched_names", "operator": "contains", "value": "authority_change"}
         ]
       },
       "message": "Array search stress test"
@@ -82,8 +82,8 @@
           {"field": "system:total_sol_transferred", "operator": "greater_than", "value": 10000000000},
           {"field": "basic:instruction_count", "operator": "greater_than", "value": 15},
           {"field": "basic:writable_accounts_count", "operator": "greater_than", "value": 10},
-          {"field": "inner_instruction:cpi_depth", "operator": "greater_than", "value": 5},
-          {"field": "inner_instruction:unknown_program_count", "operator": "greater_than", "value": 2},
+          {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 5},
+          {"field": "cpi:unknown_program_count", "operator": "greater_than", "value": 2},
           {"field": "program_complexity:unique_program_count", "operator": "greater_than", "value": 4}
         ]
       },
@@ -110,8 +110,8 @@
               },
               {
                 "all": [
-                  {"field": "inner_instruction:cpi_depth", "operator": "greater_than", "value": 4},
-                  {"field": "inner_instruction:has_unknown_inner_programs", "operator": "equals", "value": true}
+                  {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 4},
+                  {"field": "cpi:has_unknown_inner_programs", "operator": "equals", "value": true}
                 ]
               }
             ]

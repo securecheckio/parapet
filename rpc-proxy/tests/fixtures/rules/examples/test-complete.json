@@ -7,7 +7,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:delegation_detected",
+        "field": "security:delegation_detected",
         "operator": "equals",
         "value": true
       },
@@ -22,7 +22,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:delegation_is_unlimited",
+        "field": "security:delegation_is_unlimited",
         "operator": "equals",
         "value": true
       },
@@ -37,7 +37,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:authority_changes",
+        "field": "security:authority_changes",
         "operator": "greater_than",
         "value": 0
       },
@@ -52,7 +52,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:blocked_program_detected",
+        "field": "security:blocked_program_detected",
         "operator": "equals",
         "value": true
       },
@@ -67,7 +67,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:risk_score",
+        "field": "security:risk_score",
         "operator": "greater_than_or_equal",
         "value": 80
       },

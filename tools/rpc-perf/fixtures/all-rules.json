@@ -22,7 +22,7 @@
     "metadata": {
       "attack_type": "unlimited_approval",
       "severity": "critical",
-      "false_positive_rate": 0.001
+      
     }
   },
   {
@@ -327,12 +327,12 @@
       "conditions": {
         "all": [
           {
-            "field": "complexity:non_core_program_count",
+            "field": "programs:non_core_program_count",
             "operator": "greater_than",
             "value": 2
           },
           {
-            "field": "complexity:complexity_score",
+            "field": "programs:complexity_score",
             "operator": "greater_than",
             "value": 70
           }
@@ -357,7 +357,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "complexity:is_complex_transaction",
+        "field": "programs:is_complex_transaction",
         "operator": "equals",
         "value": true
       },
@@ -378,7 +378,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "complexity:potential_authority_mismatch",
+        "field": "accounts:potential_authority_mismatch",
         "operator": "equals",
         "value": true
       },
@@ -422,7 +422,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:blocked_program_detected",
+        "field": "security:blocked_program_detected",
         "operator": "equals",
         "value": true
       },
@@ -442,7 +442,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:risk_score",
+        "field": "security:risk_score",
         "operator": "greater_than_or_equal",
         "value": 90
       },
@@ -492,7 +492,7 @@
             "value": true
           },
           {
-            "field": "complexity:non_core_program_count",
+            "field": "programs:non_core_program_count",
             "operator": "greater_than",
             "value": 0
           },
@@ -518,7 +518,7 @@
       "attack_type": "drift_exploit_with_drain",
       "severity": "critical",
       "reference": "Drift Protocol $285M exploit, April 2026",
-      "false_positive_rate": 0.005
+      
     }
   },
   {
@@ -543,7 +543,7 @@
             "value": true
           },
           {
-            "field": "complexity:non_core_program_count",
+            "field": "programs:non_core_program_count",
             "operator": "greater_than",
             "value": 0
           }

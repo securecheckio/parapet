@@ -13,7 +13,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "instruction_data:has_authority_change",
+        "field": "fingerprint:has_authority_change",
         "operator": "equals",
         "value": true
       },
@@ -22,7 +22,6 @@
     "metadata": {
       "severity": "critical",
       "weight": 70,
-      "false_positive_rate": "low",
       "note": "Requires fingerprint configuration file"
     }
   },
@@ -40,7 +39,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "instruction_data:has_match",
+        "field": "fingerprint:has_match",
         "operator": "equals",
         "value": true
       },

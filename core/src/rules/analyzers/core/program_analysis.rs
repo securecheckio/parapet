@@ -100,13 +100,12 @@ impl ProgramAnalyzer {
 #[async_trait::async_trait]
 impl TransactionAnalyzer for ProgramAnalyzer {
     fn name(&self) -> &str {
-        "program_analysis"
+        "program_scan"
     }
 
     fn fields(&self) -> Vec<String> {
         vec![
-            "program_ids".to_string(),
-            "program_count".to_string(),
+            // Note: program_ids and program_count removed - use programs:all_programs and programs:program_count instead
             "program_details".to_string(),
             "is_in_blocklist".to_string(),
             "blocked_program_ids".to_string(),
@@ -302,8 +301,7 @@ impl TransactionAnalyzer for ProgramAnalyzer {
             entropy_score_sum / program_ids.len() as f64
         };
 
-        fields.insert("program_ids".to_string(), json!(program_ids));
-        fields.insert("program_count".to_string(), json!(program_details.len()));
+        // Note: program_ids and program_count removed - use programs:all_programs and programs:program_count instead
         fields.insert("program_details".to_string(), json!(program_details));
         fields.insert(
             "is_in_blocklist".to_string(),

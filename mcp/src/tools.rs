@@ -213,7 +213,7 @@ pub async fn initialize_analyzers_and_rules(
 
     // Fallback to static rules file (development/testing only - production uses RULES_FEED_URLS)
     let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
-        let candidates = vec![
+        let candidates = [
             "rules/presets/comprehensive-protection.json",
             "../rules/presets/comprehensive-protection.json",
             "rules/presets/default-protection.json",
@@ -387,7 +387,7 @@ pub async fn analyze_program(program_id: &str, rpc_url: &str, network: &str) -> 
             output.push_str(&format!("⚠️ Could not fetch verification data: {}\n", e));
         }
     }
-    output.push_str("\n");
+    output.push('\n');
 
     output.push_str("## Explorer Links\n");
     output.push_str(&format!(
@@ -428,7 +428,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
         if let Some(ref reg_date) = domain_reg.registered_at {
             output.push_str(&format!("- **Registered:** {}\n", reg_date));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Insider Trading Analysis (NEW!)
@@ -469,7 +469,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                     output.push_str(&format!("- ⚠️ {}\n", warning));
                 }
             }
-            output.push_str("\n");
+            output.push('\n');
 
             overall_risk_score += insider.risk_score;
             if insider.risk_score >= 50 {
@@ -515,10 +515,10 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                 if let Some(ref unlock) = locker.unlock_date {
                     output.push_str(&format!(" until {}", unlock));
                 }
-                output.push_str("\n");
+                output.push('\n');
             }
         }
-        output.push_str("\n");
+        output.push('\n');
 
         // Add to overall risk
         match vault.rugpull_risk.as_str() {
@@ -560,7 +560,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                 ));
             }
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Jupiter data
@@ -581,7 +581,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
         if jupiter.has_rugpull_indicators {
             output.push_str("- **⚠️ Rugpull Indicators:** Detected\n");
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Overall Summary
@@ -713,7 +713,7 @@ pub async fn check_transaction(
     for (i, program_id) in program_ids.iter().enumerate() {
         output.push_str(&format!("{}. `{}`\n", i + 1, program_id));
     }
-    output.push_str("\n");
+    output.push('\n');
 
     // Initialize analyzers and rules
     output.push_str("## Security Analysis\n");
@@ -795,7 +795,7 @@ pub async fn verify_program_status(program_address: &str) -> Result<String> {
         if let Some(risk) = helius.risk_score {
             output.push_str(&format!("- **Risk Score:** {}/100\n", risk));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     if let Some(ref ottersec) = data.ottersec {
@@ -822,7 +822,7 @@ pub async fn verify_program_status(program_address: &str) -> Result<String> {
                 "❌ No"
             }
         ));
-        output.push_str("\n");
+        output.push('\n');
     }
 
     if data.helius.is_none() && data.ottersec.is_none() {

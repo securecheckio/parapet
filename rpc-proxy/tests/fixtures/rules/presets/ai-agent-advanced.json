@@ -43,7 +43,7 @@
     },
     "metadata": {
       "attack_type": "gradual_exfiltration",
-      "false_positive_risk": "low",
+      
       "tuning_note": "Allowlist legitimate recipients (e.g., exchange deposit addresses)",
       "variable_bindings": {
         "recipient": "system:sol_recipients[0]"
@@ -81,7 +81,7 @@
     },
     "metadata": {
       "attack_type": "suspicious_program_interaction",
-      "false_positive_risk": "medium",
+      
       "tuning_note": "Maintain allowlist of known safe programs (DEXs, lending protocols, etc.)",
       "variable_bindings": {
         "program_id": "basic:program_ids[0]"

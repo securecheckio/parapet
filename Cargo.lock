@@ -4075,6 +4075,7 @@ dependencies = [
  "axum",
  "base64 0.21.7",
  "bincode",
+ "bs58",
  "clap",
  "parapet-rpc-proxy",
  "rand 0.8.6",
@@ -4082,7 +4083,9 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "solana-address-lookup-table-interface",
  "solana-sdk",
+ "solana-sdk-ids",
  "solana-system-interface 3.2.0",
  "tokio",
 ]

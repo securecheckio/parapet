@@ -147,22 +147,20 @@ impl SafeListFeedUpdater {
         // Determine feed URL
         let url = if let Some(url) = feed_url {
             url.to_string()
-        } else {
-            if local_path.exists() {
-                if let Ok(content) = fs::read_to_string(local_path) {
-                    if let Ok(config) = serde_json::from_str::<KnownSafeOwnersConfig>(&content) {
-                        config
-                            .feed_url
-                            .unwrap_or_else(|| self.default_owners_feed_url())
-                    } else {
-                        self.default_owners_feed_url()
-                    }
+        } else if local_path.exists() {
+            if let Ok(content) = fs::read_to_string(local_path) {
+                if let Ok(config) = serde_json::from_str::<KnownSafeOwnersConfig>(&content) {
+                    config
+                        .feed_url
+                        .unwrap_or_else(|| self.default_owners_feed_url())
                 } else {
                     self.default_owners_feed_url()
                 }
             } else {
                 self.default_owners_feed_url()
             }
+        } else {
+            self.default_owners_feed_url()
         };
 
         info!("📡 Fetching safe owners feed from: {}", url);

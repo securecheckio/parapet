@@ -17,8 +17,7 @@
     },
     "metadata": {
       "attack_type": "unlimited_approval",
-      "severity": "critical",
-      "false_positive_rate": 0.001
+      "severity": "critical"
     }
   },
   {
@@ -245,8 +244,8 @@
       "action": "block",
       "conditions": {
         "all": [
-          {"field": "complexity:non_core_program_count", "operator": "greater_than", "value": 2},
-          {"field": "complexity:complexity_score", "operator": "greater_than", "value": 70}
+          {"field": "programs:non_core_program_count", "operator": "greater_than", "value": 2},
+          {"field": "programs:complexity_score", "operator": "greater_than", "value": 70}
         ]
       },
       "message": "🚨 BLOCKED: Complex transaction with 3+ unknown programs - potential obfuscation"
@@ -265,7 +264,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "complexity:is_complex_transaction",
+        "field": "programs:is_complex_transaction",
         "operator": "equals",
         "value": true
       },
@@ -282,7 +281,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "complexity:potential_authority_mismatch",
+        "field": "accounts:potential_authority_mismatch",
         "operator": "equals",
         "value": true
       },
@@ -320,7 +319,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:blocked_program_detected",
+        "field": "security:blocked_program_detected",
         "operator": "equals",
         "value": true
       },
@@ -337,7 +336,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:risk_score",
+        "field": "security:risk_score",
         "operator": "greater_than_or_equal",
         "value": 90
       },
@@ -373,7 +372,7 @@
       "conditions": {
         "all": [
           { "field": "system:uses_durable_nonce", "operator": "equals", "value": true },
-          { "field": "complexity:non_core_program_count", "operator": "greater_than", "value": 0 },
+          { "field": "programs:non_core_program_count", "operator": "greater_than", "value": 0 },
           {
             "any": [
               { "field": "system:has_sol_transfer", "operator": "equals", "value": true },
@@ -387,8 +386,7 @@
     "metadata": {
       "attack_type": "drift_exploit_with_drain",
       "severity": "critical",
-      "reference": "Drift Protocol $285M exploit, April 2026",
-      "false_positive_rate": 0.005
+      "reference": "Drift Protocol $285M exploit, April 2026"
     }
   },
   {
@@ -403,7 +401,7 @@
       "conditions": {
         "all": [
           { "field": "system:uses_durable_nonce", "operator": "equals", "value": true },
-          { "field": "complexity:non_core_program_count", "operator": "greater_than", "value": 0 }
+          { "field": "programs:non_core_program_count", "operator": "greater_than", "value": 0 }
         ]
       },
       "message": "ALERT: Durable nonce transaction targeting non-core custom program - review for Drift-style pre-signed exploit (allowlist known-safe programs to suppress)"
@@ -434,8 +432,7 @@
     "metadata": {
       "attack_type": "wallet_drainer",
       "severity": "high",
-      "weight": 70,
-      "false_positive_rate": 0.1
+      "weight": 70
     }
   },
   {
@@ -460,7 +457,6 @@
       "attack_type": "wallet_drainer_unfunded",
       "severity": "critical",
       "weight": 100,
-      "false_positive_rate": 0.001,
       "reference": "Prevents TIPT-style drain attacks"
     }
   }

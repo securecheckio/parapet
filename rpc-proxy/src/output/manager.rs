@@ -15,6 +15,12 @@ struct Pipeline {
     enabled: bool,
 }
 
+impl Default for OutputManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl OutputManager {
     pub fn new() -> Self {
         Self {

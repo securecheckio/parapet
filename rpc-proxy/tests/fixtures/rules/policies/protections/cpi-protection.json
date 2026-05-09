@@ -10,8 +10,8 @@
       "action": "block",
       "conditions": {
         "all": [
-          {"field": "inner_instruction:cpi_depth", "operator": "greater_than", "value": 4},
-          {"field": "inner_instruction:cpi_depth_score", "operator": "greater_than", "value": 70}
+          {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 4},
+          {"field": "cpi:cpi_depth_score", "operator": "greater_than", "value": 70}
         ]
       },
       "message": "🚨 BLOCKED: Deep CPI chain detected - potential hidden malicious behavior"
@@ -19,7 +19,6 @@
     "metadata": {
       "severity": "critical",
       "weight": 60,
-      "false_positive_rate": "low",
       "validation_status": "production"
     }
   },
@@ -33,7 +32,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "inner_instruction:cpi_depth",
+        "field": "cpi:cpi_depth",
         "operator": "greater_than",
         "value": 3
       },
@@ -54,7 +53,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "inner_instruction:unknown_program_count",
+        "field": "cpi:unknown_program_count",
         "operator": "greater_than",
         "value": 0
       },
@@ -77,7 +76,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "inner_instruction:unknown_program_count",
+        "field": "cpi:unknown_program_count",
         "operator": "greater_than",
         "value": 0
       },
@@ -98,7 +97,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "inner_instruction:cpi_risk_score",
+        "field": "cpi:cpi_risk_score",
         "operator": "greater_than",
         "value": 80
       },
@@ -119,7 +118,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "inner_instruction:unknown_program_count",
+        "field": "cpi:unknown_program_count",
         "operator": "greater_than",
         "value": 1
       },

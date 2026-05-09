@@ -1,7 +1,8 @@
 use anyhow::Result;
-use serde_json::Value;
+use serde_json::{json, Value};
 use solana_sdk::transaction::Transaction;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::sync::Arc;
 
 /// A single inner (CPI) instruction from confirmed transaction metadata.
@@ -19,6 +20,14 @@ pub struct ConfirmedInnerInstruction {
     pub stack_height: Option<u8>,
 }
 
+/// Address lookup table references from a v0 message (static indices only).
+#[derive(Debug, Clone)]
+pub struct LookupTableInfo {
+    pub table_address: String,
+    pub writable_indexes: Vec<u8>,
+    pub readonly_indexes: Vec<u8>,
+}
+
 /// All confirmed transaction metadata available after a transaction lands on-chain.
 /// Passed to analyze_with_metadata so analyzers can use post-execution data
 /// without trusting the RPC for the transaction bytes themselves.
@@ -28,6 +37,14 @@ pub struct ConfirmedTransactionMetadata {
     pub logs: Vec<String>,
     /// Inner (CPI) instructions from meta.innerInstructions
     pub inner_instructions: Vec<ConfirmedInnerInstruction>,
+    /// When true, `basic` emits ALT-related fields (pay-for-what-you-use).
+    pub capture_alt_details: bool,
+    /// Lookup tables from the original v0 message (filled during ALT resolution).
+    pub lookup_tables: Vec<LookupTableInfo>,
+    /// Number of accounts loaded from ALTs as writable.
+    pub loaded_writable_count: usize,
+    /// Number of accounts loaded from ALTs as readonly.
+    pub loaded_readonly_count: usize,
 }
 
 /// Trait for transaction analyzers that extract fields from transactions
@@ -64,6 +81,7 @@ pub trait TransactionAnalyzer: Send + Sync {
         let metadata = ConfirmedTransactionMetadata {
             logs: logs.to_vec(),
             inner_instructions: vec![],
+            ..Default::default()
         };
         self.analyze_with_metadata(tx, &metadata).await
     }
@@ -82,6 +100,59 @@ pub trait TransactionAnalyzer: Send + Sync {
     /// Returns None if no rate limit, or Some(ms) for required delay
     fn recommended_delay_ms(&self) -> Option<u64> {
         None
+    }
+}
+
+/// Unprefixed field maps to more than one analyzer — rule must use `analyzer:field`.
+#[derive(Debug)]
+pub struct AmbiguousFieldError {
+    pub field: String,
+    pub analyzers: Vec<String>,
+}
+
+fn squads_neutral_value(field: &str) -> Value {
+    match field {
+        "instruction_types" => json!({}),
+        "security_concerns" => json!([]),
+        "primary_operation" => json!("none"),
+        "estimated_multisig_accounts" => json!(0),
+        "is_squads_transaction" => json!(false),
+        "squads_instruction_count" => json!(0),
+        s if s.starts_with("has_") => json!(false),
+        s if s.ends_with("_count") => json!(0),
+        _ => Value::Null,
+    }
+}
+
+/// For cold paths (`analyze_all`), restore unprefixed keys so dynamic rules and legacy callers work.
+pub(crate) fn merge_unprefixed_aliases(map: &mut HashMap<String, Value>) {
+    let snapshot: Vec<(String, Value)> = map.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+    for (k, v) in snapshot {
+        if let Some((_analyzer, field)) = k.split_once(':') {
+            map.entry(field.to_string()).or_insert(v);
+        }
+    }
+}
+
+fn merge_squads_defaults_if_needed(
+    analyzer_name: &str,
+    fields: &mut HashMap<String, Value>,
+    required_prefixed_fields: Option<&HashSet<String>>,
+) {
+    if analyzer_name != "squads_v4" {
+        return;
+    }
+    let Some(req) = required_prefixed_fields else {
+        return;
+    };
+    const PREFIX: &str = "squads_v4:";
+    for full in req.iter() {
+        let Some(rest) = full.strip_prefix(PREFIX) else {
+            continue;
+        };
+        if !fields.contains_key(rest) {
+            fields.insert(rest.to_string(), squads_neutral_value(rest));
+        }
     }
 }
 
@@ -126,6 +197,25 @@ impl AnalyzerRegistry {
         result
     }
 
+    /// Resolve which analyzer owns an unprefixed field name.
+    pub fn find_owning_analyzer(&self, field: &str) -> Result<Option<String>, AmbiguousFieldError> {
+        let mut matches: Vec<String> = self
+            .analyzers
+            .iter()
+            .filter(|(_, analyzer)| analyzer.fields().contains(&field.to_string()))
+            .map(|(name, _)| name.clone())
+            .collect();
+        matches.sort();
+        match matches.len() {
+            0 => Ok(None),
+            1 => Ok(Some(matches[0].clone())),
+            _ => Err(AmbiguousFieldError {
+                field: field.to_string(),
+                analyzers: matches,
+            }),
+        }
+    }
+
     /// Check if a field is available (with or without prefix)
     pub fn has_field(&self, field: &str) -> bool {
         // Check if it's a prefixed field (analyzer:field)
@@ -147,11 +237,15 @@ impl AnalyzerRegistry {
     }
 
     /// Analyze transaction with selected analyzers (lazy evaluation)
-    /// Only runs analyzers that are in the required_analyzers list
+    /// Only runs analyzers that are in the required_analyzers list.
+    ///
+    /// `required_prefixed_fields`: when set, referenced fields only — used to merge neutral
+    /// defaults for `squads_v4` on non-Squads transactions for predictable `exists` semantics.
     pub async fn analyze_selected(
         &self,
         tx: &Transaction,
         required_analyzers: &[String],
+        required_prefixed_fields: Option<&HashSet<String>>,
     ) -> Result<HashMap<String, Value>> {
         let mut all_fields = HashMap::new();
 
@@ -184,13 +278,11 @@ impl AnalyzerRegistry {
 
         for task_result in results {
             match task_result {
-                Ok((name, Ok(fields))) => {
-                    // Prefix fields with analyzer name to avoid conflicts
+                Ok((name, Ok(mut fields))) => {
+                    merge_squads_defaults_if_needed(&name, &mut fields, required_prefixed_fields);
                     for (field, value) in fields {
                         let prefixed_key = format!("{}:{}", name, &field);
-                        all_fields.insert(prefixed_key, value.clone());
-                        // Also add without prefix for convenience
-                        all_fields.entry(field.clone()).or_insert(value);
+                        all_fields.insert(prefixed_key, value);
                     }
                 }
                 Ok((name, Err(e))) => {
@@ -208,7 +300,9 @@ impl AnalyzerRegistry {
     /// Analyze transaction with all registered analyzers (backwards compatibility)
     pub async fn analyze_all(&self, tx: &Transaction) -> Result<HashMap<String, Value>> {
         let all_analyzers: Vec<String> = self.analyzers.keys().cloned().collect();
-        self.analyze_selected(tx, &all_analyzers).await
+        let mut m = self.analyze_selected(tx, &all_analyzers, None).await?;
+        merge_unprefixed_aliases(&mut m);
+        Ok(m)
     }
 
     /// Analyze transaction with selected analyzers, passing confirmed transaction metadata.
@@ -218,6 +312,7 @@ impl AnalyzerRegistry {
         &self,
         tx: &Transaction,
         required_analyzers: &[String],
+        required_prefixed_fields: Option<&HashSet<String>>,
         metadata: &ConfirmedTransactionMetadata,
     ) -> Result<HashMap<String, Value>> {
         let mut all_fields = HashMap::new();
@@ -250,11 +345,11 @@ impl AnalyzerRegistry {
 
         for task_result in results {
             match task_result {
-                Ok((name, Ok(fields))) => {
+                Ok((name, Ok(mut fields))) => {
+                    merge_squads_defaults_if_needed(&name, &mut fields, required_prefixed_fields);
                     for (field, value) in fields {
                         let prefixed_key = format!("{}:{}", name, &field);
-                        all_fields.insert(prefixed_key, value.clone());
-                        all_fields.entry(field.clone()).or_insert(value);
+                        all_fields.insert(prefixed_key, value);
                     }
                 }
                 Ok((name, Err(e))) => {
@@ -279,8 +374,9 @@ impl AnalyzerRegistry {
         let metadata = ConfirmedTransactionMetadata {
             logs: logs.to_vec(),
             inner_instructions: vec![],
+            ..Default::default()
         };
-        self.analyze_selected_with_metadata(tx, required_analyzers, &metadata)
+        self.analyze_selected_with_metadata(tx, required_analyzers, None, &metadata)
             .await
     }
 

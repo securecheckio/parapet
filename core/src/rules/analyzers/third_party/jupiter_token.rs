@@ -374,7 +374,7 @@ impl TransactionAnalyzer for JupiterTokenAnalyzer {
         let has_critical_risk = is_sus || holder_exodus || liquidity_drain;
 
         // High risk: Multiple red flags
-        let risk_indicators = vec![
+        let risk_indicators = [
             freeze_enabled,
             high_concentration,
             low_organic,

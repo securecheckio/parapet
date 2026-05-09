@@ -113,6 +113,7 @@ async fn main() -> anyhow::Result<()> {
         network: config.network.network,
         prefetch_alts: config.network.prefetch_alts,
         alt_cache_ttl_secs: config.network.alt_cache_ttl_secs,
+        alt_cache_preseed: Vec::new(),
     };
 
     // Store config path for reloading

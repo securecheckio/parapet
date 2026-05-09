@@ -52,6 +52,12 @@ pub struct ProgramDisassembler {
     // Simple BPF bytecode analyzer (without capstone for now)
 }
 
+impl Default for ProgramDisassembler {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ProgramDisassembler {
     pub fn new() -> Self {
         Self {}

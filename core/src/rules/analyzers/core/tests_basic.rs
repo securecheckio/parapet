@@ -1,7 +1,9 @@
 #[cfg(test)]
 mod tests {
     use super::super::basic::BasicAnalyzer;
-    use crate::rules::analyzer::TransactionAnalyzer;
+    use crate::rules::analyzer::{
+        ConfirmedTransactionMetadata, LookupTableInfo, TransactionAnalyzer,
+    };
     use solana_sdk::{
         instruction::Instruction, message::Message, pubkey::Pubkey, signature::Keypair,
         signer::Signer, transaction::Transaction,
@@ -53,6 +55,14 @@ mod tests {
         assert_eq!(
             fields.get("account_keys_count").unwrap().as_u64().unwrap(),
             4
+        );
+
+        let keys = fields.get("account_keys").unwrap().as_array().unwrap();
+        assert_eq!(keys.len(), 4);
+        assert_eq!(
+            keys[0].as_str().unwrap(),
+            payer.pubkey().to_string(),
+            "fee payer first in legacy message ordering"
         );
     }
 
@@ -167,14 +177,19 @@ mod tests {
         let analyzer = BasicAnalyzer::new();
         let fields = analyzer.fields();
 
-        assert_eq!(fields.len(), 7);
+        assert_eq!(fields.len(), 12);
         assert!(fields.contains(&"instruction_count".to_string()));
         assert!(fields.contains(&"account_keys_count".to_string()));
+        assert!(fields.contains(&"account_keys".to_string()));
         assert!(fields.contains(&"writable_accounts_count".to_string()));
         assert!(fields.contains(&"signers_count".to_string()));
         assert!(fields.contains(&"amount".to_string()));
         assert!(fields.contains(&"has_instructions".to_string()));
         assert!(fields.contains(&"program_ids".to_string()));
+        assert!(fields.contains(&"uses_lookup_tables".to_string()));
+        assert!(fields.contains(&"lookup_table_addresses".to_string()));
+        assert!(fields.contains(&"loaded_writable_count".to_string()));
+        assert!(fields.contains(&"loaded_readonly_count".to_string()));
     }
 
     #[test]
@@ -193,5 +208,55 @@ mod tests {
     fn test_basic_analyzer_default() {
         let analyzer = BasicAnalyzer;
         assert_eq!(analyzer.name(), "basic");
+    }
+
+    #[tokio::test]
+    async fn test_basic_analyzer_alt_metadata_when_capture_enabled() {
+        let analyzer = BasicAnalyzer::new();
+        let payer = Keypair::new();
+        let transfer = system_instruction::transfer(&payer.pubkey(), &Pubkey::new_unique(), 1);
+        let message = Message::new(&[transfer], Some(&payer.pubkey()));
+        let tx = Transaction::new_unsigned(message);
+
+        let meta = ConfirmedTransactionMetadata {
+            capture_alt_details: true,
+            lookup_tables: vec![LookupTableInfo {
+                table_address: "ALT11111111111111111111111111111111".to_string(),
+                writable_indexes: vec![0],
+                readonly_indexes: vec![1],
+            }],
+            loaded_writable_count: 2,
+            loaded_readonly_count: 3,
+            ..Default::default()
+        };
+        let fields = analyzer.analyze_with_metadata(&tx, &meta).await.unwrap();
+        assert_eq!(
+            fields.get("uses_lookup_tables").unwrap(),
+            &serde_json::json!(true)
+        );
+        assert_eq!(
+            fields.get("lookup_table_addresses").unwrap(),
+            &serde_json::json!(["ALT11111111111111111111111111111111"])
+        );
+        assert_eq!(
+            fields.get("loaded_writable_count").unwrap(),
+            &serde_json::json!(2)
+        );
+        assert_eq!(
+            fields.get("loaded_readonly_count").unwrap(),
+            &serde_json::json!(3)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_basic_analyzer_alt_omitted_when_capture_disabled() {
+        let analyzer = BasicAnalyzer::new();
+        let payer = Keypair::new();
+        let transfer = system_instruction::transfer(&payer.pubkey(), &Pubkey::new_unique(), 1);
+        let message = Message::new(&[transfer], Some(&payer.pubkey()));
+        let tx = Transaction::new_unsigned(message);
+        let meta = ConfirmedTransactionMetadata::default();
+        let fields = analyzer.analyze_with_metadata(&tx, &meta).await.unwrap();
+        assert!(!fields.contains_key("uses_lookup_tables"));
     }
 }

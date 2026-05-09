@@ -436,7 +436,7 @@ async fn handle_transaction_send(
             // ALWAYS emit event for complete audit trail - with or without signature
             log::info!(
                 "📝 Emitting ALLOWED event (signature: {})",
-                signature.as_ref().map(|s| s.as_str()).unwrap_or("none")
+                signature.as_deref().unwrap_or("none")
             );
 
             let mut event_builder = EventBuilder::new(

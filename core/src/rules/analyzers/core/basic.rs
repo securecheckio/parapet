@@ -1,4 +1,4 @@
-use crate::rules::analyzer::TransactionAnalyzer;
+use crate::rules::analyzer::{ConfirmedTransactionMetadata, TransactionAnalyzer};
 use anyhow::Result;
 use serde_json::{json, Value};
 use solana_sdk::transaction::Transaction;
@@ -57,16 +57,28 @@ impl TransactionAnalyzer for BasicAnalyzer {
         vec![
             "instruction_count".to_string(),
             "account_keys_count".to_string(),
+            "account_keys".to_string(),
             "writable_accounts_count".to_string(),
             "signers_count".to_string(),
             "amount".to_string(),
             "has_instructions".to_string(),
             "program_ids".to_string(),
+            "uses_lookup_tables".to_string(),
+            "lookup_table_addresses".to_string(),
+            "loaded_writable_count".to_string(),
+            "loaded_readonly_count".to_string(),
         ]
     }
 
     async fn analyze(&self, tx: &Transaction) -> Result<HashMap<String, Value>> {
         let writable_count = Self::writable_accounts_count(tx);
+
+        let account_keys: Vec<String> = tx
+            .message
+            .account_keys
+            .iter()
+            .map(|k| k.to_string())
+            .collect();
 
         // Extract unique program IDs from instructions
         let program_ids: Vec<String> = tx
@@ -95,6 +107,8 @@ impl TransactionAnalyzer for BasicAnalyzer {
             json!(tx.message.account_keys.len()),
         );
 
+        fields.insert("account_keys".to_string(), json!(account_keys));
+
         fields.insert("writable_accounts_count".to_string(), json!(writable_count));
 
         fields.insert(
@@ -111,6 +125,36 @@ impl TransactionAnalyzer for BasicAnalyzer {
 
         fields.insert("program_ids".to_string(), json!(program_ids));
 
+        Ok(fields)
+    }
+
+    async fn analyze_with_metadata(
+        &self,
+        tx: &Transaction,
+        metadata: &ConfirmedTransactionMetadata,
+    ) -> Result<HashMap<String, Value>> {
+        let mut fields = self.analyze(tx).await?;
+        if !metadata.capture_alt_details {
+            return Ok(fields);
+        }
+        let uses = !metadata.lookup_tables.is_empty()
+            || metadata.loaded_writable_count > 0
+            || metadata.loaded_readonly_count > 0;
+        fields.insert("uses_lookup_tables".to_string(), json!(uses));
+        let addrs: Vec<String> = metadata
+            .lookup_tables
+            .iter()
+            .map(|t| t.table_address.clone())
+            .collect();
+        fields.insert("lookup_table_addresses".to_string(), json!(addrs));
+        fields.insert(
+            "loaded_writable_count".to_string(),
+            json!(metadata.loaded_writable_count),
+        );
+        fields.insert(
+            "loaded_readonly_count".to_string(),
+            json!(metadata.loaded_readonly_count),
+        );
         Ok(fields)
     }
 

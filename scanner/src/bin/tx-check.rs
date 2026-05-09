@@ -166,7 +166,7 @@ fn format_human_output(
                 }
             };
 
-            print_human_line(&format!("{}", formatted_msg), delay);
+            print_human_line(&formatted_msg.to_string(), delay);
 
             if delay > 0 {
                 sleep_ms(delay / 2);
@@ -239,7 +239,7 @@ fn format_human_output(
         }
     };
 
-    print_human_line(&format!("{}", formatted_decision), delay);
+    print_human_line(&formatted_decision.to_string(), delay);
 
     // Impact statement for blocked transactions
     if decision.action == parapet_core::rules::types::RuleAction::Block && decision.total_risk >= 80
@@ -437,6 +437,7 @@ async fn main() -> Result<()> {
     let tx_metadata = ConfirmedTransactionMetadata {
         logs: log_messages.clone(),
         inner_instructions,
+        ..Default::default()
     };
 
     if args.format == "pretty" && !args.human {
@@ -551,7 +552,7 @@ async fn main() -> Result<()> {
 
         let all_analyzers: Vec<String> = debug_registry.list_all();
         let fields = debug_registry
-            .analyze_selected_with_metadata(&transaction, &all_analyzers, &tx_metadata)
+            .analyze_selected_with_metadata(&transaction, &all_analyzers, None, &tx_metadata)
             .await?;
         let mut sorted: Vec<_> = fields.iter().collect();
         sorted.sort_by_key(|(k, _)| k.as_str());

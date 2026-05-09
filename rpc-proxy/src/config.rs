@@ -135,7 +135,7 @@ pub struct UsageConfig {
     pub default_requests_per_month: u64,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct RedisConfig {
     pub url: Option<String>,
 }
@@ -146,7 +146,7 @@ pub struct WasmConfig {
     pub analyzer_config: Option<String>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Default)]
 pub struct EscalationsConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -321,26 +321,11 @@ impl Default for UsageConfig {
     }
 }
 
-impl Default for RedisConfig {
-    fn default() -> Self {
-        Self { url: None }
-    }
-}
-
 impl Default for WasmConfig {
     fn default() -> Self {
         Self {
             analyzers_path: Some("./analyzers".to_string()),
             analyzer_config: None,
-        }
-    }
-}
-
-impl Default for EscalationsConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            approver_wallet: None,
         }
     }
 }

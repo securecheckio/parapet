@@ -242,13 +242,12 @@ async fn test_analyze_selected_single() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &["test".to_string()])
+        .analyze_selected(&tx, &["test".to_string()], None)
         .await
         .unwrap();
 
-    assert!(result.contains_key("field1"));
     assert!(result.contains_key("test:field1"));
-    assert_eq!(result["field1"], json!(true));
+    assert_eq!(result["test:field1"], json!(true));
 }
 
 #[tokio::test]
@@ -263,12 +262,14 @@ async fn test_analyze_selected_multiple() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &["analyzer1".to_string(), "analyzer2".to_string()])
+        .analyze_selected(
+            &tx,
+            &["analyzer1".to_string(), "analyzer2".to_string()],
+            None,
+        )
         .await
         .unwrap();
 
-    assert!(result.contains_key("field_a"));
-    assert!(result.contains_key("field_b"));
     assert!(result.contains_key("analyzer1:field_a"));
     assert!(result.contains_key("analyzer2:field_b"));
 }
@@ -287,12 +288,16 @@ async fn test_analyze_selected_filters_unavailable() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &["available".to_string(), "unavailable".to_string()])
+        .analyze_selected(
+            &tx,
+            &["available".to_string(), "unavailable".to_string()],
+            None,
+        )
         .await
         .unwrap();
 
-    assert!(result.contains_key("field_a"));
-    assert!(!result.contains_key("field_b")); // Unavailable analyzer not run
+    assert!(result.contains_key("available:field_a"));
+    assert!(!result.contains_key("unavailable:field_b")); // Unavailable analyzer not run
 }
 
 #[tokio::test]
@@ -307,12 +312,12 @@ async fn test_analyze_selected_only_requested() {
 
     let tx = create_test_transaction();
     let result = registry
-        .analyze_selected(&tx, &["requested".to_string()])
+        .analyze_selected(&tx, &["requested".to_string()], None)
         .await
         .unwrap();
 
-    assert!(result.contains_key("field_a"));
-    assert!(!result.contains_key("field_b")); // Not requested
+    assert!(result.contains_key("requested:field_a"));
+    assert!(!result.contains_key("not_requested:field_b")); // Not requested
 }
 
 #[tokio::test]
@@ -349,15 +354,16 @@ async fn test_analyze_with_metadata() {
             accounts: vec![],
             stack_height: Some(1),
         }],
+        ..Default::default()
     };
 
     let result = registry
-        .analyze_selected_with_metadata(&tx, &["metadata_analyzer".to_string()], &metadata)
+        .analyze_selected_with_metadata(&tx, &["metadata_analyzer".to_string()], None, &metadata)
         .await
         .unwrap();
 
-    assert_eq!(result["log_count"], json!(3));
-    assert_eq!(result["inner_ix_count"], json!(1));
+    assert_eq!(result["metadata_analyzer:log_count"], json!(3));
+    assert_eq!(result["metadata_analyzer:inner_ix_count"], json!(1));
 }
 
 #[tokio::test]
@@ -375,8 +381,8 @@ async fn test_analyze_with_logs() {
         .await
         .unwrap();
 
-    assert_eq!(result["log_count"], json!(2));
-    assert_eq!(result["inner_ix_count"], json!(0)); // No inner instructions
+    assert_eq!(result["metadata_analyzer:log_count"], json!(2));
+    assert_eq!(result["metadata_analyzer:inner_ix_count"], json!(0)); // No inner instructions
 }
 
 #[test]
@@ -463,6 +469,7 @@ fn test_confirmed_metadata_with_data() {
             accounts: vec![],
             stack_height: None,
         }],
+        ..Default::default()
     };
 
     assert_eq!(metadata.logs.len(), 2);
@@ -552,7 +559,7 @@ async fn test_analyze_empty_selection() {
     registry.register(Arc::new(MockAnalyzer::new("test")));
 
     let tx = create_test_transaction();
-    let result = registry.analyze_selected(&tx, &[]).await.unwrap();
+    let result = registry.analyze_selected(&tx, &[], None).await.unwrap();
 
     // No analyzers selected, should return empty
     assert!(result.is_empty());

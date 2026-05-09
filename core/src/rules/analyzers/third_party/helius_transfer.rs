@@ -191,7 +191,7 @@ impl HeliusTransferAnalyzer {
             .get(&top_counterparty)
             .copied()
             .unwrap_or(0);
-        let concentration = if outgoing.len() > 0 {
+        let concentration = if !outgoing.is_empty() {
             top_count as f32 / outgoing.len() as f32
         } else {
             0.0

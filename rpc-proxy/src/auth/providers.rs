@@ -31,6 +31,7 @@ struct UserInfo {
 
 impl ApiKeyAuth {
     /// Create ApiKeyAuth from a config string (for testing and direct usage)
+    #[allow(clippy::should_implement_trait)]
     pub fn from_str(keys_str: &str) -> Result<Self> {
         let mut keys = HashMap::new();
 
@@ -81,11 +82,12 @@ impl ApiKeyAuth {
     ///
     /// Format: key:userid[:wallet1,wallet2,...]
     /// Separators:
-    /// - Use | to separate multiple API keys when wallets are included
-    /// - Use , for backwards compatibility when no wallets
+    ///   - Use | to separate multiple API keys when wallets are included
+    ///   - Use , for backwards compatibility when no wallets
+    ///
     /// Examples:
-    /// - Simple: "key1:user1,key2:user2" (backwards compatible)
-    /// - With wallets: "key1:user1:wallet1,wallet2|key2:user2:wallet3"
+    ///   - Simple: "key1:user1,key2:user2" (backwards compatible)
+    ///   - With wallets: "key1:user1:wallet1,wallet2|key2:user2:wallet3"
     pub fn from_env() -> Result<Self> {
         let keys_str = std::env::var("API_KEYS").unwrap_or_default();
         Self::from_str(&keys_str)

@@ -19,7 +19,6 @@
     "metadata": {
       "severity": "critical",
       "weight": 80,
-      "false_positive_rate": "low",
       "note": "Requires simulation - not available for pre-send analysis"
     }
   },

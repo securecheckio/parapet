@@ -62,7 +62,7 @@ pub fn calculate_program_risk_score(
     }
 
     // Clamp to 0-100 range
-    score.max(0).min(100) as u8
+    score.clamp(0, 100) as u8
 }
 
 /// Determine threat type classification

@@ -177,6 +177,7 @@ fn test_simple_condition_serialization() {
         field: "has_sol_transfer".to_string(),
         operator: ComparisonOperator::Equals,
         value: json!(true),
+        ..Default::default()
     };
 
     let json = serde_json::to_value(&condition).unwrap();
@@ -237,6 +238,18 @@ fn test_comparison_operator_serialization() {
         "\"contains\""
     );
     assert_eq!(
+        serde_json::to_string(&ComparisonOperator::SubsetOf).unwrap(),
+        "\"subset_of\""
+    );
+    assert_eq!(
+        serde_json::to_string(&ComparisonOperator::Intersects).unwrap(),
+        "\"intersects\""
+    );
+    assert_eq!(
+        serde_json::to_string(&ComparisonOperator::Regex).unwrap(),
+        "\"regex\""
+    );
+    assert_eq!(
         serde_json::to_string(&ComparisonOperator::IsNotSet).unwrap(),
         "\"isnotset\""
     );
@@ -254,11 +267,13 @@ fn test_compound_condition_all_serialization() {
                 field: "field1".to_string(),
                 operator: ComparisonOperator::Equals,
                 value: json!(true),
+                ..Default::default()
             }),
             RuleCondition::Simple(SimpleCondition {
                 field: "field2".to_string(),
                 operator: ComparisonOperator::GreaterThan,
                 value: json!(10),
+                ..Default::default()
             }),
         ]),
         any: None,
@@ -278,6 +293,7 @@ fn test_compound_condition_any_serialization() {
             field: "field1".to_string(),
             operator: ComparisonOperator::Equals,
             value: json!(true),
+            ..Default::default()
         })]),
         not: None,
     };
@@ -296,6 +312,7 @@ fn test_compound_condition_not_serialization() {
             field: "field1".to_string(),
             operator: ComparisonOperator::Equals,
             value: json!(false),
+            ..Default::default()
         }))),
     };
 
@@ -309,6 +326,7 @@ fn test_rule_condition_simple_variant() {
         field: "test".to_string(),
         operator: ComparisonOperator::Equals,
         value: json!(true),
+        ..Default::default()
     });
 
     let json = serde_json::to_value(&condition).unwrap();
@@ -335,6 +353,7 @@ fn test_rule_serialization() {
             field: "has_sol_transfer".to_string(),
             operator: ComparisonOperator::Equals,
             value: json!(true),
+            ..Default::default()
         }),
         message: "Test message".to_string(),
         flowstate: None,
@@ -383,6 +402,7 @@ fn test_rule_definition_full() {
                 field: "test".to_string(),
                 operator: ComparisonOperator::Equals,
                 value: json!(true),
+                ..Default::default()
             }),
             message: "Test".to_string(),
             flowstate: None,
@@ -414,6 +434,7 @@ fn test_rule_definition_minimal() {
                 field: "test".to_string(),
                 operator: ComparisonOperator::Equals,
                 value: json!(true),
+                ..Default::default()
             }),
             message: "".to_string(),
             flowstate: None,
@@ -513,6 +534,7 @@ fn test_nested_compound_conditions() {
                 field: "field1".to_string(),
                 operator: ComparisonOperator::Equals,
                 value: json!(true),
+                ..Default::default()
             }),
             RuleCondition::Compound(CompoundCondition {
                 any: Some(vec![
@@ -520,11 +542,13 @@ fn test_nested_compound_conditions() {
                         field: "field2".to_string(),
                         operator: ComparisonOperator::GreaterThan,
                         value: json!(10),
+                        ..Default::default()
                     }),
                     RuleCondition::Simple(SimpleCondition {
                         field: "field3".to_string(),
                         operator: ComparisonOperator::LessThan,
                         value: json!(5),
+                        ..Default::default()
                     }),
                 ]),
                 all: None,

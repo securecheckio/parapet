@@ -45,9 +45,9 @@ Real Solana RPC calls introduce 15-70ms of variance that obscures sub-millisecon
 
 **Response**: Test transactions are constructed using actual Solana SDK primitives and match real-world transaction structures (token transfers, approvals, system program calls, etc.). The rule engine processes them identically to mainnet transactions - same deserialization, same analyzer execution, same condition evaluation.
 
-**Criticism**: "Only 7 test cases."
+**Criticism**: "Only a handful of test cases."
 
-**Response**: Each case targets a specific rule engine path (pass/alert/block, simple/complex conditions, single/multi-analyzer). Additional cases provide no new information about rule engine performance - they test rule logic (covered by unit tests), not proxy overhead.
+**Response**: Each case targets a specific rule engine path (pass/alert/block, legacy vs v0 vs ALT resolution, simple/complex conditions, single/multi-analyzer). Extra cases mainly duplicate timing paths already exercised here; rule logic is covered by unit tests.
 
 ### Benchmark Design Decisions
 
@@ -94,23 +94,26 @@ This validates that mock measurements accurately predict production impact.
 From the workspace root (`parapet/`):
 
 ```bash
-# All 7 cases, 100 iterations each (700 total), default rules
-cargo run -p rpc-perf --
+# sendRawTransaction path — all cases, default fixtures/baseline-rules.json
+cargo run -p rpc-perf -- send
+
+# simulateTransaction path — default fixtures/simulation-rules.json (checks result.parapet.decision)
+cargo run -p rpc-perf -- simulate
 
 # More iterations for stable percentiles
-cargo run -p rpc-perf -- --iterations 500 --warmup 50
+cargo run -p rpc-perf -- send --iterations 500 --warmup 50
 
 # Specific cases only
-cargo run -p rpc-perf -- --cases unlimited-approve-block,freeze-combo-block --iterations 200
+cargo run -p rpc-perf -- send --cases unlimited-approve-block,freeze-combo-block --iterations 200
 
 # Concurrent load (tests RwLock / semaphore contention)
-cargo run -p rpc-perf -- --iterations 200 --concurrency 4
+cargo run -p rpc-perf -- send --iterations 200 --concurrency 4
 
-# Custom rules file (absolute or relative to workspace root)
-cargo run -p rpc-perf -- --rules-path proxy/tests/fixtures/rules/presets/comprehensive-protection.json
+# Custom rules file
+cargo run -p rpc-perf -- send --rules-path proxy/tests/fixtures/rules/presets/comprehensive-protection.json
 
 # Release build for lower-noise numbers
-cargo run -p rpc-perf --release -- --iterations 500
+cargo run -p rpc-perf --release -- send --iterations 500
 ```
 
 ## Test cases
@@ -118,7 +121,9 @@ cargo run -p rpc-perf --release -- --iterations 500
 
 | Case                       | Rule tested                         | Expected    |
 | -------------------------- | ----------------------------------- | ----------- |
-| `sol-transfer-pass`        | (none — no rules match)             | pass / 2xx  |
+| `sol-transfer-pass-legacy` | (none — no rules match)             | pass / 2xx  |
+| `sol-transfer-pass-v0-empty` | (none) — v0 message, empty lookups | pass / 2xx |
+| `sol-transfer-pass-v0-alt` | (none) — v0 + ALT (cache pre-seeded) | pass / 2xx |
 | `memo-alert`               | `rpc-perf-alert-memo`               | alert / 2xx |
 | `large-sol-transfer-block` | `rpc-perf-block-large-sol-transfer` | block / 403 |
 | `unlimited-approve-block`  | `rpc-perf-block-unlimited-approve`  | block / 403 |
@@ -127,7 +132,7 @@ cargo run -p rpc-perf --release -- --iterations 500
 | `revoke-pass`              | `rpc-perf-pass-revoke-only`         | pass / 2xx  |
 
 
-The harness reports **outcome mismatches** if the proxy returns a different HTTP status than expected — useful for catching rule regressions.
+On **`send`**, mismatches are HTTP status (403 vs 2xx). On **`simulate`**, mismatches are `result.parapet.decision` vs expected risk band (`safe` / `alert` / `would_block`), accounting for simulation-specific block downgrades.
 
 ## Flags
 
@@ -139,7 +144,7 @@ The harness reports **outcome mismatches** if the proxy returns a different HTTP
 | `--warmup`             | 20                              | Unmeasured warmup iterations         |
 | `--concurrency`        | 1                               | Parallel in-flight requests          |
 | `--blocking-threshold` | 70                              | Rule-engine risk threshold (0–100)   |
-| `--rules-path`         | `fixtures/realistic-rules.json` | Rules JSON file                      |
+| `--rules-path`         | `baseline-rules.json` or `simulation-rules.json` (per subcommand) | Rules JSON file |
 | `--seed`               | 42                              | RNG seed for shuffle                 |
 
 
@@ -157,13 +162,13 @@ Runs unit tests (schedule logic, case registry) plus a smoke test that sends one
 rpc-perf summary
   proxy:       http://127.0.0.1:39681
   upstream:    mock (localhost), upstream_delay_ms=0
-  rules:       fixtures/realistic-rules.json
+  rules:       fixtures/baseline-rules.json
   iterations:  200 per case (warmup 30), concurrency 1, total 1400
   threshold:   70
 
   case                       expect   p50ms      p95ms      p99ms     
   ------------------------------------------------------------------
-  sol-transfer-pass          pass        0.505     0.727     1.500
+  sol-transfer-pass-legacy   pass        0.505     0.727     1.500
   memo-alert                 alert       0.513     1.406     1.550
   large-sol-transfer-block   block       0.349     0.524     1.096
   unlimited-approve-block    block       0.367     0.509     1.040
@@ -202,8 +207,9 @@ Parapet adds **0.3-0.5ms median latency** to RPC calls. For context:
 
 See [fixtures/README.md](fixtures/README.md) for detailed descriptions.
 
-- `minimal-rules.json` — Empty (baseline)
-- `realistic-rules.json` — 5 basic rules (typical production)
-- `stress-test-rules.json` — 5 complex rules (worst-case)
+- `empty-rules.json` — Empty rule set (baseline)
+- `baseline-rules.json` — Core rpc-perf structural rules (send path default)
+- `simulation-rules.json` — Same structural rules + simulation-log alert (simulate path default)
+- `stress-rules.json` — Complex nested rules (stress)
 - `mix-rules.json` — Mixed actions
 

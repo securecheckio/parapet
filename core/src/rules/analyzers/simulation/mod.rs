@@ -15,6 +15,7 @@ pub use failure::SimulationFailureAnalyzer;
 pub use logs::SimulationLogAnalyzer;
 pub use token_balance::SimulationTokenAnalyzer;
 
+use crate::rules::analyzer::merge_unprefixed_aliases;
 use anyhow::Result;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -84,12 +85,9 @@ impl SimulationAnalyzerRegistry {
 
             match analyzer.analyze(simulation_result).await {
                 Ok(fields) => {
-                    // Prefix fields with analyzer name to avoid conflicts
                     for (field, value) in fields {
                         let prefixed_key = format!("{}:{}", name, &field);
-                        all_fields.insert(prefixed_key, value.clone());
-                        // Also add without prefix for convenience
-                        all_fields.entry(field.clone()).or_insert(value);
+                        all_fields.insert(prefixed_key, value);
                     }
                 }
                 Err(e) => {
@@ -97,6 +95,8 @@ impl SimulationAnalyzerRegistry {
                 }
             }
         }
+
+        merge_unprefixed_aliases(&mut all_fields);
 
         Ok(all_fields)
     }

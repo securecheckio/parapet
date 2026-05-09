@@ -317,6 +317,7 @@ mod tests {
                         field: "test".to_string(),
                         operator: ComparisonOperator::Equals,
                         value: serde_json::json!("test"),
+                        ..Default::default()
                     }),
                     message: "Test".to_string(),
                     flowstate: None,

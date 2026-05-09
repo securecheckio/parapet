@@ -1,3 +1,4 @@
+use crate::rules::analyzer::{ConfirmedTransactionMetadata, LookupTableInfo};
 /// Address Lookup Table resolution for v0 transactions
 use anyhow::{anyhow, Result};
 use solana_address_lookup_table_interface::state::AddressLookupTable;
@@ -45,8 +46,15 @@ impl AltResolver {
         }
     }
 
-    /// Resolve Address Lookup Tables in a v0 transaction and convert to a legacy transaction
-    pub async fn resolve_v0_transaction(&self, tx: &VersionedTransaction) -> Result<Transaction> {
+    /// Resolve Address Lookup Tables in a v0 transaction and convert to a legacy transaction.
+    ///
+    /// When `metadata_out` is provided and `capture_alt_details` is true, fills lookup table
+    /// indices and loaded account counts (no extra RPC — uses the same resolution pass).
+    pub async fn resolve_v0_transaction(
+        &self,
+        tx: &VersionedTransaction,
+        mut metadata_out: Option<&mut ConfirmedTransactionMetadata>,
+    ) -> Result<Transaction> {
         // Extract the v0 message
         let v0_message = match &tx.message {
             VersionedMessage::V0(msg) => msg,
@@ -60,8 +68,29 @@ impl AltResolver {
             }
         };
 
+        if let Some(meta) = metadata_out.as_mut() {
+            if meta.capture_alt_details {
+                meta.lookup_tables = v0_message
+                    .address_table_lookups
+                    .iter()
+                    .map(|l| LookupTableInfo {
+                        table_address: l.account_key.to_string(),
+                        writable_indexes: l.writable_indexes.clone(),
+                        readonly_indexes: l.readonly_indexes.clone(),
+                    })
+                    .collect();
+            }
+        }
+
         // Resolve ALT addresses with caching
         let resolved_addresses = self.resolve_alt_addresses(v0_message).await?;
+
+        if let Some(meta) = metadata_out {
+            if meta.capture_alt_details {
+                meta.loaded_writable_count = resolved_addresses.writable.len();
+                meta.loaded_readonly_count = resolved_addresses.readonly.len();
+            }
+        }
 
         // Build the full account keys list
         let mut account_keys = v0_message.account_keys.clone();
