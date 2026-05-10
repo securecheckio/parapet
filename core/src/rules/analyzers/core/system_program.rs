@@ -13,6 +13,9 @@ const ASSIGN: u32 = 1;
 const TRANSFER: u32 = 2;
 const CREATE_ACCOUNT_WITH_SEED: u32 = 3;
 const ADVANCE_NONCE_ACCOUNT: u32 = 4;
+const WITHDRAW_NONCE_ACCOUNT: u32 = 5;
+const INITIALIZE_NONCE_ACCOUNT: u32 = 6;
+const AUTHORIZE_NONCE_ACCOUNT: u32 = 7;
 const ALLOCATE: u32 = 8;
 const ALLOCATE_WITH_SEED: u32 = 9;
 
@@ -101,6 +104,42 @@ impl SystemProgramAnalyzer {
                                 }
                             }
                         }
+                        INITIALIZE_NONCE_ACCOUNT => {
+                            stats.uses_durable_nonce = true;
+                            stats.initializes_nonce = true;
+                            // Extract nonce account (accounts[0])
+                            if let Some(&nonce_idx) = instruction.accounts.first() {
+                                if let Some(nonce_account) =
+                                    tx.message.account_keys.get(nonce_idx as usize)
+                                {
+                                    stats.nonce_account = Some(nonce_account.to_string());
+                                }
+                            }
+                        }
+                        WITHDRAW_NONCE_ACCOUNT => {
+                            stats.uses_durable_nonce = true;
+                            stats.withdraws_nonce = true;
+                            // Extract nonce account (accounts[0])
+                            if let Some(&nonce_idx) = instruction.accounts.first() {
+                                if let Some(nonce_account) =
+                                    tx.message.account_keys.get(nonce_idx as usize)
+                                {
+                                    stats.nonce_account = Some(nonce_account.to_string());
+                                }
+                            }
+                        }
+                        AUTHORIZE_NONCE_ACCOUNT => {
+                            stats.uses_durable_nonce = true;
+                            stats.authorizes_nonce = true;
+                            // Extract nonce account (accounts[0])
+                            if let Some(&nonce_idx) = instruction.accounts.first() {
+                                if let Some(nonce_account) =
+                                    tx.message.account_keys.get(nonce_idx as usize)
+                                {
+                                    stats.nonce_account = Some(nonce_account.to_string());
+                                }
+                            }
+                        }
                         ALLOCATE | ALLOCATE_WITH_SEED => {
                             stats.allocate_count += 1;
                         }
@@ -129,6 +168,9 @@ struct SystemStats {
     total_rent_required: u64,
     uses_durable_nonce: bool,
     advances_nonce: bool,
+    initializes_nonce: bool,
+    withdraws_nonce: bool,
+    authorizes_nonce: bool,
     nonce_account: Option<String>,
 
     // Target addresses
@@ -156,9 +198,12 @@ impl TransactionAnalyzer for SystemProgramAnalyzer {
             // Program assignment
             "assigns_program_ownership".to_string(),
             "assign_count".to_string(),
-            // Advanced features
+            // Advanced features - Durable nonce operations
             "uses_durable_nonce".to_string(),
             "advances_nonce".to_string(),
+            "initializes_nonce".to_string(),
+            "withdraws_nonce".to_string(),
+            "authorizes_nonce".to_string(),
             "nonce_account".to_string(),
             "allocate_count".to_string(),
             // Security indicators
@@ -211,12 +256,21 @@ impl TransactionAnalyzer for SystemProgramAnalyzer {
         );
         fields.insert("assign_count".to_string(), json!(stats.assign_count));
 
-        // Advanced features
+        // Advanced features - Durable nonce operations
         fields.insert(
             "uses_durable_nonce".to_string(),
             json!(stats.uses_durable_nonce),
         );
         fields.insert("advances_nonce".to_string(), json!(stats.advances_nonce));
+        fields.insert(
+            "initializes_nonce".to_string(),
+            json!(stats.initializes_nonce),
+        );
+        fields.insert("withdraws_nonce".to_string(), json!(stats.withdraws_nonce));
+        fields.insert(
+            "authorizes_nonce".to_string(),
+            json!(stats.authorizes_nonce),
+        );
         if let Some(nonce_account) = stats.nonce_account {
             fields.insert("nonce_account".to_string(), json!(nonce_account));
         }

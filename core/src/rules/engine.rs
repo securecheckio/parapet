@@ -1077,6 +1077,7 @@ impl RuleEngine {
                                 structural_risk: None,
                                 simulation_risk: None,
                                 is_simulation: false,
+                                analyzer_fields: fields.clone(),
                             });
                         }
                     }
@@ -1225,6 +1226,7 @@ impl RuleEngine {
                         structural_risk: None,
                         simulation_risk: None,
                         is_simulation: false,
+                        analyzer_fields: fields.clone(),
                     });
                 }
 
@@ -1282,6 +1284,7 @@ impl RuleEngine {
                             structural_risk: None,
                             simulation_risk: None,
                             is_simulation: false,
+                            analyzer_fields: fields.clone(),
                         });
                     }
                 }
@@ -1340,6 +1343,7 @@ impl RuleEngine {
             structural_risk: None,
             simulation_risk: None,
             is_simulation: false,
+            analyzer_fields: fields,
         })
     }
 
@@ -2174,6 +2178,7 @@ impl RuleEngine {
             structural_risk: Some(structural_risk_only),
             simulation_risk: Some(simulation_risk_only),
             is_simulation: true,
+            analyzer_fields: combined_fields,
         })
     }
 

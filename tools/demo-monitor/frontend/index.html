@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drift Attack Demo - Parapet Security</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="header-left">
+                    <div class="parapet-logo">
+                        <img src="/static/favicon.png" alt="Parapet" class="logo-img" />
+                        <span class="logo-text">Parapet</span>
+                    </div>
+                    <div class="header-divider"></div>
+                    <div class="header-title">
+                        <h1>Transaction Security Analysis</h1>
+                        <p class="header-subtitle">Real-time threat detection for Solana</p>
+                    </div>
+                </div>
+                <div class="header-badge">
+                    <span>Live Demo</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Impact Banner -->
+        <div class="impact-banner">
+            <div class="impact-main">
+                <div class="impact-label">Attack Value</div>
+                <div class="impact-value" id="stake-amount">$285M</div>
+            </div>
+        </div>
+
+        <!-- Demo Intro -->
+        <div class="demo-intro">
+            <h2>March 23 - April 1, 2026: Pre-Signing Admin Transfer</h2>
+            <p>Click each stage to simulate analysis</p>
+        </div>
+
+        <!-- Active Rules -->
+        <div class="rules-section">
+            <div class="rules-header" onclick="toggleRules()">
+                <h3>Active Security Rules <span class="rules-count" id="rules-count">0</span></h3>
+                <span class="rules-toggle" id="rules-toggle">▼</span>
+            </div>
+            <div class="rules-list" id="rules-list" style="display: none;">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Stage Cards -->
+        <div class="stages-container" id="stages-container">
+            <!-- Populated by JavaScript -->
+        </div>
+
+        <!-- Results Display -->
+        <div class="results-container" id="results-container" style="display: none;">
+            <div class="results-header">
+                <h3 id="results-stage-name">Stage Results</h3>
+                <button class="btn-close" onclick="clearResults()">×</button>
+            </div>
+            
+            <div class="results-split">
+                <!-- Baseline (Left) -->
+                <div class="result-column baseline-column">
+                    <div class="column-header">
+                        <h4>Without Parapet</h4>
+                        <span class="column-subtitle">Industry Standard (Blind Signing)</span>
+                    </div>
+                    <div class="result-content" id="baseline-result">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Parapet (Right) -->
+                <div class="result-column parapet-column">
+                    <div class="column-header">
+                        <h4>With Parapet</h4>
+                        <span class="column-subtitle" id="parapet-subtitle">Security Analysis</span>
+                    </div>
+                    <div class="result-content" id="parapet-result">
+                        <!-- Populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Talking Points -->
+            <div class="talking-points" id="talking-points">
+                <h4>Key Points</h4>
+                <ul id="talking-points-list">
+                    <!-- Populated by JavaScript -->
+                </ul>
+            </div>
+        </div>
+
+        <!-- Console Output -->
+        <div class="console-container">
+            <div class="console-header">
+                <span>Monitor Console</span>
+                <button class="btn-clear" onclick="clearConsole()">Clear</button>
+            </div>
+            <div class="console-output" id="console-output">
+                <div class="console-line system">Demo Monitor initialized. Ready to replay Drift attack...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>

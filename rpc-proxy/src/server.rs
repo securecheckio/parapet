@@ -874,6 +874,12 @@ fn initialize_rule_engine(
         registry.register(Arc::new(analyzer));
     }
 
+    // Register Squads V4 analyzer (no external deps)
+    if ac.should_register("squads_v4") {
+        use parapet_core::rules::analyzers::SquadsV4Analyzer;
+        registry.register(Arc::new(SquadsV4Analyzer::new()));
+    }
+
     // Register Helius analyzers (check HELIUS_API_KEY env var via should_register / requirements_met)
     if ac.should_register("helius_identity") {
         registry.register(Arc::new(HeliusIdentityAnalyzer::new()));

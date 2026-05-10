@@ -1,0 +1,46 @@
+[package]
+name = "demo-monitor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+# Web server
+axum.workspace = true
+tokio.workspace = true
+tower = "0.4"
+tower-http = { workspace = true, features = ["fs"] }
+
+# WebSocket
+tokio-tungstenite = "0.21"
+futures-util = "0.3"
+
+# Serialization
+serde.workspace = true
+serde_json.workspace = true
+
+# HTTP client for RPC proxy
+reqwest.workspace = true
+
+# Parapet dependencies
+parapet-core = { path = "../../core" }
+solana-sdk.workspace = true
+
+# Logging
+log.workspace = true
+env_logger.workspace = true
+
+# Base58/Base64 encoding
+bs58.workspace = true
+base64.workspace = true
+
+# Error handling
+anyhow.workspace = true
+
+[lib]
+name = "demo_monitor"
+path = "src/lib.rs"
+
+[[bin]]
+name = "demo-monitor"
+path = "src/main.rs"

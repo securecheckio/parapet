@@ -140,7 +140,9 @@ pub async fn initialize_analyzers_and_rules(
         registry.register(Arc::new(TransactionLogAnalyzer::new()));
 
         // Register InstructionDataAnalyzer for instruction_data:* fields (authority change detection)
-        registry.register(Arc::new(InstructionDataAnalyzer::with_authority_fingerprints_embedded()));
+        registry.register(Arc::new(
+            InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
+        ));
 
         registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
         registry.register(Arc::new(HeliusTransferAnalyzer::new()));

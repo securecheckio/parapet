@@ -518,6 +518,7 @@ fn test_rule_decision_with_risks() {
         structural_risk: Some(80),
         simulation_risk: Some(15),
         is_simulation: true,
+        analyzer_fields: std::collections::HashMap::new(),
     };
 
     assert_eq!(decision.total_risk, 95);

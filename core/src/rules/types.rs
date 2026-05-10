@@ -268,6 +268,8 @@ pub struct RuleDecision {
     pub simulation_risk: Option<u8>,
     /// Whether this decision was made for a simulation
     pub is_simulation: bool,
+    /// Analyzer fields (all analyzed data from transaction)
+    pub analyzer_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -292,6 +294,7 @@ impl RuleDecision {
             structural_risk: None,
             simulation_risk: None,
             is_simulation: false,
+            analyzer_fields: std::collections::HashMap::new(),
         }
     }
 }

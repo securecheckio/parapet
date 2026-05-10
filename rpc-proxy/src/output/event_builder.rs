@@ -93,6 +93,16 @@ impl EventBuilder {
             }
         };
 
+        // Add analyzer fields from the decision
+        self.event.analyzer_fields = decision.analyzer_fields.clone();
+        self.event.analyzers_used = decision
+            .analyzer_fields
+            .keys()
+            .map(|k| k.split(':').next().unwrap_or(k).to_string())
+            .collect::<std::collections::HashSet<_>>()
+            .into_iter()
+            .collect();
+
         self
     }
 

@@ -722,7 +722,8 @@ fn build_parapet_metadata(decision: &RuleDecision, threshold: u8) -> Value {
             "matchedRules": decision.matched_rules.len(),
             "totalWeight": decision.total_risk,
             "wouldBlock": decision.total_risk >= threshold,
-        }
+        },
+        "analyzerFields": decision.analyzer_fields,
     })
 }
 

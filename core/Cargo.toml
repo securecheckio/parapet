@@ -36,6 +36,7 @@ bs58 = "0.5"
 bincode = "1.3"
 sha2 = "0.10"
 regex = "1.10"
+hex = "0.4"
 
 # Async support
 async-trait = "0.1"

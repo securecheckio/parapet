@@ -1,12 +1,12 @@
 [
   {
     "version": "1.0",
-    "id": "block-drift-presigned-authority-fingerprint",
-    "name": "Block: Drift Attack - Pre-signed Authority Change (Fingerprint)",
-    "description": "Blocks any durable nonce transaction that contains an instruction whose first 8 bytes match a known authority/admin-transfer fingerprint. A pre-signed authority change has no legitimate operational justification.",
+    "id": "block-presigned-authority-fingerprint",
+    "name": "Block: Pre-signed Authority Change",
+    "description": "Blocks durable nonce transactions containing instructions matching known authority/admin-transfer fingerprints.",
     "enabled": true,
     "author": "SecureCheck Security Team",
-    "tags": ["critical", "drift-attack", "durable-nonce", "authority-change", "fingerprint"],
+    "tags": ["critical", "durable-nonce", "authority-change", "fingerprint"],
     "rule": {
       "action": "block",
       "conditions": {
@@ -17,13 +17,13 @@
             "value": true
           },
           {
-            "field": "instruction_data:has_authority_change",
+            "field": "fingerprint:has_authority_change",
             "operator": "equals",
             "value": true
           }
         ]
       },
-      "message": "🚨 CRITICAL: Pre-signed authority/admin change detected - durable nonce + known authority-transfer instruction fingerprint. Drift-style attack BLOCKED."
+      "message": "🚨 CRITICAL: Pre-signed authority/admin change detected. Transaction BLOCKED."
     },
     "metadata": {
       "attack_type": "drift_presigned_authority_change",
@@ -36,12 +36,12 @@
   },
   {
     "version": "1.0",
-    "id": "block-drift-nonce-custom-program-outflow",
-    "name": "Block: Drift Attack - Durable Nonce + Custom Program + Outflow",
-    "description": "Blocks durable nonce transactions targeting a non-core custom program that also contain fund outflows. This combination is rare in legitimate use and matches the Drift Protocol exploit pattern.",
+    "id": "block-nonce-custom-program-outflow",
+    "name": "Block: Pre-signed Transaction with Fund Outflow",
+    "description": "Blocks durable nonce transactions to custom programs containing fund outflows.",
     "enabled": true,
     "author": "SecureCheck Security Team",
-    "tags": ["critical", "drift-attack", "durable-nonce", "custom-program", "outflow"],
+    "tags": ["critical", "durable-nonce", "custom-program", "outflow"],
     "rule": {
       "action": "block",
       "conditions": {
@@ -52,7 +52,7 @@
             "value": true
           },
           {
-            "field": "complexity:non_core_program_count",
+            "field": "programs:non_core_program_count",
             "operator": "greater_than",
             "value": 0
           },
@@ -72,7 +72,7 @@
           }
         ]
       },
-      "message": "🚨 CRITICAL: Drift-style attack detected! Durable nonce + custom program + fund outflow pattern. Transaction BLOCKED."
+      "message": "🚨 CRITICAL: Pre-signed transaction with fund outflow to custom program. Transaction BLOCKED."
     },
     "metadata": {
       "attack_type": "drift_exploit_with_drain",
@@ -85,12 +85,12 @@
   },
   {
     "version": "1.0",
-    "id": "block-drift-log-admin-change",
-    "name": "Block: Drift Attack - Admin Change in Logs + Durable Nonce",
-    "description": "Blocks when confirmed transaction logs contain an admin/authority-change instruction name AND a durable nonce was used. Catches Drift-style attacks by analyzing transaction execution logs.",
+    "id": "block-log-admin-change",
+    "name": "Block: Pre-signed Admin Change",
+    "description": "Blocks durable nonce transactions containing admin/authority-change instructions in logs.",
     "enabled": true,
     "author": "SecureCheck Security Team",
-    "tags": ["critical", "drift-attack", "durable-nonce", "log-analysis", "admin-change"],
+    "tags": ["critical", "durable-nonce", "log-analysis", "admin-change"],
     "rule": {
       "action": "block",
       "conditions": {
@@ -146,7 +146,7 @@
           }
         ]
       },
-      "message": "🚨 CRITICAL: Durable nonce transaction contains admin/authority-change instruction in logs - Drift-style exploit pattern BLOCKED."
+      "message": "🚨 CRITICAL: Pre-signed transaction contains admin/authority change instruction. Transaction BLOCKED."
     },
     "metadata": {
       "attack_type": "drift_log_admin_change",
@@ -160,36 +160,111 @@
   },
   {
     "version": "1.0",
-    "id": "alert-drift-nonce-custom-program",
-    "name": "Alert: Drift Attack - Durable Nonce Targeting Custom Program",
-    "description": "Alerts on any durable nonce transaction targeting a non-core custom program. Catches the Drift attack pre-signing step. May fire on legitimate multisig/governance workflows - operators should review.",
+    "id": "critical-timelock-removal",
+    "name": "CRITICAL: Timelock Removal",
+    "description": "Alerts when transaction sets governance timelock to zero, eliminating safety delay.",
     "enabled": true,
     "author": "SecureCheck Security Team",
-    "tags": ["high", "drift-attack", "durable-nonce", "custom-program"],
+    "tags": ["critical", "timelock", "pre-drain", "governance"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "any": [
+          {
+            "field": "squads_v4:sets_timelock_to_zero",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Transaction sets governance timelock to zero. Removes safety delay for emergency intervention."
+    },
+    "metadata": {
+      "attack_type": "timelock_removal",
+      "severity": "critical",
+      "reference": "Drift Protocol March 27 multisig migration - removed timelock",
+      "cvss_score": 9.0,
+      "weight": 90,
+      "note": "Currently supports Squads v4. Extend to other governance programs as needed."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-presigned-squads-proposal",
+    "name": "CRITICAL: Pre-Signed Squads Proposal",
+    "description": "Alerts on pre-signed Squads V4 proposal creation or approval. Hardware wallets show Unknown Instruction.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "squads-v4", "proposal", "durable-nonce", "blind-signing"],
     "rule": {
       "action": "alert",
       "conditions": {
         "all": [
           {
-            "field": "system:uses_durable_nonce",
+            "field": "system:advances_nonce",
             "operator": "equals",
             "value": true
           },
           {
-            "field": "complexity:non_core_program_count",
+            "any": [
+              {
+                "field": "squads_v4:has_proposal_create",
+                "operator": "equals",
+                "value": true
+              },
+              {
+                "field": "squads_v4:has_proposal_approve",
+                "operator": "equals",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed Squads proposal detected. Hardware wallet shows 'Unknown Instruction' - decoded as proposal_create/proposal_approve. Proposal contains embedded instructions that execute later. Verify proposal content matches expected action before signing."
+    },
+    "metadata": {
+      "attack_type": "presigned_squads_proposal",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit March 23-30, 2026 - Security Council signed proposal containing admin transfer",
+      "cvss_score": 9.5,
+      "weight": 95,
+      "note": "This catches the SIGNING EVENT where the victim signs the malicious proposal on their hardware wallet."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-nonce-custom-program",
+    "name": "Alert: Pre-Signed Transaction Requires Manual Review",
+    "description": "Alerts on pre-signed transactions (durable nonce) to custom programs. Hardware wallets cannot display custom instruction details. Manual verification required.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["high", "durable-nonce", "custom-program", "blind-signing"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:advances_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "programs:non_core_program_count",
             "operator": "greater_than",
             "value": 0
           }
         ]
       },
-      "message": "⚠️ ALERT: Durable nonce transaction targeting non-core custom program - review for potential Drift-style pre-signed exploit."
+      "message": "⚠️ ALERT: Pre-signed transaction to custom program detected. Hardware wallet cannot display instruction details. Verify all instruction parameters and target addresses before signing."
     },
     "metadata": {
-      "attack_type": "drift_presign",
+      "attack_type": "drift_presign_blind_signing",
       "severity": "high",
-      "reference": "Drift Protocol $285M exploit, April 2026",
+      "reference": "Drift Protocol $285M exploit - team signed their own instruction without verifying target",
       "cvss_score": 7.5,
-      "weight": 60
+      "weight": 60,
+      "note": "Instruction registry provides human-readable decoding. Alert fires regardless of whether instruction is in registry."
     }
   }
 ]

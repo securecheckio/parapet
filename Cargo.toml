@@ -13,6 +13,7 @@ members = [
     "mcp",
     "tools/rpc-perf",
     "tools/flowstate-perf",
+    "tools/demo-monitor",
 ]
 exclude = [
     "core/tests/wasm_mock",

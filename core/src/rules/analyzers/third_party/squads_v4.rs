@@ -36,32 +36,47 @@ enum SquadsInstruction {
 impl SquadsInstruction {
     /// Parse instruction discriminator from instruction data
     fn from_discriminator(data: &[u8]) -> Self {
-        if data.is_empty() {
+        if data.len() < 8 {
             return Self::Unknown;
         }
 
-        // Anchor uses first byte as discriminator for some instructions
-        // For v4, we check the first byte
-        match data[0] {
-            0 => Self::MultisigCreate,
-            1 => Self::MultisigCreateV2,
-            2 => Self::ConfigTransactionCreate,
-            3 => Self::VaultTransactionCreate,
-            4 => Self::ProposalCreate,
-            5 => Self::ProposalApprove,
-            6 => Self::ProposalReject,
-            7 => Self::ProposalCancel,
-            8 => Self::VaultTransactionExecute,
-            9 => Self::ConfigTransactionExecute,
-            10 => Self::VaultBatchTransactionAccountClose,
-            11 => Self::MultisigAddMember,
-            12 => Self::MultisigRemoveMember,
-            13 => Self::MultisigChangeThreshold,
-            14 => Self::MultisigSetTimeLock,
-            15 => Self::MultisigAddSpendingLimit,
-            16 => Self::MultisigRemoveSpendingLimit,
-            17 => Self::MultisigSetRentCollector,
-            _ => Self::Unknown,
+        // Squads V4 uses Anchor 8-byte discriminators (SHA256 of "global:method_name")
+        // Extract first 8 bytes
+        let disc = &data[0..8];
+
+        // Known Anchor discriminators for Squads V4 (SHA256 of "global:method_name")
+        match disc {
+            [0xc2, 0x08, 0xa1, 0x57, 0x99, 0xa4, 0x19, 0xab] => Self::VaultTransactionExecute,
+            [0x30, 0xfa, 0x4e, 0xa8, 0xd0, 0xe2, 0xda, 0xd3] => Self::VaultTransactionCreate,
+            [0xdc, 0x3c, 0x49, 0xe0, 0x1e, 0x6c, 0x4f, 0x9f] => Self::ProposalCreate,
+            [0x90, 0x25, 0xa4, 0x88, 0xbc, 0xd8, 0x2a, 0xf8] => Self::ProposalApprove,
+            [0x0e, ..] if data[0] == 14 => Self::MultisigSetTimeLock,
+            [0x0c, ..] if data[0] == 12 => Self::MultisigAddMember,
+            [0x0d, ..] if data[0] == 13 => Self::MultisigChangeThreshold,
+            _ => {
+                // Fallback to single-byte for backward compatibility
+                match data[0] {
+                    0 => Self::MultisigCreate,
+                    1 => Self::MultisigCreateV2,
+                    2 => Self::ConfigTransactionCreate,
+                    3 => Self::VaultTransactionCreate,
+                    4 => Self::ProposalCreate,
+                    5 => Self::ProposalApprove,
+                    6 => Self::ProposalReject,
+                    7 => Self::ProposalCancel,
+                    8 => Self::VaultTransactionExecute,
+                    9 => Self::ConfigTransactionExecute,
+                    10 => Self::VaultBatchTransactionAccountClose,
+                    11 => Self::MultisigAddMember,
+                    12 => Self::MultisigRemoveMember,
+                    13 => Self::MultisigChangeThreshold,
+                    14 => Self::MultisigSetTimeLock,
+                    15 => Self::MultisigAddSpendingLimit,
+                    16 => Self::MultisigRemoveSpendingLimit,
+                    17 => Self::MultisigSetRentCollector,
+                    _ => Self::Unknown,
+                }
+            }
         }
     }
 
@@ -276,6 +291,9 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
             "has_member_remove".to_string(),
             "has_threshold_change".to_string(),
             "has_time_lock_set".to_string(),
+            "new_timelock_value".to_string(),
+            "sets_timelock_to_zero".to_string(),
+            "removes_governance_delay".to_string(),
             "has_spending_limit_add".to_string(),
             "has_spending_limit_remove".to_string(),
             // Activity Patterns
@@ -408,6 +426,47 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
                 .iter()
                 .any(|i| matches!(i, SquadsInstruction::MultisigSetTimeLock))),
         );
+
+        // Parse timelock value if MultisigSetTimeLock is present
+        let mut new_timelock_value: Option<u32> = None;
+        for inst in &tx.message.instructions {
+            if let Some(program_id) = tx.message.account_keys.get(inst.program_id_index as usize) {
+                if program_id.to_string() == SQUADS_V4_PROGRAM_ID {
+                    let squad_inst = SquadsInstruction::from_discriminator(&inst.data);
+                    if matches!(squad_inst, SquadsInstruction::MultisigSetTimeLock) {
+                        // Squads MultisigSetTimeLock instruction format:
+                        // [discriminator: 1 byte] + [timelock_seconds: u32 at offset 1]
+                        if inst.data.len() >= 5 {
+                            let timelock_bytes = &inst.data[1..5];
+                            new_timelock_value = Some(u32::from_le_bytes([
+                                timelock_bytes[0],
+                                timelock_bytes[1],
+                                timelock_bytes[2],
+                                timelock_bytes[3],
+                            ]));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(timelock_val) = new_timelock_value {
+            fields.insert("new_timelock_value".to_string(), json!(timelock_val));
+            fields.insert(
+                "sets_timelock_to_zero".to_string(),
+                json!(timelock_val == 0),
+            );
+            fields.insert(
+                "removes_governance_delay".to_string(),
+                json!(timelock_val == 0),
+            );
+        } else {
+            fields.insert("new_timelock_value".to_string(), json!(null));
+            fields.insert("sets_timelock_to_zero".to_string(), json!(false));
+            fields.insert("removes_governance_delay".to_string(), json!(false));
+        }
+
         fields.insert(
             "has_spending_limit_add".to_string(),
             json!(instructions
