@@ -1,350 +1,357 @@
-// API Base URL
 const API_BASE = '';
 
-// State
 let stages = [];
-let currentResults = null;
-let seenAlertIds = new Set();
+let loadedRules = [];
+const seenAlertIds = new Set();
+const resultsByStageId = {};
+const expandedStages = new Set();
 
-// Initialize
 document.addEventListener('DOMContentLoaded', async () => {
     await loadStages();
     await loadRules();
-    startConsoleTime();
 });
 
-// Load stages from API
+function escapeHtml(s) {
+    if (s === null || s === undefined) return '';
+    const d = document.createElement('div');
+    d.textContent = String(s);
+    return d.innerHTML;
+}
+
+function isDriftTeamStage(stageId) {
+    return stageId === 1 || stageId === 2;
+}
+
+function stageTitleWithoutDate(stage) {
+    const d = (stage.date || '').trim();
+    let n = stage.name || '';
+    if (d && n.startsWith(d)) {
+        n = n.slice(d.length).replace(/^\s*[:\u2013\u2014\-]\s*/, '').trim();
+    }
+    return n || stage.name || '';
+}
+
+function fieldMapFromParapet(parapet) {
+    const raw = parapet.analyzer_fields;
+    if (!raw || typeof raw !== 'object') return {};
+    return { ...raw };
+}
+
+function boolField(fields, key) {
+    return fields[key] === true || fields[key] === 'true';
+}
+
+function riskLabel(score) {
+    if (score >= 200) return 'CRITICAL';
+    if (score >= 100) return 'HIGH';
+    if (score >= 50) return 'MEDIUM';
+    return 'LOW';
+}
+
+function technicalAppendixHtml(stageId, result) {
+    const fields = fieldMapFromParapet(result.parapet_result);
+    const p = result.parapet_result;
+    const rulesHit = Array.isArray(p.rules_triggered) ? p.rules_triggered : [];
+    let ruleBlock = '';
+    for (const id of rulesHit) {
+        const rec = ruleRecordById(id);
+        ruleBlock +=
+            '<p class="rule-h">' +
+            escapeHtml(id) +
+            '</p>';
+        if (rec && rec.rule && rec.rule.conditions) {
+            ruleBlock +=
+                '<pre class="mono-block">' +
+                escapeHtml(JSON.stringify(rec.rule.conditions, null, 2)) +
+                '</pre>';
+        }
+    }
+    return (
+        '<details class="tech-fold">' +
+        '<summary>Raw fields · conditions</summary>' +
+        '<pre class="mono-block">' +
+        escapeHtml(JSON.stringify(fields)) +
+        '</pre>' +
+        ruleBlock +
+        '</details>'
+    );
+}
+
+function ruleRecordById(ruleId) {
+    return loadedRules.find(r => r.id === ruleId) || null;
+}
+
+/** Team stages: signing device vs decoded/replay. */
+function compareTeamHtml(stageId, fieldsOrNull, parapetResultOrNull) {
+    let leftContent;
+    if (stageId === 1) {
+        leftContent =
+            '<p class="compare-mono">Advance nonce</p>' +
+            '<p class="compare-mono">Unknown instruction</p>';
+    } else {
+        leftContent =
+            '<p class="compare-mono">Multisig proposal</p>' +
+            '<p class="compare-mono">Vault execute</p>';
+    }
+    const left =
+        '<div class="compare-cell compare-signing">' +
+        '<span class="compare-label">Device</span>' +
+        leftContent +
+        '</div>';
+    let rightInner;
+    if (!parapetResultOrNull) {
+        rightInner = '<p class="muted pending-hint">Analyze</p>';
+    } else {
+        const fields = fieldsOrNull || {};
+        const bits = [];
+        if (boolField(fields, 'squads_v4:has_proposal_create')) bits.push('proposal_create');
+        if (boolField(fields, 'squads_v4:has_proposal_approve')) bits.push('proposal_approve');
+        if (boolField(fields, 'squads_v4:has_vault_transaction_execute')) bits.push('vault_execute');
+        const p = parapetResultOrNull;
+        const decoded = bits.length ? bits.join(' · ') : '—';
+        rightInner =
+            '<p class="compare-decode">' +
+            escapeHtml(decoded) +
+            '</p>' +
+            '<p class="compare-verdict">' +
+            escapeHtml(p.action.toUpperCase() + ' · ' + riskLabel(p.risk_score)) +
+            '</p>';
+    }
+    const right =
+        '<div class="compare-cell compare-engine">' +
+        '<span class="compare-label">Parapet</span>' +
+        rightInner +
+        '</div>';
+    return '<div class="compare-row">' + left + right + '</div>';
+}
+
+function compareAttackerHtml(result) {
+    const p = result.parapet_result;
+    const b = result.baseline_result;
+    return (
+        '<div class="compare-row compare-row-simple">' +
+        '<p><span class="muted">Baseline</span> · ' +
+        escapeHtml(b.status) +
+        '</p>' +
+        '<p><span class="muted">Geyser (real-time)</span> · ' +
+        escapeHtml(p.action.toUpperCase() + ' · ' + riskLabel(p.risk_score)) +
+        '</p>' +
+        '</div>'
+    );
+}
+
+function verdictLineHtml(stage, result) {
+    const p = result.parapet_result;
+    const msg = (p.message || '').trim();
+    const short =
+        msg.length > 140 ? escapeHtml(msg.slice(0, 137)) + '…' : escapeHtml(msg || '—');
+    const sig = stage.tx_signature || '';
+    const tx =
+        sig.length > 0
+            ? '<a class="tx-link" href="' +
+              escapeHtml('https://solscan.io/tx/' + encodeURIComponent(sig)) +
+              '" target="_blank" rel="noopener">' +
+              escapeHtml(sig.slice(0, 10) + '…') +
+              '</a>'
+            : '';
+    return (
+        '<div class="verdict-block">' +
+        '<p class="verdict-msg">' +
+        short +
+        '</p>' +
+        tx +
+        '</div>'
+    );
+}
+
+function renderTechnicalPanel(stageId) {
+    const wrap = document.getElementById('stage-details-' + stageId);
+    if (!wrap) return;
+    const stage = stages.find(s => s.id === stageId);
+    if (!stage) return;
+
+    const open = expandedStages.has(stageId);
+    wrap.className = 'stage-body' + (open ? ' is-open' : '');
+    wrap.innerHTML = '';
+    const chev = document.getElementById('chev-' + stageId);
+    if (chev) chev.textContent = open ? '▾' : '▸';
+    if (!open) return;
+
+    const result = resultsByStageId[stageId];
+
+    if (!result) {
+        wrap.innerHTML = isDriftTeamStage(stageId)
+            ? compareTeamHtml(stageId, null, null)
+            : '<p class="muted pending-hint">Analyze</p>';
+        return;
+    }
+
+    const fields = fieldMapFromParapet(result.parapet_result);
+    const top =
+        isDriftTeamStage(stageId) ? compareTeamHtml(stageId, fields, result.parapet_result) : compareAttackerHtml(result);
+
+    wrap.innerHTML =
+        top + verdictLineHtml(stage, result) + technicalAppendixHtml(stageId, result);
+}
+
+function toggleStage(stageId) {
+    if (expandedStages.has(stageId)) expandedStages.delete(stageId);
+    else expandedStages.add(stageId);
+
+    const chev = document.getElementById('chev-' + stageId);
+    if (chev) chev.textContent = expandedStages.has(stageId) ? '▾' : '▸';
+
+    renderTechnicalPanel(stageId);
+}
+
+function setVerdictChip(stageId, result) {
+    const el = document.getElementById('verdict-' + stageId);
+    if (!el) return;
+    const p = result.parapet_result;
+    const a = String(p.action).toLowerCase();
+    el.className =
+        'verdict-chip verdict-chip--' + (a === 'pass' ? 'pass' : a === 'block' ? 'block' : 'alert');
+    el.textContent = p.action.toUpperCase() + ' · ' + riskLabel(p.risk_score);
+    el.hidden = false;
+}
+
 async function loadStages() {
     try {
         const response = await fetch(`${API_BASE}/api/stages`);
         stages = await response.json();
         renderStages();
-        log('system', 'Loaded ' + stages.length + ' demo stages');
-    } catch (error) {
-        log('critical', 'Failed to load stages: ' + error.message);
+    } catch (e) {
+        log('critical', e.message);
     }
 }
 
-// Load rules from API
 async function loadRules() {
     try {
         const response = await fetch(`${API_BASE}/api/rules`);
-        const rules = await response.json();
-        renderRules(rules);
-        log('system', 'Loaded ' + rules.length + ' security rules');
-    } catch (error) {
-        log('critical', 'Failed to load rules: ' + error.message);
+        loadedRules = await response.json();
+        const cnt = document.getElementById('rules-count');
+        const list = document.getElementById('rules-list');
+        if (cnt) cnt.textContent = String(loadedRules.length);
+        if (list)
+            list.innerHTML = loadedRules
+                .map(r => {
+                    const id = escapeHtml(r.id || '');
+                    const a = escapeHtml(r.rule.action);
+                    return '<div class="rule-line mono-block">' + id + ' <span class="muted">·</span> ' + a + '</div>';
+                })
+                .join('');
+    } catch (e) {
+        log('critical', e.message);
     }
 }
 
-// Render rules list
-function renderRules(rules) {
-    const container = document.getElementById('rules-list');
-    const countEl = document.getElementById('rules-count');
-    
-    countEl.textContent = rules.length;
-    
-    container.innerHTML = rules.map(rule => `
-        <div class="rule-item">
-            <div class="rule-header-row">
-                <div class="rule-name">${rule.name}</div>
-                <div class="rule-action ${rule.rule.action}">${rule.rule.action}</div>
-            </div>
-            <div class="rule-description">${rule.description}</div>
-            <div class="rule-conditions">
-                <div class="conditions-label">Conditions:</div>
-                <pre class="conditions-code">${JSON.stringify(rule.rule.conditions, null, 2)}</pre>
-            </div>
-            <div class="rule-message">${rule.rule.message}</div>
-        </div>
-    `).join('');
-}
-
-// Toggle rules section
-function toggleRules() {
-    const list = document.getElementById('rules-list');
-    const toggle = document.getElementById('rules-toggle');
-    
-    if (list.style.display === 'none') {
-        list.style.display = 'block';
-        toggle.classList.add('expanded');
-    } else {
-        list.style.display = 'none';
-        toggle.classList.remove('expanded');
-    }
-}
-
-// Render stage cards
 function renderStages() {
     const container = document.getElementById('stages-container');
-    container.innerHTML = stages.map(stage => {
-        // Show Solscan link for all real on-chain transactions
-        const txSig = stage.tx_signature || '';
-        const showLink = txSig && txSig.length > 0;
-        const shortSig = txSig ? `${txSig.slice(0, 8)}...${txSig.slice(-8)}` : '';
-        const solscanUrl = txSig ? `https://solscan.io/tx/${txSig}` : '';
-        
-        return `
-        <div class="stage-card" id="stage-${stage.id}" onclick="fireStage(${stage.id})">
-            <div class="stage-header">
-                <div class="stage-number">${stage.id}</div>
-                <div class="stage-date">${stage.date}</div>
-            </div>
-            <div class="stage-name">${stage.name}</div>
-            <div class="stage-description">${stage.description}</div>
-            ${showLink ? `
-            <div class="stage-tx-link">
-                <a href="${solscanUrl}" target="_blank" onclick="event.stopPropagation();" title="${txSig}">
-                    ${shortSig} ↗
-                </a>
-            </div>
-            ` : ''}
-            <div class="stage-footer">
-                <button class="btn-fire" onclick="fireStage(${stage.id}); event.stopPropagation();">
-                    FIRE EVENT
-                </button>
-                <span class="stage-badge" id="badge-${stage.id}" style="display: none;"></span>
-            </div>
-        </div>
-    `;
-    }).join('');
+    const ordered = [...stages].sort((a, b) => a.id - b.id);
+    const p1 = ordered.filter(s => isDriftTeamStage(s.id));
+    const p2 = ordered.filter(s => !isDriftTeamStage(s.id));
+
+    let html = '<p class="phase-label">Team</p>';
+    p1.forEach(s => {
+        html += renderStage(s);
+    });
+    html += '<p class="phase-label phase-label-spaced">Attacker</p>';
+    p2.forEach(s => {
+        html += renderStage(s);
+    });
+
+    container.innerHTML = html;
+    ordered.forEach(s => {
+        if (expandedStages.has(s.id)) renderTechnicalPanel(s.id);
+        if (resultsByStageId[s.id]) setVerdictChip(s.id, resultsByStageId[s.id]);
+    });
 }
 
-// Fire stage event
+function renderStage(stage) {
+    const team = isDriftTeamStage(stage.id);
+    const title = escapeHtml(stageTitleWithoutDate(stage));
+    const date = escapeHtml(stage.date || '');
+    const txSig = stage.tx_signature || '';
+    const txShort = txSig ? escapeHtml(txSig.slice(0, 6) + '…') : '';
+    const txUrl =
+        txSig.length > 0
+            ? 'https://solscan.io/tx/' + encodeURIComponent(txSig)
+            : '';
+
+    const txHtml =
+        txSig.length > 0
+            ? `<a href="${escapeHtml(txUrl)}" target="_blank" rel="noopener" class="tx-link-plain" onclick="event.stopPropagation()">${txShort}</a>`
+            : '';
+
+    const exp = expandedStages.has(stage.id) ? '▾' : '▸';
+
+    return (
+        `<section class="stage ${team ? 'stage--team' : 'stage--attacker'}" id="stage-${stage.id}">` +
+        `<button type="button" class="stage-head" onclick="toggleStage(${stage.id})" aria-expanded="${expandedStages.has(stage.id)}">` +
+        `<time class="stage-date">${date}</time>` +
+        `<h2 class="stage-title">${title}</h2>` +
+        `<span class="stage-chev" id="chev-${stage.id}">${exp}</span>` +
+        `</button>` +
+        `<div class="stage-toolbar">` +
+        `<button type="button" class="btn-analyze" onclick="event.stopPropagation(); fireStage(${stage.id})">Analyze</button>` +
+        txHtml +
+        `<span class="verdict-chip" id="verdict-${stage.id}" hidden></span>` +
+        `</div>` +
+        `<div id="stage-details-${stage.id}" class="stage-body"></div>` +
+        `</section>`
+    );
+}
+
 async function fireStage(stageId) {
-    const stageCard = document.getElementById(`stage-${stageId}`);
-    const stage = stages.find(s => s.id === stageId);
-    
-    if (!stage) return;
-    
-    // Visual feedback
-    stageCard.classList.add('loading');
-    log('info', `Firing Stage ${stageId}: ${stage.name}`);
-    
+    const wrap = document.getElementById('stage-' + stageId);
+    if (!wrap) return;
+    expandedStages.add(stageId);
+    const chev = document.getElementById('chev-' + stageId);
+    if (chev) chev.textContent = '▾';
+    renderTechnicalPanel(stageId);
+    wrap.classList.add('is-busy');
+
     try {
-        // Call API
         const response = await fetch(`${API_BASE}/api/stage/fire`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ stage_id: stageId })
+            body: JSON.stringify({ stage_id: stageId }),
         });
-        
-        if (!response.ok) {
-            throw new Error('API request failed');
-        }
-        
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         const result = await response.json();
-        
-        // Update UI
-        stageCard.classList.remove('loading');
-        stageCard.classList.add('fired');
-        
-        // Show badge after firing (only for alerts/blocks)
-        const badge = document.getElementById(`badge-${stageId}`);
-        if (badge && result.parapet_result.action) {
-            const action = result.parapet_result.action.toLowerCase();
-            if (action === 'alert' || action === 'block') {
-                badge.textContent = result.parapet_result.action.toUpperCase();
-                badge.className = `stage-badge badge-${result.parapet_result.action}`;
-                badge.style.display = 'inline-block';
-            } else {
-                badge.style.display = 'none';
-            }
-        }
-        
-        // Show results
-        displayResults(result);
-        
-        // Log to console
+        resultsByStageId[stageId] = result;
+        wrap.classList.remove('is-busy');
+        wrap.classList.add('has-result');
+        setVerdictChip(stageId, result);
+        renderTechnicalPanel(stageId);
         logStageResult(result);
-        
-    } catch (error) {
-        stageCard.classList.remove('loading');
-        log('critical', `Stage ${stageId} failed: ${error.message}`);
+    } catch (e) {
+        wrap.classList.remove('is-busy');
+        log('critical', e.message);
     }
 }
 
-// Display results
-function displayResults(result) {
-    currentResults = result;
-    const container = document.getElementById('results-container');
-    const stageName = document.getElementById('results-stage-name');
-    
-    stageName.textContent = result.stage.name;
-    
-    // Baseline result
-    const baselineDiv = document.getElementById('baseline-result');
-    const statusClass = getStatusClass(result.baseline_result.status);
-    
-    baselineDiv.innerHTML = `
-        <div class="result-status ${statusClass}">
-            <span>Status: ${result.baseline_result.status}</span>
-        </div>
-        <div class="result-detail">
-            <strong>Detection:</strong> None - Transaction executed on-chain
-        </div>
-        <div class="result-detail">
-            <strong>Response Time:</strong> N/A (No monitoring)
-        </div>
-    `;
-    
-    // Parapet result
-    const parapetDiv = document.getElementById('parapet-result');
-    const parapetStatusClass = getParapetStatusClass(result.parapet_result.action);
-    
-    // Update subtitle based on stage type
-    const isPreSigning = result.stage.id === 1;
-    const subtitleEl = document.getElementById('parapet-subtitle');
-    if (subtitleEl) {
-        subtitleEl.textContent = isPreSigning ? 'RPC Pre-Signing Analysis' : 'On-Chain Monitoring (Geyser/Helius)';
-    }
-    
-    parapetDiv.innerHTML = `
-        <div class="result-status ${parapetStatusClass}">
-            <span>${result.parapet_result.action.toUpperCase()}</span>
-        </div>
-        <div class="result-detail" style="padding: 0.75rem; background: rgba(59, 130, 246, 0.1); border-radius: 0.375rem; border: 1px solid rgba(59, 130, 246, 0.3); margin-bottom: 0.75rem;">
-            ${result.parapet_result.message}
-        </div>
-        <div class="result-detail">
-            <strong>Risk Score:</strong> ${result.parapet_result.risk_score}/100
-        </div>
-        <div class="result-detail">
-            <strong>Rules Triggered:</strong> ${result.parapet_result.rules_triggered.map(r => r.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ') || 'None'}
-        </div>
-        <div class="result-detail">
-            <strong>Analysis Time:</strong> ${result.parapet_result.analysis_time_ms.toFixed(2)}ms
-        </div>
-    `;
-    
-    // Talking points
-    const pointsList = document.getElementById('talking-points-list');
-    pointsList.innerHTML = result.stage.talking_points
-        .map(point => `<li>${point}</li>`)
-        .join('');
-    
-    // Show container
-    container.style.display = 'block';
-    container.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-}
-
-// Helper: Get status class
-function getStatusClass(status) {
-    if (status.includes('Executed')) return 'status-executed';
-    if (status.includes('Signed')) return 'status-executed';
-    return 'status-executed';
-}
-
-// Helper: Get Parapet status class
-function getParapetStatusClass(action) {
-    if (action === 'alert') return 'status-alert';
-    return 'status-pass';
-}
-
-// Clear results
-function clearResults() {
-    document.getElementById('results-container').style.display = 'none';
-    currentResults = null;
-}
-
-// Log to console
 function log(level, message) {
     const output = document.getElementById('console-output');
-    const timestamp = new Date().toISOString().substr(11, 8);
+    if (!output) return;
+    const t = new Date().toISOString().substr(11, 8);
     const line = document.createElement('div');
-    line.className = `console-line ${level}`;
-    line.textContent = `[${timestamp}] ${message}`;
+    line.className = 'console-line ' + level;
+    line.textContent = '[' + t + '] ' + message;
     output.appendChild(line);
     output.scrollTop = output.scrollHeight;
 }
 
-// Log stage result
 function logStageResult(result) {
-    const stage = result.stage;
-    const parapet = result.parapet_result;
-    const baseline = result.baseline_result;
-    
-    log('info', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-    log('info', `Stage ${stage.id}: ${stage.name}`);
-    log('system', `Baseline: ${baseline.status}`);
-    
-    if (parapet.action === 'alert') {
-        log('alert', `⚠️ ALERT: Risk ${parapet.risk_score}/100 - ${parapet.rules_triggered.length} rules triggered`);
-        log('alert', parapet.message);
-        
-        // Show Squads V4 analyzer output if available
-        if (parapet.analyzer_fields) {
-            const fields = parapet.analyzer_fields;
-            
-            // Check for Squads V4 transaction
-            if (fields['squads_v4:has_vault_transaction_execute'] === true) {
-                log('info', '');
-                log('info', '📋 DECODED TRANSACTION ANALYSIS:');
-                log('critical', '  • Program: Squads V4 Multisig');
-                log('critical', '  • Instruction: vault_transaction_execute');
-                log('alert', '    Executes a pre-approved transaction from the vault');
-                log('alert', '    Contains embedded instructions (e.g., admin transfer to unknown address)');
-                
-                if (fields['squads_v4:sets_timelock_to_zero'] === true) {
-                    log('critical', '  • Sets timelock to: ZERO (removes governance delay!)');
-                }
-                
-                log('info', '  ℹ️ Hardware wallet shows: "AdvanceNonceAccount + Unknown Instruction"');
-                log('info', '  ✅ Parapet decoded: Squads vault execution (high risk when pre-signed)');
-            }
-        }
-    } else {
-        log('info', `PASS: Risk ${parapet.risk_score}/100 - Transaction safe`);
-    }
-    
-    log('system', `Analysis completed in ${parapet.analysis_time_ms.toFixed(2)}ms`);
-    log('info', '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+    const s = result.stage;
+    const p = result.parapet_result;
+    const rs = Array.isArray(p.rules_triggered) ? p.rules_triggered.join(', ') : '';
+    log('system', `${s.id} ${p.action} ${p.risk_score}ms:${p.analysis_time_ms.toFixed(0)}`);
+    if (rs) log('alert', rs);
 }
 
-// Clear console
 function clearConsole() {
     const output = document.getElementById('console-output');
-    output.innerHTML = '<div class="console-line system">Console cleared. Ready for next stage...</div>';
-    // Clear seen alerts when console is cleared
+    if (output) output.innerHTML = '<div class="console-line system">cleared</div>';
     seenAlertIds.clear();
 }
-
-// Start console time display
-function startConsoleTime() {
-    setInterval(() => {
-        const now = new Date().toISOString();
-        // Update would go here if needed
-    }, 1000);
-}
-
-// Poll for alerts (optional - for real-time monitoring)
-async function pollAlerts() {
-    try {
-        const response = await fetch(`${API_BASE}/api/alerts`);
-        const alerts = await response.json();
-        
-        // Process only new alerts (not already seen)
-        alerts.forEach(alert => {
-            // Create unique ID from stage_id + timestamp
-            const alertId = `${alert.stage_id}-${alert.timestamp}`;
-            
-            if (!seenAlertIds.has(alertId)) {
-                seenAlertIds.add(alertId);
-                
-                if (alert.alert_type === 'attack_detected') {
-                    log('critical', alert.message);
-                } else if (alert.alert_type === 'nonce_creation_detected') {
-                    log('alert', alert.message);
-                } else if (alert.alert_type === 'coordinated_attack') {
-                    log('critical', alert.message);
-                }
-            }
-        });
-    } catch (error) {
-        // Silently fail
-    }
-}
-
-// Don't poll alerts automatically - only show alerts when user fires events
-// Alerts will be generated by the fire stage API and logged via logStageResult
-// setInterval(pollAlerts, 5000);
