@@ -69,6 +69,7 @@ sbom.json
 *.md
 !README.md
 !QUICKSTART.md
+!JUDGE_QUICKSTART.md
 !docs/**/*.md
 !rpc-proxy/README.md
 !rpc-proxy/rules/README.md
