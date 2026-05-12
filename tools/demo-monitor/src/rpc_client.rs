@@ -101,7 +101,7 @@ pub async fn simulate_via_parapet(
             .and_then(|d| d.as_str())
             .unwrap_or("safe");
         let action = if decision == "would_block" {
-            "alert"
+            "block"
         } else if decision == "alert" {
             "alert"
         } else {

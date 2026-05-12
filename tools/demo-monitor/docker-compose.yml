@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  parapet-proxy:
+    image: parapet:latest
+    container_name: demo-parapet-proxy
+    command: ["parapet-rpc-proxy"]
+    ports:
+      - "8899:8899"
+    environment:
+      - UPSTREAM_RPC_URL=${UPSTREAM_RPC_URL:-https://devnet.helius-rpc.com/?api-key=a1dcb99c-304a-458f-b4d6-a9fcdb8eb7e3}
+      - HELIUS_API_KEY=a1dcb99c-304a-458f-b4d6-a9fcdb8eb7e3
+      - PROXY_PORT=8899
+      - DEFAULT_BLOCK_THRESHOLD=70
+      - RULES_PATH=/app/rules/demo-combined-rules.json
+      - RUST_LOG=${RUST_LOG:-info,parapet_rpc_proxy=debug}
+    volumes:
+      - ./rules:/app/rules:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8899/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - demo-network
+
+networks:
+  demo-network:
+    driver: bridge

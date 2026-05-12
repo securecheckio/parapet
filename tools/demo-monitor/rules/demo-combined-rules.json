@@ -1,6 +1,27 @@
 [
   {
     "version": "1.0",
+    "id": "dev-alert-sol-transfer-gt-0.01",
+    "name": "Dev: SOL transfer over 0.01 SOL",
+    "description": "Fires when any System Program Transfer instruction moves more than 0.01 SOL (10_000_000 lamports) in a single transfer. Use for wallet/simulation testing.",
+    "author": "local-dev",
+    "enabled": true,
+    "tags": ["dev", "sol-transfer", "testing", "samui-wallet"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 10000000
+      },
+      "message": "Dev test: native SOL transfer exceeds 0.01 SOL (largest single System Transfer instruction)."
+    },
+    "metadata": {
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
     "id": "block-presigned-authority-fingerprint",
     "name": "Block: Pre-signed Authority Change",
     "description": "Blocks durable nonce transactions containing instructions matching known authority/admin-transfer fingerprints.",
@@ -263,14 +284,14 @@
   },
   {
     "version": "1.0",
-    "id": "alert-nonce-custom-program",
-    "name": "Alert: Pre-Signed Transaction Requires Manual Review",
-    "description": "Alerts on pre-signed transactions (durable nonce) to custom programs. Hardware wallets cannot display custom instruction details. Manual verification required.",
+    "id": "block-nonce-custom-program",
+    "name": "Block: Pre-Signed Transaction Requires Manual Review",
+    "description": "Blocks pre-signed transactions (durable nonce) to custom programs. Hardware wallets cannot display custom instruction details. Manual verification required.",
     "enabled": true,
     "author": "SecureCheck Security Team",
     "tags": ["high", "durable-nonce", "custom-program", "blind-signing"],
     "rule": {
-      "action": "alert",
+      "action": "block",
       "conditions": {
         "all": [
           {
@@ -285,15 +306,15 @@
           }
         ]
       },
-      "message": "⚠️ ALERT: Pre-signed transaction to custom program detected. Hardware wallet cannot display instruction details. Verify all instruction parameters and target addresses before signing."
+      "message": "🚨 BLOCKED: Pre-signed transaction to custom program detected. Hardware wallet cannot display instruction details. Transaction REJECTED to prevent blind signing."
     },
     "metadata": {
       "attack_type": "drift_presign_blind_signing",
-      "severity": "high",
+      "severity": "critical",
       "reference": "Drift Protocol $285M exploit - team signed their own instruction without verifying target",
       "cvss_score": 7.5,
-      "weight": 60,
-      "note": "Instruction registry provides human-readable decoding. Alert fires regardless of whether instruction is in registry."
+      "weight": 100,
+      "note": "Instruction registry provides human-readable decoding. Blocks all pre-signed transactions to custom programs by default."
     }
   }
 ]

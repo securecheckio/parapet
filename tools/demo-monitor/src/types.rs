@@ -16,6 +16,7 @@ pub struct DemoStage {
 pub enum StageResult {
     Pass,
     Alert,
+    Block,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

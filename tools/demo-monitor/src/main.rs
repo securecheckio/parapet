@@ -130,7 +130,7 @@ async fn fire_event(
         )
     })?;
 
-    let parapet_result = simulate_via_parapet(tx_sig, &state.rpc_proxy_url)
+    let mut parapet_result = simulate_via_parapet(tx_sig, &state.rpc_proxy_url)
         .await
         .map_err(|e| {
             log::error!("Failed to simulate transaction: {}", e);
@@ -139,6 +139,16 @@ async fn fire_event(
                 format!("RPC error: {}", e),
             )
         })?;
+
+    // Stages 3 & 4 are already executed on-chain - can only alert/monitor, not block
+    // Convert "block" to "alert" for on-chain execution stages
+    if (payload.stage_id == 3 || payload.stage_id == 4) && parapet_result.action == "block" {
+        log::info!(
+            "Stage {} is on-chain execution - converting block to alert (monitoring)",
+            payload.stage_id
+        );
+        parapet_result.action = "alert".to_string();
+    }
 
     // Generate and store alert
     let alert = generate_monitor_alert(payload.stage_id, &parapet_result);
