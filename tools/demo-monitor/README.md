@@ -63,6 +63,7 @@ Visit `http://localhost:3030` in your browser.
 ## Demo Flow
 
 ### Stage 1: Pre-Signing Detection (March 23-30)
+
 - **Baseline**: Security Council member signs blindly on Ledger
   - Ledger shows: `AdvanceNonceAccount` + `Unknown Instruction`
   - Told: "Air-gapped signing for security" + "Routine multisig upgrade"
@@ -85,6 +86,7 @@ Visit `http://localhost:3030` in your browser.
   - This is where the attack could have been stopped
 
 ### Stage 2: On-Chain Execution (April 1, 16:05:18)
+
 - **Context**: SAME transaction from Stage 1 - signed in March, broadcast in April
 - **Baseline**: Transaction executes on-chain undetected
 - **Parapet**: Monitoring Alert - "Pre-signed admin transfer executing"
@@ -97,6 +99,7 @@ Visit `http://localhost:3030` in your browser.
   - Triggers: Emergency pause, security team alert, incident response
 
 ### Stage 3: Coordinated Attack (April 1, 16:05:19)
+
 - **Baseline**: Second pre-signed transaction executes 1 second later
 - **Parapet**: CRITICAL Alert - "Coordinated attack: Sequential admin actions"
 - **Impact**: $285M total, full exploit confirmed
@@ -138,9 +141,11 @@ $285,000,000 LOST                  |  $285,000,000 PROTECTED
 ## API Endpoints
 
 ### GET /api/stages
+
 Returns all demo stages
 
 **Response:**
+
 ```json
 [
   {
@@ -157,9 +162,11 @@ Returns all demo stages
 ```
 
 ### POST /api/stage/fire
+
 Fire a demo stage event
 
 **Request:**
+
 ```json
 {
   "stage_id": 1
@@ -167,6 +174,7 @@ Fire a demo stage event
 ```
 
 **Response:**
+
 ```json
 {
   "stage": { ... },
@@ -185,9 +193,11 @@ Fire a demo stage event
 ```
 
 ### GET /api/alerts
+
 Get all monitor alerts
 
 **Response:**
+
 ```json
 [
   {
@@ -200,24 +210,6 @@ Get all monitor alerts
 ]
 ```
 
-## Demo Scripts
-
-Choose your format:
-
-- **2-Minute Demo** (recommended): `PRESENTER_GUIDE_2MIN.md` + `DEMO_CHEATSHEET.md`
-- **Full Workshop** (15-20 min): `PRESENTER_GUIDE.md`
-- **Quick Practice**: `QUICKSTART.md`
-
-## 2-Minute Demo Flow
-
-1. Impact Banner (20s) → "$285M at stake"
-2. Stage 1 (30s) → March pre-signing: Ledger shows "Unknown" - Parapet decodes admin transfer (PREVENTION)
-3. Stage 2 (30s) → April execution: Same tx hits chain (too late, but monitoring detects)
-4. Stage 3 (30s) → Second tx 1 second later (coordinated exploit confirmed)
-5. Close (10s) → "Don't Blind Sign - Decode First"
-
-Total: 2:00 ⏱️
-
 ## Real Transaction Signatures
 
 The demo uses actual Drift attack transactions:
@@ -229,25 +221,28 @@ The demo uses actual Drift attack transactions:
 ## Development
 
 ### Build
+
 ```bash
 cargo build --release
 ```
 
 ### Run Tests
+
 ```bash
 cargo test
 ```
 
 ### Frontend Development
+
 The frontend is static HTML/CSS/JS served from the `frontend/` directory. Edit files and refresh browser to see changes.
 
 ## Future Enhancements
 
-- [ ] Add WebSocket real-time alerts
-- [ ] Integrate with actual Solana RPC for transaction fetching
-- [ ] Add more attack stages (fund drainage, etc.)
-- [ ] Export demo results as PDF report
-- [ ] Add presenter mode with auto-advance
+- Add WebSocket real-time alerts
+- Integrate with actual Solana RPC for transaction fetching
+- Add more attack stages (fund drainage, etc.)
+- Export demo results as PDF report
+- Add presenter mode with auto-advance
 
 ## License
 
