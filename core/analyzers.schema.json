@@ -71,37 +71,6 @@
       ]
     },
     {
-      "name": "program_scan",
-      "fields": [
-        "account_read_count",
-        "account_write_count",
-        "analysis_cached",
-        "analysis_duration_ms",
-        "arbitrary_cpi",
-        "blocked_hashes",
-        "blocked_program_ids",
-        "bytecode_hashes",
-        "checked_account_count",
-        "cpi_call_count",
-        "entropy_score",
-        "has_account_write",
-        "has_cpi_call",
-        "has_key_check",
-        "has_owner_check",
-        "has_signer_check",
-        "instruction_count",
-        "is_in_blocklist",
-        "is_upgradeable",
-        "missing_owner_check",
-        "missing_signer_check",
-        "program_details",
-        "reads_account_data",
-        "spl_token_related",
-        "token_2022_related",
-        "unchecked_account_count"
-      ]
-    },
-    {
       "name": "programs",
       "fields": [
         "all_programs",
@@ -157,9 +126,12 @@
         "has_vault_transaction_execute",
         "instruction_types",
         "is_squads_transaction",
+        "new_timelock_value",
         "primary_operation",
         "proposal_action_count",
+        "removes_governance_delay",
         "security_concerns",
+        "sets_timelock_to_zero",
         "squads_instruction_count",
         "transaction_creation_count"
       ]
@@ -172,9 +144,11 @@
         "allocate_count",
         "assign_count",
         "assigns_program_ownership",
+        "authorizes_nonce",
         "creates_accounts",
         "has_sol_transfer",
         "high_rent_spam",
+        "initializes_nonce",
         "large_sol_transfer",
         "max_sol_transfer",
         "nonce_account",
@@ -182,7 +156,8 @@
         "sol_transfer_count",
         "total_rent_required",
         "total_sol_transferred",
-        "uses_durable_nonce"
+        "uses_durable_nonce",
+        "withdraws_nonce"
       ]
     },
     {

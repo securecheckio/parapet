@@ -36,47 +36,54 @@ enum SquadsInstruction {
 impl SquadsInstruction {
     /// Parse instruction discriminator from instruction data
     fn from_discriminator(data: &[u8]) -> Self {
-        if data.len() < 8 {
+        if data.is_empty() {
             return Self::Unknown;
         }
 
-        // Squads V4 uses Anchor 8-byte discriminators (SHA256 of "global:method_name")
-        // Extract first 8 bytes
-        let disc = &data[0..8];
+        // Try 8-byte Anchor discriminator first (if available)
+        if data.len() >= 8 {
+            let disc = &data[0..8];
 
-        // Known Anchor discriminators for Squads V4 (SHA256 of "global:method_name")
-        match disc {
-            [0xc2, 0x08, 0xa1, 0x57, 0x99, 0xa4, 0x19, 0xab] => Self::VaultTransactionExecute,
-            [0x30, 0xfa, 0x4e, 0xa8, 0xd0, 0xe2, 0xda, 0xd3] => Self::VaultTransactionCreate,
-            [0xdc, 0x3c, 0x49, 0xe0, 0x1e, 0x6c, 0x4f, 0x9f] => Self::ProposalCreate,
-            [0x90, 0x25, 0xa4, 0x88, 0xbc, 0xd8, 0x2a, 0xf8] => Self::ProposalApprove,
-            [0x0e, ..] if data[0] == 14 => Self::MultisigSetTimeLock,
-            [0x0c, ..] if data[0] == 12 => Self::MultisigAddMember,
-            [0x0d, ..] if data[0] == 13 => Self::MultisigChangeThreshold,
-            _ => {
-                // Fallback to single-byte for backward compatibility
-                match data[0] {
-                    0 => Self::MultisigCreate,
-                    1 => Self::MultisigCreateV2,
-                    2 => Self::ConfigTransactionCreate,
-                    3 => Self::VaultTransactionCreate,
-                    4 => Self::ProposalCreate,
-                    5 => Self::ProposalApprove,
-                    6 => Self::ProposalReject,
-                    7 => Self::ProposalCancel,
-                    8 => Self::VaultTransactionExecute,
-                    9 => Self::ConfigTransactionExecute,
-                    10 => Self::VaultBatchTransactionAccountClose,
-                    11 => Self::MultisigAddMember,
-                    12 => Self::MultisigRemoveMember,
-                    13 => Self::MultisigChangeThreshold,
-                    14 => Self::MultisigSetTimeLock,
-                    15 => Self::MultisigAddSpendingLimit,
-                    16 => Self::MultisigRemoveSpendingLimit,
-                    17 => Self::MultisigSetRentCollector,
-                    _ => Self::Unknown,
+            // Known Anchor discriminators for Squads V4 (SHA256 of "global:method_name")
+            match disc {
+                [0xc2, 0x08, 0xa1, 0x57, 0x99, 0xa4, 0x19, 0xab] => {
+                    return Self::VaultTransactionExecute
+                }
+                [0x30, 0xfa, 0x4e, 0xa8, 0xd0, 0xe2, 0xda, 0xd3] => {
+                    return Self::VaultTransactionCreate
+                }
+                [0xdc, 0x3c, 0x49, 0xe0, 0x1e, 0x6c, 0x4f, 0x9f] => return Self::ProposalCreate,
+                [0x90, 0x25, 0xa4, 0x88, 0xbc, 0xd8, 0x2a, 0xf8] => return Self::ProposalApprove,
+                [0x0e, ..] if data[0] == 14 => return Self::MultisigSetTimeLock,
+                [0x0c, ..] if data[0] == 12 => return Self::MultisigAddMember,
+                [0x0d, ..] if data[0] == 13 => return Self::MultisigChangeThreshold,
+                _ => {
+                    // Fall through to single-byte check
                 }
             }
+        }
+
+        // Fallback to single-byte discriminator for backward compatibility
+        match data[0] {
+            0 => Self::MultisigCreate,
+            1 => Self::MultisigCreateV2,
+            2 => Self::ConfigTransactionCreate,
+            3 => Self::VaultTransactionCreate,
+            4 => Self::ProposalCreate,
+            5 => Self::ProposalApprove,
+            6 => Self::ProposalReject,
+            7 => Self::ProposalCancel,
+            8 => Self::VaultTransactionExecute,
+            9 => Self::ConfigTransactionExecute,
+            10 => Self::VaultBatchTransactionAccountClose,
+            11 => Self::MultisigAddMember,
+            12 => Self::MultisigRemoveMember,
+            13 => Self::MultisigChangeThreshold,
+            14 => Self::MultisigSetTimeLock,
+            15 => Self::MultisigAddSpendingLimit,
+            16 => Self::MultisigRemoveSpendingLimit,
+            17 => Self::MultisigSetRentCollector,
+            _ => Self::Unknown,
         }
     }
 
