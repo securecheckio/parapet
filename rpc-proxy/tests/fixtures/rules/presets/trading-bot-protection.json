@@ -149,9 +149,9 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "security:blocked_program_detected",
-        "operator": "equals",
-        "value": true
+        "field": "blocked_program_ids",
+        "operator": "not_empty",
+        "value": null
       },
       "message": "🚨 BLOCKED: Known malicious program detected"
     }

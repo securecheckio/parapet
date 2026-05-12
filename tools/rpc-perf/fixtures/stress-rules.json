@@ -9,20 +9,44 @@
         "all": [
           {
             "any": [
-              {"field": "token_instructions:unlimited_approve_count", "operator": "greater_than", "value": 0},
-              {"field": "token_instructions:has_freeze", "operator": "equals", "value": true}
+              {
+                "field": "token_instructions:unlimited_approve_count",
+                "operator": "greater_than",
+                "value": 0
+              },
+              {
+                "field": "token_instructions:has_freeze",
+                "operator": "not_empty",
+                "value": null
+              }
             ]
           },
           {
             "all": [
-              {"field": "system:total_sol_transferred", "operator": "greater_than", "value": 1000000000},
-              {"field": "basic:instruction_count", "operator": "greater_than", "value": 5}
+              {
+                "field": "system:total_sol_transferred",
+                "operator": "greater_than",
+                "value": 1000000000
+              },
+              {
+                "field": "basic:instruction_count",
+                "operator": "greater_than",
+                "value": 5
+              }
             ]
           },
           {
             "any": [
-              {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 3},
-              {"field": "cpi:unknown_program_count", "operator": "greater_than", "value": 1}
+              {
+                "field": "cpi:cpi_depth",
+                "operator": "greater_than",
+                "value": 3
+              },
+              {
+                "field": "cpi:unknown_program_count",
+                "operator": "greater_than",
+                "value": 1
+              }
             ]
           }
         ]
@@ -38,13 +62,41 @@
       "action": "alert",
       "conditions": {
         "all": [
-          {"field": "basic:instruction_count", "operator": "greater_than", "value": 3},
-          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 0},
-          {"field": "system:has_sol_transfer", "operator": "equals", "value": true},
-          {"field": "security:risk_score", "operator": "greater_than", "value": 50},
-          {"field": "fingerprint:match_count", "operator": "greater_than", "value": 0},
-          {"field": "canonical_tx:has_recent_blockhash", "operator": "equals", "value": true},
-          {"field": "program_complexity:unique_program_count", "operator": "greater_than", "value": 2}
+          {
+            "field": "basic:instruction_count",
+            "operator": "greater_than",
+            "value": 3
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          {
+            "field": "system:has_sol_transfer",
+            "operator": "not_empty",
+            "value": null
+          },
+          {
+            "field": "security:risk_score",
+            "operator": "greater_than",
+            "value": 50
+          },
+          {
+            "field": "fingerprint:match_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          {
+            "field": "canonical_tx:has_recent_blockhash",
+            "operator": "not_empty",
+            "value": null
+          },
+          {
+            "field": "program_complexity:unique_program_count",
+            "operator": "greater_than",
+            "value": 2
+          }
         ]
       },
       "message": "Multiple analyzer evaluation"
@@ -61,9 +113,21 @@
       "action": "alert",
       "conditions": {
         "any": [
-          {"field": "basic:program_ids", "operator": "contains", "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"},
-          {"field": "cpi:inner_programs", "operator": "contains", "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"},
-          {"field": "fingerprint:matched_names", "operator": "contains", "value": "authority_change"}
+          {
+            "field": "basic:program_ids",
+            "operator": "contains",
+            "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+          },
+          {
+            "field": "cpi:inner_programs",
+            "operator": "contains",
+            "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+          },
+          {
+            "field": "fingerprint:matched_names",
+            "operator": "contains",
+            "value": "authority_change"
+          }
         ]
       },
       "message": "Array search stress test"
@@ -77,14 +141,46 @@
       "action": "block",
       "conditions": {
         "any": [
-          {"field": "security:risk_score", "operator": "greater_than", "value": 80},
-          {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 5},
-          {"field": "system:total_sol_transferred", "operator": "greater_than", "value": 10000000000},
-          {"field": "basic:instruction_count", "operator": "greater_than", "value": 15},
-          {"field": "basic:writable_accounts_count", "operator": "greater_than", "value": 10},
-          {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 5},
-          {"field": "cpi:unknown_program_count", "operator": "greater_than", "value": 2},
-          {"field": "program_complexity:unique_program_count", "operator": "greater_than", "value": 4}
+          {
+            "field": "security:risk_score",
+            "operator": "greater_than",
+            "value": 80
+          },
+          {
+            "field": "token_instructions:approve_count",
+            "operator": "greater_than",
+            "value": 5
+          },
+          {
+            "field": "system:total_sol_transferred",
+            "operator": "greater_than",
+            "value": 10000000000
+          },
+          {
+            "field": "basic:instruction_count",
+            "operator": "greater_than",
+            "value": 15
+          },
+          {
+            "field": "basic:writable_accounts_count",
+            "operator": "greater_than",
+            "value": 10
+          },
+          {
+            "field": "cpi:cpi_depth",
+            "operator": "greater_than",
+            "value": 5
+          },
+          {
+            "field": "cpi:unknown_program_count",
+            "operator": "greater_than",
+            "value": 2
+          },
+          {
+            "field": "program_complexity:unique_program_count",
+            "operator": "greater_than",
+            "value": 4
+          }
         ]
       },
       "message": "Threshold cascade stress test"
@@ -98,20 +194,44 @@
       "action": "block",
       "conditions": {
         "all": [
-          {"field": "security:risk_score", "operator": "greater_than", "value": 70},
+          {
+            "field": "security:risk_score",
+            "operator": "greater_than",
+            "value": 70
+          },
           {
             "any": [
-              {"field": "token_instructions:unlimited_approve_count", "operator": "greater_than", "value": 0},
+              {
+                "field": "token_instructions:unlimited_approve_count",
+                "operator": "greater_than",
+                "value": 0
+              },
               {
                 "all": [
-                  {"field": "token_instructions:approve_count", "operator": "greater_than", "value": 3},
-                  {"field": "system:total_sol_transferred", "operator": "greater_than", "value": 5000000000}
+                  {
+                    "field": "token_instructions:approve_count",
+                    "operator": "greater_than",
+                    "value": 3
+                  },
+                  {
+                    "field": "system:total_sol_transferred",
+                    "operator": "greater_than",
+                    "value": 5000000000
+                  }
                 ]
               },
               {
                 "all": [
-                  {"field": "cpi:cpi_depth", "operator": "greater_than", "value": 4},
-                  {"field": "cpi:has_unknown_inner_programs", "operator": "equals", "value": true}
+                  {
+                    "field": "cpi:cpi_depth",
+                    "operator": "greater_than",
+                    "value": 4
+                  },
+                  {
+                    "field": "cpi:has_unknown_inner_programs",
+                    "operator": "not_empty",
+                    "value": null
+                  }
                 ]
               }
             ]

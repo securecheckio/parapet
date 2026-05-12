@@ -398,9 +398,9 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "security:blocked_program_detected",
-        "operator": "equals",
-        "value": true
+        "field": "blocked_program_ids",
+        "operator": "not_empty",
+        "value": null
       },
       "message": "Blocked program detected"
     },
@@ -3012,9 +3012,9 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "security:blocked_program_detected",
-        "operator": "equals",
-        "value": true
+        "field": "blocked_program_ids",
+        "operator": "not_empty",
+        "value": null
       },
       "message": "\ud83d\udea8 BLOCKED: Transaction involves known malicious program"
     }
