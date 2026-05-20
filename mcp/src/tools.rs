@@ -5,6 +5,8 @@
 //!
 //! **DO NOT DUPLICATE THIS CODE** - all MCP tool logic lives here.
 
+use crate::scan_coverage::{build_rules_snapshot, build_scan_coverage, FeedSnapshotEntry};
+use crate::scan_types::{DecisionSummary, TransactionScanResult};
 use anyhow::Result;
 use parapet_core::enrichment::EnrichmentService;
 use parapet_core::rules::types::RuleDefinition;
@@ -13,8 +15,10 @@ use parapet_scanner::{ScanReport, ThreatType};
 use solana_client::rpc_client::RpcClient;
 use solana_commitment_config::CommitmentConfig;
 use solana_sdk::pubkey::Pubkey;
+use solana_sdk::transaction::Transaction;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Instant;
 
 /// Merge ephemeral custom rules onto the engine after base rules are loaded.
 fn merge_custom_rules(
@@ -140,7 +144,9 @@ pub async fn initialize_analyzers_and_rules(
         registry.register(Arc::new(TransactionLogAnalyzer::new()));
 
         // Register InstructionDataAnalyzer for instruction_data:* fields (authority change detection)
-        registry.register(Arc::new(InstructionDataAnalyzer::with_authority_fingerprints_embedded()));
+        registry.register(Arc::new(
+            InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
+        ));
 
         registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
         registry.register(Arc::new(HeliusTransferAnalyzer::new()));
@@ -213,7 +219,7 @@ pub async fn initialize_analyzers_and_rules(
 
     // Fallback to static rules file (development/testing only - production uses RULES_FEED_URLS)
     let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
-        let candidates = vec![
+        let candidates = [
             "rules/presets/comprehensive-protection.json",
             "../rules/presets/comprehensive-protection.json",
             "rules/presets/default-protection.json",
@@ -387,7 +393,7 @@ pub async fn analyze_program(program_id: &str, rpc_url: &str, network: &str) -> 
             output.push_str(&format!("⚠️ Could not fetch verification data: {}\n", e));
         }
     }
-    output.push_str("\n");
+    output.push('\n');
 
     output.push_str("## Explorer Links\n");
     output.push_str(&format!(
@@ -428,7 +434,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
         if let Some(ref reg_date) = domain_reg.registered_at {
             output.push_str(&format!("- **Registered:** {}\n", reg_date));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Insider Trading Analysis (NEW!)
@@ -469,7 +475,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                     output.push_str(&format!("- ⚠️ {}\n", warning));
                 }
             }
-            output.push_str("\n");
+            output.push('\n');
 
             overall_risk_score += insider.risk_score;
             if insider.risk_score >= 50 {
@@ -515,10 +521,10 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                 if let Some(ref unlock) = locker.unlock_date {
                     output.push_str(&format!(" until {}", unlock));
                 }
-                output.push_str("\n");
+                output.push('\n');
             }
         }
-        output.push_str("\n");
+        output.push('\n');
 
         // Add to overall risk
         match vault.rugpull_risk.as_str() {
@@ -560,7 +566,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
                 ));
             }
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Jupiter data
@@ -581,7 +587,7 @@ pub async fn check_token_reputation(token_address: &str) -> Result<String> {
         if jupiter.has_rugpull_indicators {
             output.push_str("- **⚠️ Rugpull Indicators:** Detected\n");
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     // Overall Summary
@@ -713,7 +719,7 @@ pub async fn check_transaction(
     for (i, program_id) in program_ids.iter().enumerate() {
         output.push_str(&format!("{}. `{}`\n", i + 1, program_id));
     }
-    output.push_str("\n");
+    output.push('\n');
 
     // Initialize analyzers and rules
     output.push_str("## Security Analysis\n");
@@ -768,6 +774,197 @@ pub async fn check_transaction(
     Ok(output)
 }
 
+/// Fetch and decode a confirmed transaction for rule evaluation.
+pub async fn fetch_transaction_for_analysis(
+    signature: &str,
+    rpc_url: &str,
+) -> Result<Transaction> {
+    use base64::engine::general_purpose;
+    use base64::Engine;
+    use solana_client::rpc_config::{RpcTransactionConfig, UiTransactionEncoding};
+    use solana_client::rpc_response::{EncodedTransaction, EncodedTransactionWithStatusMeta};
+    use solana_sdk::message::{Message, VersionedMessage};
+    use solana_sdk::signature::Signature;
+    use solana_sdk::transaction::VersionedTransaction;
+
+    let sig = Signature::from_str(signature)?;
+    let rpc_client =
+        RpcClient::new_with_commitment(rpc_url.to_string(), CommitmentConfig::confirmed());
+
+    let tx_response = rpc_client
+        .get_transaction_with_config(
+            &sig,
+            RpcTransactionConfig {
+                encoding: Some(UiTransactionEncoding::Base64),
+                commitment: Some(CommitmentConfig::confirmed()),
+                max_supported_transaction_version: Some(0),
+            },
+        )
+        .map_err(|e| anyhow::anyhow!("Failed to fetch transaction: {}", e))?;
+
+    let encoded_tx = match &tx_response.transaction {
+        EncodedTransactionWithStatusMeta {
+            transaction: EncodedTransaction::LegacyBinary(encoded_data),
+            ..
+        } => encoded_data,
+        EncodedTransactionWithStatusMeta {
+            transaction: EncodedTransaction::Binary(encoded_data, _),
+            ..
+        } => encoded_data,
+        _ => return Err(anyhow::anyhow!("Unexpected transaction encoding")),
+    };
+
+    let decoded_tx_data = general_purpose::STANDARD
+        .decode(encoded_tx)
+        .map_err(|e| anyhow::anyhow!("Failed to decode transaction: {}", e))?;
+
+    let versioned_tx: VersionedTransaction = bincode::deserialize(&decoded_tx_data)
+        .map_err(|e| anyhow::anyhow!("Failed to deserialize transaction: {}", e))?;
+
+    Ok(match versioned_tx.message {
+        VersionedMessage::Legacy(legacy_message) => Transaction {
+            signatures: versioned_tx.signatures,
+            message: legacy_message,
+        },
+        VersionedMessage::V0(v0_message) => Transaction {
+            signatures: versioned_tx.signatures,
+            message: Message {
+                header: v0_message.header,
+                account_keys: v0_message.account_keys,
+                recent_blockhash: v0_message.recent_blockhash,
+                instructions: v0_message.instructions,
+            },
+        },
+        VersionedMessage::V1(_) => {
+            return Err(anyhow::anyhow!(
+                "V1 transaction format is not supported yet"
+            ));
+        }
+    })
+}
+
+pub fn rules_loaded_labels() -> Vec<String> {
+    if let Ok(urls) = std::env::var("RULES_FEED_URLS") {
+        return urls
+            .split(',')
+            .filter_map(|u| {
+                let u = u.trim();
+                if u.is_empty() {
+                    return None;
+                }
+                Some(
+                    u.rsplit('/')
+                        .next()
+                        .unwrap_or(u)
+                        .trim_end_matches(".json")
+                        .to_string(),
+                )
+            })
+            .collect();
+    }
+    std::env::var("RULES_PATH")
+        .ok()
+        .map(|p| vec![p])
+        .unwrap_or_else(|| vec!["default".to_string()])
+}
+
+pub fn rules_snapshot_from_engine(engine: &RuleEngine) -> crate::scan_coverage::RulesSnapshot {
+    let rule_count = engine.rules().len();
+    let feeds = if let Ok(urls) = std::env::var("RULES_FEED_URLS") {
+        urls.split(',')
+            .enumerate()
+            .map(|(i, url)| {
+                let url = url.trim().to_string();
+                let name = url
+                    .rsplit('/')
+                    .next()
+                    .unwrap_or("feed")
+                    .trim_end_matches(".json")
+                    .to_string();
+                FeedSnapshotEntry {
+                    url: Some(url),
+                    name,
+                    version: "1.0".to_string(),
+                    published_at: None,
+                    rule_count: rule_count / urls.split(',').count().max(1),
+                }
+            })
+            .collect()
+    } else {
+        vec![FeedSnapshotEntry {
+            url: std::env::var("RULES_PATH").ok(),
+            name: "local-rules".to_string(),
+            version: "1.0".to_string(),
+            published_at: None,
+            rule_count,
+        }]
+    };
+    build_rules_snapshot(None, feeds, rule_count)
+}
+
+/// Structured transaction scan for REST API and JSON consumers.
+pub async fn check_transaction_structured(
+    scan_id: String,
+    signature: &str,
+    rpc_url: &str,
+    custom_rules: Option<Vec<RuleDefinition>>,
+    include_analyzer_fields: bool,
+) -> Result<TransactionScanResult> {
+    let start = Instant::now();
+    let transaction = fetch_transaction_for_analysis(signature, rpc_url).await?;
+
+    let programs: Vec<String> = transaction
+        .message
+        .instructions
+        .iter()
+        .filter_map(|inst| {
+            transaction
+                .message
+                .account_keys
+                .get(inst.program_id_index as usize)
+                .map(|pk| pk.to_string())
+        })
+        .collect();
+
+    let (registry, engine) = initialize_analyzers_and_rules(None, custom_rules).await?;
+    let required = engine.get_required_analyzers();
+    let analyzer_field_map = registry
+        .analyze_selected(&transaction, &required)
+        .await
+        .unwrap_or_default();
+    let rule_decision = engine.evaluate(&transaction).await?;
+    let rules_loaded = rules_loaded_labels();
+    let scan_coverage = build_scan_coverage(
+        &required,
+        &analyzer_field_map,
+        registry.as_ref(),
+        rules_loaded.clone(),
+    );
+    let rules_snapshot = rules_snapshot_from_engine(engine.as_ref());
+
+    let analyzer_fields = if include_analyzer_fields {
+        Some(
+            analyzer_field_map
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone()))
+                .collect(),
+        )
+    } else {
+        None
+    };
+
+    Ok(TransactionScanResult {
+        scan_id,
+        signature: signature.to_string(),
+        decision: DecisionSummary::from_decision(&rule_decision),
+        programs,
+        analysis_time_ms: start.elapsed().as_millis() as u64,
+        scan_coverage,
+        rules_snapshot,
+        analyzer_fields,
+    })
+}
+
 /// Get program verification status
 pub async fn verify_program_status(program_address: &str) -> Result<String> {
     let enrichment = EnrichmentService::new();
@@ -795,7 +992,7 @@ pub async fn verify_program_status(program_address: &str) -> Result<String> {
         if let Some(risk) = helius.risk_score {
             output.push_str(&format!("- **Risk Score:** {}/100\n", risk));
         }
-        output.push_str("\n");
+        output.push('\n');
     }
 
     if let Some(ref ottersec) = data.ottersec {
@@ -822,7 +1019,7 @@ pub async fn verify_program_status(program_address: &str) -> Result<String> {
                 "❌ No"
             }
         ));
-        output.push_str("\n");
+        output.push('\n');
     }
 
     if data.helius.is_none() && data.ottersec.is_none() {
