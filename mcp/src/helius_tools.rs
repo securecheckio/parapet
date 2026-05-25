@@ -142,7 +142,7 @@ pub async fn get_wallet_history(
     if let Some(tx_type) = transaction_type {
         output.push_str(&format!("**Filtered by Type:** {}\n", tx_type));
     }
-    output.push_str("\n");
+    output.push('\n');
 
     if response_data.is_empty() {
         output.push_str("No transactions found.\n");
@@ -195,7 +195,7 @@ pub async fn get_wallet_history(
                 }
             }
 
-            output.push_str("\n");
+            output.push('\n');
         }
 
         // Pagination info
@@ -329,7 +329,7 @@ pub async fn get_token_accounts_by_delegate(
                 output.push_str("- **Type:** Native SOL\n");
             }
 
-            output.push_str("\n");
+            output.push('\n');
         }
 
         output.push_str("## Security Recommendation\n");

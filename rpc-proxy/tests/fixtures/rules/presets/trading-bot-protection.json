@@ -9,7 +9,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "complexity:non_core_program_count",
+        "field": "programs:non_core_program_count",
         "operator": "greater_than",
         "value": 0
       },
@@ -132,7 +132,7 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "complexity:complexity_score",
+        "field": "programs:complexity_score",
         "operator": "greater_than",
         "value": 50
       },
@@ -149,9 +149,9 @@
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "core_security:blocked_program_detected",
-        "operator": "equals",
-        "value": true
+        "field": "blocked_program_ids",
+        "operator": "not_empty",
+        "value": null
       },
       "message": "🚨 BLOCKED: Known malicious program detected"
     }

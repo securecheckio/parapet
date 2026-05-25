@@ -182,12 +182,37 @@ pub struct FlowStateCondition {
     pub count_value: Option<u64>,
 }
 
+/// Compiled regex payload for [`ComparisonOperator::Regex`] (built at rule load).
+#[derive(Debug, Clone)]
+pub enum RegexPredicate {
+    /// Pattern has no regex metacharacters — evaluated with substring match only.
+    Literal(String),
+    /// Compiled regex with optional literal prescreen (`haystack.contains(lit)`).
+    Regex {
+        compiled: regex::Regex,
+        required_literal: Option<String>,
+    },
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default, deny_unknown_fields)]
 pub struct SimpleCondition {
     pub field: String,
     pub operator: ComparisonOperator,
-    #[serde(default)]
     pub value: serde_json::Value,
+    #[serde(skip, default)]
+    pub regex_predicate: Option<RegexPredicate>,
+}
+
+impl Default for SimpleCondition {
+    fn default() -> Self {
+        Self {
+            field: String::new(),
+            operator: ComparisonOperator::Equals,
+            value: serde_json::Value::Null,
+            regex_predicate: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,6 +239,12 @@ pub enum ComparisonOperator {
     In,
     NotIn,
     Contains,
+    /// True when all elements in the field array are within the value array
+    SubsetOf,
+    /// True when the field array shares at least one element with the value array
+    Intersects,
+    /// Regular-expression match against a string or each string in a string array field
+    Regex,
     /// True when a flowstate flag is not set (used with `flowstate:` / `flowstate_global:` fields)
     #[serde(rename = "isnotset")]
     IsNotSet,
@@ -237,6 +268,8 @@ pub struct RuleDecision {
     pub simulation_risk: Option<u8>,
     /// Whether this decision was made for a simulation
     pub is_simulation: bool,
+    /// Analyzer fields (all analyzed data from transaction)
+    pub analyzer_fields: std::collections::HashMap<String, serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -261,6 +294,7 @@ impl RuleDecision {
             structural_risk: None,
             simulation_risk: None,
             is_simulation: false,
+            analyzer_fields: std::collections::HashMap::new(),
         }
     }
 }

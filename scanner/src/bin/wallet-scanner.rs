@@ -346,7 +346,7 @@ async fn initialize_analyzers_and_rules(
         // Fallback to static rules file
         let rules_path = std::env::var("RULES_PATH").ok().or_else(|| {
             // Try enhanced ruleset first (uses Helius/OtterSec to reduce false positives)
-            let enhanced_candidates = vec![
+            let enhanced_candidates = [
                 "../../rules/presets/wallet-scan-enhanced.json",
                 "../rules/presets/wallet-scan-enhanced.json",
                 "./rules/presets/wallet-scan-enhanced.json",
@@ -354,7 +354,7 @@ async fn initialize_analyzers_and_rules(
             ];
 
             // Fallback to bot-essentials if enhanced not found
-            let fallback_candidates = vec![
+            let fallback_candidates = [
                 "../../rules/presets/bot-essentials.json",
                 "../rules/presets/bot-essentials.json",
                 "./rules/presets/bot-essentials.json",
@@ -816,13 +816,16 @@ async fn handle_revoke(args: &Args, report: &ScanReport, rpc_url: &str) -> Resul
     let mut dangerous_approvals = Vec::new();
     for threat in &report.threats {
         // Check severity
-        let severity_met = match (&threat.severity, min_severity) {
-            (Severity::Critical, _) => true,
-            (Severity::High, Severity::High | Severity::Medium | Severity::Low) => true,
-            (Severity::Medium, Severity::Medium | Severity::Low) => true,
-            (Severity::Low, Severity::Low) => true,
-            _ => false,
-        };
+        let severity_met = matches!(
+            (&threat.severity, min_severity),
+            (Severity::Critical, _)
+                | (
+                    Severity::High,
+                    Severity::High | Severity::Medium | Severity::Low
+                )
+                | (Severity::Medium, Severity::Medium | Severity::Low)
+                | (Severity::Low, Severity::Low)
+        );
 
         if !severity_met {
             continue;
@@ -840,7 +843,7 @@ async fn handle_revoke(args: &Args, report: &ScanReport, rpc_url: &str) -> Resul
                     token_account.clone(),
                     delegate.clone(),
                     *amount,
-                    threat.severity.clone(),
+                    threat.severity,
                 ));
             }
             ThreatType::PossibleExploitedDelegation {
@@ -853,7 +856,7 @@ async fn handle_revoke(args: &Args, report: &ScanReport, rpc_url: &str) -> Resul
                     token_account.clone(),
                     delegate.clone(),
                     *amount,
-                    threat.severity.clone(),
+                    threat.severity,
                 ));
             }
             _ => {}

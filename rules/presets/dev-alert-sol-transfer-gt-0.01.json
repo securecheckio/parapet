@@ -1,0 +1,23 @@
+[
+  {
+    "version": "1.0",
+    "id": "dev-alert-sol-transfer-gt-0.01",
+    "name": "Dev: SOL transfer over 0.01 SOL",
+    "description": "Fires when any System Program Transfer instruction moves more than 0.01 SOL (10_000_000 lamports) in a single transfer. Use for wallet/simulation testing.",
+    "author": "local-dev",
+    "enabled": true,
+    "tags": ["dev", "sol-transfer", "testing"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 10000000
+      },
+      "message": "Dev test: native SOL transfer exceeds 0.01 SOL (largest single System Transfer instruction)."
+    },
+    "metadata": {
+      "weight": 40
+    }
+  }
+]

@@ -304,7 +304,7 @@ impl Default for InnerInstructionAnalyzer {
 #[async_trait::async_trait]
 impl TransactionAnalyzer for InnerInstructionAnalyzer {
     fn name(&self) -> &str {
-        "inner_instruction"
+        "cpi"
     }
 
     fn fields(&self) -> Vec<String> {

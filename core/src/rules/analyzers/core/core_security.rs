@@ -196,7 +196,7 @@ impl CoreSecurityAnalyzer {
 #[async_trait::async_trait]
 impl TransactionAnalyzer for CoreSecurityAnalyzer {
     fn name(&self) -> &str {
-        "core_security"
+        "security"
     }
 
     fn fields(&self) -> Vec<String> {

@@ -1,0 +1,320 @@
+[
+  {
+    "version": "1.0",
+    "id": "dev-alert-sol-transfer-gt-0.01",
+    "name": "Dev: SOL transfer over 0.01 SOL",
+    "description": "Fires when any System Program Transfer instruction moves more than 0.01 SOL (10_000_000 lamports) in a single transfer. Use for wallet/simulation testing.",
+    "author": "local-dev",
+    "enabled": true,
+    "tags": ["dev", "sol-transfer", "testing", "samui-wallet"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "field": "system:max_sol_transfer",
+        "operator": "greater_than",
+        "value": 10000000
+      },
+      "message": "Dev test: native SOL transfer exceeds 0.01 SOL (largest single System Transfer instruction)."
+    },
+    "metadata": {
+      "weight": 40
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-presigned-authority-fingerprint",
+    "name": "Block: Pre-signed Authority Change",
+    "description": "Blocks durable nonce transactions containing instructions matching known authority/admin-transfer fingerprints.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "durable-nonce", "authority-change", "fingerprint"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "fingerprint:has_authority_change",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed authority/admin change detected. Transaction BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_presigned_authority_change",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.8,
+      "false_positive_rate": 0.001,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-nonce-custom-program-outflow",
+    "name": "Block: Pre-signed Transaction with Fund Outflow",
+    "description": "Blocks durable nonce transactions to custom programs containing fund outflows.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "durable-nonce", "custom-program", "outflow"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "programs:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          },
+          {
+            "any": [
+              {
+                "field": "system:has_sol_transfer",
+                "operator": "equals",
+                "value": true
+              },
+              {
+                "field": "token_instructions:has_transfer",
+                "operator": "equals",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed transaction with fund outflow to custom program. Transaction BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_exploit_with_drain",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.5,
+      "false_positive_rate": 0.005,
+      "weight": 100
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-log-admin-change",
+    "name": "Block: Pre-signed Admin Change",
+    "description": "Blocks durable nonce transactions containing admin/authority-change instructions in logs.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "durable-nonce", "log-analysis", "admin-change"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:uses_durable_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "any": [
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferAdmin"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "UpdateAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetAuthority"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "TransferOwnership"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "SetOwner"
+              },
+              {
+                "field": "logs:instruction_names",
+                "operator": "contains",
+                "value": "ChangeAuthority"
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed transaction contains admin/authority change instruction. Transaction BLOCKED."
+    },
+    "metadata": {
+      "attack_type": "drift_log_admin_change",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit, April 2026",
+      "cvss_score": 9.7,
+      "false_positive_rate": 0.002,
+      "weight": 100,
+      "note": "Only fires when logs are available (confirmed tx or simulation)"
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-timelock-removal",
+    "name": "CRITICAL: Timelock Removal",
+    "description": "Alerts when transaction sets governance timelock to zero, eliminating safety delay.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "timelock", "pre-drain", "governance"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "any": [
+          {
+            "field": "squads_v4:sets_timelock_to_zero",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Transaction sets governance timelock to zero. Removes safety delay for emergency intervention."
+    },
+    "metadata": {
+      "attack_type": "timelock_removal",
+      "severity": "critical",
+      "reference": "Drift Protocol March 27 multisig migration - removed timelock",
+      "cvss_score": 9.0,
+      "weight": 90,
+      "note": "Currently supports Squads v4. Extend to other governance programs as needed."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "critical-presigned-squads-proposal",
+    "name": "CRITICAL: Pre-Signed Squads Proposal",
+    "description": "Alerts on pre-signed Squads V4 proposal creation or approval. Hardware wallets show Unknown Instruction.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["critical", "squads-v4", "proposal", "durable-nonce", "blind-signing"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:advances_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "any": [
+              {
+                "field": "squads_v4:has_proposal_create",
+                "operator": "equals",
+                "value": true
+              },
+              {
+                "field": "squads_v4:has_proposal_approve",
+                "operator": "equals",
+                "value": true
+              }
+            ]
+          }
+        ]
+      },
+      "message": "🚨 CRITICAL: Pre-signed Squads proposal detected. Hardware wallet shows 'Unknown Instruction' - decoded as proposal_create/proposal_approve. Proposal contains embedded instructions that execute later. Verify proposal content matches expected action before signing."
+    },
+    "metadata": {
+      "attack_type": "presigned_squads_proposal",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit March 23-30, 2026 - Security Council signed proposal containing admin transfer",
+      "cvss_score": 9.5,
+      "weight": 95,
+      "note": "This catches the SIGNING EVENT where the victim signs the malicious proposal on their hardware wallet."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "alert-squads-vault-execution",
+    "name": "Alert: Squads Governance Action",
+    "description": "Alerts on Squads V4 vault transaction executions. These are critical governance actions that execute pre-approved multisig transactions and warrant monitoring.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["high", "squads-v4", "governance", "vault-execution"],
+    "rule": {
+      "action": "alert",
+      "conditions": {
+        "all": [
+          {
+            "field": "squads_v4:has_vault_transaction_execute",
+            "operator": "equals",
+            "value": true
+          }
+        ]
+      },
+      "message": "⚠️ ALERT: Squads multisig governance action detected. Vault transaction executing pre-approved multisig operation. Review transaction details."
+    },
+    "metadata": {
+      "attack_type": "squads_governance_action",
+      "severity": "medium",
+      "cvss_score": 5.0,
+      "weight": 50,
+      "note": "Catches legitimate governance actions including multisig migrations and parameter changes. March 27 Drift multisig migration that removed timelock would trigger this rule."
+    }
+  },
+  {
+    "version": "1.0",
+    "id": "block-nonce-custom-program",
+    "name": "Block: Pre-Signed Transaction Requires Manual Review",
+    "description": "Blocks pre-signed transactions (durable nonce) to custom programs. Hardware wallets cannot display custom instruction details. Manual verification required.",
+    "enabled": true,
+    "author": "SecureCheck Security Team",
+    "tags": ["high", "durable-nonce", "custom-program", "blind-signing"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "all": [
+          {
+            "field": "system:advances_nonce",
+            "operator": "equals",
+            "value": true
+          },
+          {
+            "field": "programs:non_core_program_count",
+            "operator": "greater_than",
+            "value": 0
+          }
+        ]
+      },
+      "message": "🚨 BLOCKED: Pre-signed transaction to custom program detected. Hardware wallet cannot display instruction details. Transaction REJECTED to prevent blind signing."
+    },
+    "metadata": {
+      "attack_type": "drift_presign_blind_signing",
+      "severity": "critical",
+      "reference": "Drift Protocol $285M exploit - team signed their own instruction without verifying target",
+      "cvss_score": 7.5,
+      "weight": 100,
+      "note": "Instruction registry provides human-readable decoding. Blocks all pre-signed transactions to custom programs by default."
+    }
+  }
+]

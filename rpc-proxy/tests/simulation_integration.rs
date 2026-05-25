@@ -174,6 +174,7 @@ async fn test_parapet_metadata_format() {
         structural_risk: Some(40),
         simulation_risk: Some(35),
         is_simulation: true,
+        analyzer_fields: std::collections::HashMap::new(),
     };
 
     let threshold = 70u8;

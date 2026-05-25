@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Parapet — Drift Attack Replay</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css?v=4">
+</head>
+<body>
+    <div class="page">
+        <header class="top">
+            <div class="brand"><img src="/static/parapet.png" alt="Parapet" /></div>
+            <div class="top-line">Drift Attack Replay</div>
+        </header>
+
+        <div class="cost-compare">
+            <div class="cost-item cost-loss">
+                <div class="cost-label">Attack loss</div>
+                <div class="cost-value">$285M</div>
+            </div>
+            <div class="cost-item cost-prevention">
+                <div class="cost-label">With Parapet</div>
+                <div class="cost-value">Threat Identified</div>
+            </div>
+        </div>
+
+        <main class="deck" id="stages-container"></main>
+
+        <details class="fold fold-rules">
+            <summary>Rule list (<span id="rules-count">0</span>)</summary>
+            <div id="rules-list" class="rules-min"></div>
+        </details>
+
+        <details class="fold fold-log">
+            <summary>Log</summary>
+            <div class="console-output mono" id="console-output"><div class="console-line system">ready</div></div>
+            <p class="log-actions"><button type="button" class="linkish" onclick="clearConsole()">Clear</button></p>
+        </details>
+    </div>
+
+    <script src="/static/app.js?v=4"></script>
+</body>
+</html>

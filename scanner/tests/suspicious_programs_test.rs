@@ -126,6 +126,7 @@ fn test_create_suspicious_program() {
 
 #[test]
 fn test_suspicious_program_sorting_by_risk() {
+    #[allow(clippy::useless_vec)]
     let mut programs = vec![
         create_suspicious_program(
             "LowRisk1234567890123456789012345678".to_string(),

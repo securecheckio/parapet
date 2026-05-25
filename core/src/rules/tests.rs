@@ -246,4 +246,146 @@ mod rule_tests {
         let result = engine.load_rules(vec![rule]);
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn test_subset_of_operator() {
+        // Test that subset_of works for program allowlisting
+        // This test blocks when programs are NOT a subset of the allowlist
+        let rule_json = r#"
+        {
+            "version": "1.0",
+            "id": "test-subset-of",
+            "name": "Test SubsetOf Operator",
+            "enabled": true,
+            "rule": {
+                "action": "block",
+                "conditions": {
+                    "not": {
+                        "field": "basic:program_ids",
+                        "operator": "subset_of",
+                        "value": [
+                            "11111111111111111111111111111111",
+                            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+                        ]
+                    }
+                },
+                "message": "Transaction uses non-allowlisted programs"
+            }
+        }
+        "#;
+
+        let mut registry = AnalyzerRegistry::new();
+        registry.register(Arc::new(BasicAnalyzer::new()));
+
+        let mut engine = RuleEngine::new(registry);
+        let rule: types::RuleDefinition = serde_json::from_str(rule_json).unwrap();
+        engine.load_rules(vec![rule]).unwrap();
+
+        let tx = create_test_transaction();
+        let decision = engine.evaluate(&tx).await.unwrap();
+
+        // System program IS in allowlist, so the "not" condition should be false
+        // and the block rule should not match
+        assert!(!decision.matched);
+    }
+
+    #[tokio::test]
+    async fn test_subset_of_operator_fails() {
+        // Test that subset_of rejects transactions with non-allowlisted programs
+        let rule_json = r#"
+        {
+            "version": "1.0",
+            "id": "test-subset-of-block",
+            "name": "Block Non-Allowlisted Programs",
+            "enabled": true,
+            "rule": {
+                "action": "block",
+                "conditions": {
+                    "not": {
+                        "field": "basic:program_ids",
+                        "operator": "subset_of",
+                        "value": ["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"]
+                    }
+                },
+                "message": "Transaction uses non-allowlisted programs"
+            }
+        }
+        "#;
+
+        let mut registry = AnalyzerRegistry::new();
+        registry.register(Arc::new(BasicAnalyzer::new()));
+
+        let mut engine = RuleEngine::new(registry);
+        let rule: types::RuleDefinition = serde_json::from_str(rule_json).unwrap();
+        engine.load_rules(vec![rule]).unwrap();
+
+        let tx = create_test_transaction();
+        let decision = engine.evaluate(&tx).await.unwrap();
+
+        // System program is NOT in the allowlist, so block should trigger
+        assert!(decision.matched);
+        assert_eq!(decision.action, types::RuleAction::Block);
+    }
+
+    #[tokio::test]
+    async fn test_regex_operator_on_string_array_field() {
+        let rule_json = r#"
+        {
+            "version": "1.0",
+            "id": "regex-test",
+            "name": "Regex test",
+            "enabled": true,
+            "rule": {
+                "action": "block",
+                "conditions": {
+                    "field": "basic:program_ids",
+                    "operator": "regex",
+                    "value": "11111111111111111111111111111111"
+                },
+                "message": "system program pattern"
+            }
+        }
+        "#;
+
+        let mut registry = AnalyzerRegistry::new();
+        registry.register(Arc::new(BasicAnalyzer::new()));
+        let mut engine = RuleEngine::new(registry);
+        let rule: types::RuleDefinition = serde_json::from_str(rule_json).unwrap();
+        engine.load_rules(vec![rule]).unwrap();
+
+        let tx = create_test_transaction();
+        let decision = engine.evaluate(&tx).await.unwrap();
+        assert!(decision.matched);
+    }
+
+    #[tokio::test]
+    async fn test_intersects_operator_on_program_ids() {
+        let rule_json = r#"
+        {
+            "version": "1.0",
+            "id": "intersects-test",
+            "name": "Intersects test",
+            "enabled": true,
+            "rule": {
+                "action": "block",
+                "conditions": {
+                    "field": "basic:program_ids",
+                    "operator": "intersects",
+                    "value": ["11111111111111111111111111111111"]
+                },
+                "message": "intersects system"
+            }
+        }
+        "#;
+
+        let mut registry = AnalyzerRegistry::new();
+        registry.register(Arc::new(BasicAnalyzer::new()));
+        let mut engine = RuleEngine::new(registry);
+        let rule: types::RuleDefinition = serde_json::from_str(rule_json).unwrap();
+        engine.load_rules(vec![rule]).unwrap();
+
+        let tx = create_test_transaction();
+        let decision = engine.evaluate(&tx).await.unwrap();
+        assert!(decision.matched);
+    }
 }

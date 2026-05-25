@@ -1,4 +1,5 @@
 #[cfg(feature = "wasm-analyzers")]
+#[allow(clippy::module_inception)]
 mod wasm_tests {
     use parapet_core::rules::{
         analyzer::TransactionAnalyzer,

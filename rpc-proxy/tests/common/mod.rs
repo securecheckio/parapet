@@ -1,6 +1,6 @@
 use parapet_rpc_proxy::rpc_handler::{JsonRpcRequest, JsonRpcResponse};
-use serde_json::Value;
 
+#[allow(dead_code)]
 pub fn sample_request(method: &str) -> JsonRpcRequest {
     JsonRpcRequest {
         jsonrpc: "2.0".to_string(),
@@ -10,6 +10,7 @@ pub fn sample_request(method: &str) -> JsonRpcRequest {
     }
 }
 
+#[allow(dead_code)]
 pub fn sample_success_response(id: serde_json::Value) -> JsonRpcResponse {
     JsonRpcResponse {
         jsonrpc: "2.0".to_string(),

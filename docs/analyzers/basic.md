@@ -227,22 +227,26 @@ Detect unusually complex transactions:
 
 ### 4. Program Allowlist Enforcement
 
-Block transactions to non-allowlisted programs:
+Block transactions that use programs not on your allowlist:
 
 ```json
 {
   "conditions": {
-    "field": "basic:program_ids",
-    "operator": "not_in",
-    "value": [
-      "11111111111111111111111111111111",
-      "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-      "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
-    ]
+    "not": {
+      "field": "programs:all_programs",
+      "operator": "subset_of",
+      "value": [
+        "11111111111111111111111111111111",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+      ]
+    }
   },
   "message": "Blocked: Transaction invokes non-allowlisted program"
 }
 ```
+
+The `subset_of` operator checks that all programs in the transaction are within your allowed set.
 
 ### 5. Address Lookup Table Detection
 

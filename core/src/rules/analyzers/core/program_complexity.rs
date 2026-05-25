@@ -96,21 +96,6 @@ impl ProgramComplexityAnalyzer {
         // Cap at 100
         score.min(100) as u8
     }
-
-    fn calculate_writable_non_signers(tx: &Transaction) -> usize {
-        let total_accounts = tx.message.account_keys.len();
-        let num_signers = tx.message.header.num_required_signatures as usize;
-        let readonly_signed = tx.message.header.num_readonly_signed_accounts as usize;
-        let readonly_unsigned = tx.message.header.num_readonly_unsigned_accounts as usize;
-
-        // Writable accounts = total - readonly
-        let writable_total = total_accounts
-            .saturating_sub(readonly_signed)
-            .saturating_sub(readonly_unsigned);
-
-        // Writable non-signers = writable - signers
-        writable_total.saturating_sub(num_signers)
-    }
 }
 
 #[derive(Default)]
@@ -128,7 +113,7 @@ struct ProgramCategories {
 #[async_trait::async_trait]
 impl TransactionAnalyzer for ProgramComplexityAnalyzer {
     fn name(&self) -> &str {
-        "complexity"
+        "programs"
     }
 
     fn fields(&self) -> Vec<String> {
@@ -146,16 +131,12 @@ impl TransactionAnalyzer for ProgramComplexityAnalyzer {
             // Complexity scoring
             "complexity_score".to_string(),
             "is_complex_transaction".to_string(),
-            // Account validation risks
-            "writable_non_signer_count".to_string(),
-            "potential_authority_mismatch".to_string(),
         ]
     }
 
     async fn analyze(&self, tx: &Transaction) -> Result<HashMap<String, Value>> {
         let categories = Self::categorize_programs(tx);
         let complexity_score = Self::calculate_complexity_score(tx, &categories);
-        let writable_non_signers = Self::calculate_writable_non_signers(tx);
 
         // Get all unique program IDs
         let all_programs: Vec<String> = tx
@@ -209,19 +190,6 @@ impl TransactionAnalyzer for ProgramComplexityAnalyzer {
         fields.insert(
             "is_complex_transaction".to_string(),
             json!(complexity_score > 60),
-        );
-
-        // Account validation risks
-        fields.insert(
-            "writable_non_signer_count".to_string(),
-            json!(writable_non_signers),
-        );
-
-        // Potential authority mismatch (writable accounts that aren't signers)
-        let potential_mismatch = writable_non_signers > 5;
-        fields.insert(
-            "potential_authority_mismatch".to_string(),
-            json!(potential_mismatch),
         );
 
         Ok(fields)

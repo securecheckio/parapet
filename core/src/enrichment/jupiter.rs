@@ -9,7 +9,6 @@ use std::time::Duration;
 use crate::rules::analyzers::third_party::rate_limiter::ApiRateLimiter;
 
 #[cfg(feature = "reqwest")]
-
 /// Jupiter API client
 pub struct JupiterClient {
     api_key: Option<String>,

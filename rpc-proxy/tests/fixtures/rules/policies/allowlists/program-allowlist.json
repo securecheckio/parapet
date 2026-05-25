@@ -9,7 +9,7 @@
     "rule": {
       "action": "pass",
       "conditions": {
-        "field": "complexity:non_core_program_count",
+        "field": "programs:non_core_program_count",
         "operator": "equals",
         "value": 0
       },
@@ -26,7 +26,7 @@
     "rule": {
       "action": "pass",
       "conditions": {
-        "field": "complexity:all_programs",
+        "field": "programs:all_programs",
         "operator": "contains",
         "value": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
       },
@@ -43,7 +43,7 @@
     "rule": {
       "action": "pass",
       "conditions": {
-        "field": "complexity:all_programs",
+        "field": "programs:all_programs",
         "operator": "contains",
         "value": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
       },
@@ -60,7 +60,7 @@
     "rule": {
       "action": "pass",
       "conditions": {
-        "field": "complexity:all_programs",
+        "field": "programs:all_programs",
         "operator": "contains",
         "value": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
       },
@@ -71,20 +71,32 @@
     "version": "1.0",
     "id": "block-non-allowlisted",
     "name": "Block Non-Allowlisted Programs",
-    "description": "Block any programs not on the allowlist",
+    "description": "Only allow specific programs using the subset_of operator",
     "enabled": false,
     "tags": ["allowlist", "strict"],
     "rule": {
       "action": "block",
       "conditions": {
-        "field": "complexity:non_core_program_count",
-        "operator": "greater_than",
-        "value": 0
+        "not": {
+          "field": "programs:all_programs",
+          "operator": "subset_of",
+          "value": [
+            "11111111111111111111111111111111",
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+            "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+            "ComputeBudget111111111111111111111111111111",
+            "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr",
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+          ]
+        }
       },
-      "message": "🚨 BLOCKED: Transaction uses non-allowlisted programs"
+      "message": "🚨 BLOCKED: Transaction uses programs not on the allowlist"
     },
     "metadata": {
-      "note": "Enable this for strict allowlist mode. Combine with specific DEX/protocol allow rules."
+      "note": "Enable this for strict allowlist mode. All programs must be in the list above."
     }
   },
   {
@@ -97,7 +109,7 @@
     "rule": {
       "action": "alert",
       "conditions": {
-        "field": "complexity:non_core_program_count",
+        "field": "programs:non_core_program_count",
         "operator": "greater_than",
         "value": 0
       },

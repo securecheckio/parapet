@@ -18,7 +18,8 @@ mod test_analyzer_fields;
 
 // Re-export core analyzers
 pub use core::{
-    BasicAnalyzer, CoreSecurityAnalyzer, InnerInstructionAnalyzer, InstructionDataAnalyzer,
+    AccountsAnalyzer, BasicAnalyzer, CanonicalTransactionAnalyzer, CoreSecurityAnalyzer,
+    InnerInstructionAnalyzer, InstructionDataAnalyzer, InstructionPaddingAnalyzer,
     ProgramComplexityAnalyzer, SystemProgramAnalyzer, TokenInstructionAnalyzer,
     TransactionLogAnalyzer,
 };

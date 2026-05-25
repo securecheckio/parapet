@@ -15,7 +15,6 @@ use tokio::sync::RwLock;
 use crate::rules::analyzers::third_party::rate_limiter::ApiRateLimiter;
 
 #[cfg(feature = "reqwest")]
-
 /// Rugcheck API client
 pub struct RugcheckClient {
     http_client: reqwest::Client,

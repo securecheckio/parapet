@@ -1,4 +1,4 @@
-use super::analyzer::AnalyzerRegistry;
+use super::analyzer::{AmbiguousFieldError, AnalyzerRegistry};
 use super::dynamic::DynamicRuleStore;
 use super::flowstate::FlowStateManager;
 use super::performance::PerformanceTracker;
@@ -15,6 +15,14 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 type Result<T> = std::result::Result<T, ParapetCoreError>;
+
+/// `basic:` fields that trigger ALT metadata capture for v0 resolution (pay-for-what-you-use).
+pub const BASIC_ALT_FIELDS: &[&str] = &[
+    "basic:uses_lookup_tables",
+    "basic:lookup_table_addresses",
+    "basic:loaded_writable_count",
+    "basic:loaded_readonly_count",
+];
 
 fn flowstate_variable_regex() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
@@ -199,6 +207,24 @@ impl RuleEngine {
         self.performance_tracker.reset().await
     }
 
+    /// All prefixed analyzer fields referenced by active (loaded, enabled, applicable) rules.
+    ///
+    /// ## Pay-for-what-you-use contract
+    /// - An optional analyzer field **may** be omitted from the evaluated field map when no active
+    ///   rule references it.
+    /// - Callers **may** skip expensive pre-work whose only consumer is such a field by calling
+    ///   [`Self::requires_any`] against the relevant prefixed names.
+    /// - Analyzer-level laziness (`analyze_selected`) remains the primary optimization; field-level
+    ///   omission is opt-in for analyzers/metadata paths with material cost.
+    pub fn required_fields(&self) -> &std::collections::HashSet<String> {
+        &self.required_fields
+    }
+
+    /// True if any named **prefixed** field (e.g. `basic:uses_lookup_tables`) is required by rules.
+    pub fn requires_any(&self, fields: &[&str]) -> bool {
+        fields.iter().any(|f| self.required_fields.contains(*f))
+    }
+
     /// Check if a rule should be loaded based on network filtering
     fn is_rule_applicable(&self, rule: &RuleDefinition) -> bool {
         // Check if rule has network restriction in metadata
@@ -306,7 +332,7 @@ impl RuleEngine {
         // Validate rules before loading
         let mut required_fields = std::collections::HashSet::new();
 
-        for rule in &rules {
+        for rule in rules.iter_mut() {
             if !rule.enabled {
                 log::debug!("  ⏭️  Skipping disabled rule: {}", rule.name);
                 continue;
@@ -317,11 +343,28 @@ impl RuleEngine {
                 continue;
             }
 
+            // Resolve unprefixed analyzer fields to `analyzer:field` (single owner required).
+            if let Err(e) = self.rewrite_condition_fields(&mut rule.rule.conditions) {
+                log::error!("  ❌ Rule field rewrite failed for '{}': {}", rule.name, e);
+                return Err(ParapetCoreError::rule_validation(format!(
+                    "Rule '{}' field rewrite failed: {}",
+                    rule.name, e
+                )));
+            }
+
             // Validate that all fields referenced in the rule have corresponding analyzers
             if let Err(e) = self.validate_rule(rule) {
                 log::error!("  ❌ Rule validation failed for '{}': {}", rule.name, e);
                 return Err(ParapetCoreError::rule_validation(format!(
                     "Rule '{}' validation failed: {}",
+                    rule.name, e
+                )));
+            }
+
+            if let Err(e) = self.compile_regex_predicates(&mut rule.rule.conditions) {
+                log::error!("  ❌ Regex compile failed for '{}': {}", rule.name, e);
+                return Err(ParapetCoreError::rule_validation(format!(
+                    "Rule '{}' regex compile failed: {}",
                     rule.name, e
                 )));
             }
@@ -542,12 +585,21 @@ impl RuleEngine {
                     ))),
                 }
             }
-            In | NotIn => {
-                // In/NotIn operators require array values
+            In | NotIn | SubsetOf | Intersects => {
+                // In/NotIn/SubsetOf/Intersects operators require array values
                 if !value.is_array() {
                     return Err(ParapetCoreError::rule_validation(format!(
                         "Operator '{:?}' requires an array value, got {:?}",
                         operator, value
+                    )));
+                }
+                Ok(())
+            }
+            Regex => {
+                if !value.is_string() {
+                    return Err(ParapetCoreError::rule_validation(format!(
+                        "Operator 'regex' requires a string pattern, got {:?}",
+                        value
                     )));
                 }
                 Ok(())
@@ -565,6 +617,193 @@ impl RuleEngine {
             Equals | NotEquals => {
                 // Equals/NotEquals work with any type
                 Ok(())
+            }
+        }
+    }
+
+    fn rewrite_condition_fields(&self, condition: &mut RuleCondition) -> Result<()> {
+        match condition {
+            RuleCondition::Simple(simple) => self.rewrite_simple_field_str(&mut simple.field),
+            RuleCondition::FlowState(_) => Ok(()),
+            RuleCondition::Compound(compound) => {
+                if let Some(all) = compound.all.as_mut() {
+                    for c in all.iter_mut() {
+                        self.rewrite_condition_fields(c)?;
+                    }
+                }
+                if let Some(any) = compound.any.as_mut() {
+                    for c in any.iter_mut() {
+                        self.rewrite_condition_fields(c)?;
+                    }
+                }
+                if let Some(not) = compound.not.as_mut() {
+                    self.rewrite_condition_fields(not)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn rewrite_simple_field_str(&self, field: &mut String) -> Result<()> {
+        if field.contains(':') {
+            return Ok(());
+        }
+        if field.starts_with("simulation_") {
+            return Ok(());
+        }
+        match self.registry.find_owning_analyzer(field.as_str()) {
+            Ok(None) => Err(ParapetCoreError::rule_validation(format!(
+                "Field '{}' not provided by any registered analyzer",
+                field
+            ))),
+            Ok(Some(analyzer)) => {
+                let fname = field.clone();
+                *field = format!("{}:{}", analyzer, fname);
+                Ok(())
+            }
+            Err(AmbiguousFieldError {
+                field: fname,
+                analyzers,
+            }) => Err(ParapetCoreError::rule_validation(format!(
+                "Ambiguous unprefixed field '{}'; prefix with one of: {}",
+                fname,
+                analyzers
+                    .iter()
+                    .map(|a| format!("{}:{}", a, fname))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            ))),
+        }
+    }
+
+    fn compile_regex_predicates(&self, condition: &mut RuleCondition) -> Result<()> {
+        match condition {
+            RuleCondition::Simple(simple) => {
+                if simple.operator == ComparisonOperator::Regex {
+                    simple.regex_predicate = Some(Self::build_regex_predicate(&simple.value)?);
+                }
+                Ok(())
+            }
+            RuleCondition::FlowState(_) => Ok(()),
+            RuleCondition::Compound(compound) => {
+                if let Some(all) = compound.all.as_mut() {
+                    for c in all.iter_mut() {
+                        self.compile_regex_predicates(c)?;
+                    }
+                }
+                if let Some(any) = compound.any.as_mut() {
+                    for c in any.iter_mut() {
+                        self.compile_regex_predicates(c)?;
+                    }
+                }
+                if let Some(not) = compound.not.as_mut() {
+                    self.compile_regex_predicates(not)?;
+                }
+                Ok(())
+            }
+        }
+    }
+
+    fn build_regex_predicate(value: &Value) -> Result<RegexPredicate> {
+        let pattern = value.as_str().ok_or_else(|| {
+            ParapetCoreError::rule_validation(
+                "regex operator requires a string pattern".to_string(),
+            )
+        })?;
+        if !Self::pattern_has_regex_meta(pattern) {
+            return Ok(RegexPredicate::Literal(pattern.to_string()));
+        }
+        let required_literal = Self::longest_literal_prescreen(pattern);
+        let mut b = regex::RegexBuilder::new(pattern);
+        if pattern.is_ascii() {
+            b.unicode(false);
+        }
+        let compiled = b.build().map_err(|e| {
+            ParapetCoreError::rule_validation(format!("Invalid regex pattern: {}", e))
+        })?;
+        Ok(RegexPredicate::Regex {
+            compiled,
+            required_literal,
+        })
+    }
+
+    fn pattern_has_regex_meta(pattern: &str) -> bool {
+        const META: &[u8] = b".^$*+?()[]{}|\\";
+        let bytes = pattern.as_bytes();
+        let mut i = 0usize;
+        while i < bytes.len() {
+            if bytes[i] == b'\\' {
+                i = i.saturating_add(2);
+                continue;
+            }
+            if META.contains(&bytes[i]) {
+                return true;
+            }
+            i += 1;
+        }
+        false
+    }
+
+    fn longest_literal_prescreen(pattern: &str) -> Option<String> {
+        const META: &[u8] = b".^$*+?()[]{}|\\";
+        let bytes = pattern.as_bytes();
+        let mut best: Option<String> = None;
+        let mut i = 0usize;
+        while i < bytes.len() {
+            if bytes[i] == b'\\' {
+                i = i.saturating_add(2);
+                continue;
+            }
+            if META.contains(&bytes[i]) {
+                i += 1;
+                continue;
+            }
+            let start = i;
+            while i < bytes.len() && bytes[i] != b'\\' && !META.contains(&bytes[i]) {
+                i += 1;
+            }
+            if i - start >= 3 {
+                let candidate = pattern[start..i].to_string();
+                let replace = match &best {
+                    None => true,
+                    Some(prev) => candidate.len() > prev.len(),
+                };
+                if replace {
+                    best = Some(candidate);
+                }
+            }
+        }
+        best
+    }
+
+    fn regex_matches_value(actual: &Value, pred: &RegexPredicate) -> Result<bool> {
+        match pred {
+            RegexPredicate::Literal(s) => match actual {
+                Value::String(h) => Ok(h.contains(s.as_str())),
+                Value::Array(arr) => Ok(arr
+                    .iter()
+                    .any(|v| v.as_str().is_some_and(|h| h.contains(s.as_str())))),
+                Value::Null => Ok(false),
+                _ => Ok(false),
+            },
+            RegexPredicate::Regex {
+                compiled,
+                required_literal,
+            } => {
+                let check = |h: &str| -> bool {
+                    if let Some(lit) = required_literal {
+                        if !h.contains(lit.as_str()) {
+                            return false;
+                        }
+                    }
+                    compiled.is_match(h)
+                };
+                match actual {
+                    Value::String(h) => Ok(check(h)),
+                    Value::Array(arr) => Ok(arr.iter().any(|v| v.as_str().is_some_and(&check))),
+                    Value::Null => Ok(false),
+                    _ => Ok(false),
+                }
             }
         }
     }
@@ -739,6 +978,17 @@ impl RuleEngine {
         tx: &Transaction,
         threshold: u8,
     ) -> Result<RuleDecision> {
+        self.evaluate_with_threshold_inner(tx, threshold, None)
+            .await
+    }
+
+    /// Like [`Self::evaluate_with_threshold`], but supplies ALT resolution metadata for v0 txs.
+    async fn evaluate_with_threshold_inner(
+        &self,
+        tx: &Transaction,
+        threshold: u8,
+        alt_resolution_meta: Option<&super::analyzer::ConfirmedTransactionMetadata>,
+    ) -> Result<RuleDecision> {
         // STEP 1: Check dynamic rules first (highest priority)
         if let Some(dynamic_store) = &self.dynamic_rules {
             // Get canonical hash for matching
@@ -827,6 +1077,7 @@ impl RuleEngine {
                                 structural_risk: None,
                                 simulation_risk: None,
                                 is_simulation: false,
+                                analyzer_fields: fields.clone(),
                             });
                         }
                     }
@@ -845,22 +1096,62 @@ impl RuleEngine {
         );
 
         // Analyze transaction with only required analyzers (parallel execution)
+        let rf = Some(&self.required_fields);
+
         #[cfg(feature = "reqwest")]
-        let fields = {
-            let mut fields = self
-                .registry
-                .analyze_selected(tx, &required_analyzers)
-                .await
-                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
-            self.add_enrichment_to_fields(&mut fields).await;
-            fields
-        };
+        let mut fields = match alt_resolution_meta {
+            Some(m) => {
+                self.registry
+                    .analyze_selected_with_metadata(tx, &required_analyzers, rf, m)
+                    .await
+            }
+            None => {
+                let capture_alt = self.requires_any(BASIC_ALT_FIELDS);
+                if capture_alt {
+                    let meta = super::analyzer::ConfirmedTransactionMetadata {
+                        capture_alt_details: true,
+                        ..Default::default()
+                    };
+                    self.registry
+                        .analyze_selected_with_metadata(tx, &required_analyzers, rf, &meta)
+                        .await
+                } else {
+                    self.registry
+                        .analyze_selected(tx, &required_analyzers, rf)
+                        .await
+                }
+            }
+        }
+        .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
+
         #[cfg(not(feature = "reqwest"))]
-        let fields = self
-            .registry
-            .analyze_selected(tx, &required_analyzers)
-            .await
-            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
+        let fields = match alt_resolution_meta {
+            Some(m) => {
+                self.registry
+                    .analyze_selected_with_metadata(tx, &required_analyzers, rf, m)
+                    .await
+            }
+            None => {
+                let capture_alt = self.requires_any(BASIC_ALT_FIELDS);
+                if capture_alt {
+                    let meta = super::analyzer::ConfirmedTransactionMetadata {
+                        capture_alt_details: true,
+                        ..Default::default()
+                    };
+                    self.registry
+                        .analyze_selected_with_metadata(tx, &required_analyzers, rf, &meta)
+                        .await
+                } else {
+                    self.registry
+                        .analyze_selected(tx, &required_analyzers, rf)
+                        .await
+                }
+            }
+        }
+        .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
+
+        #[cfg(feature = "reqwest")]
+        self.add_enrichment_to_fields(&mut fields).await;
 
         self.evaluate_fields(fields, threshold).await
     }
@@ -935,6 +1226,7 @@ impl RuleEngine {
                         structural_risk: None,
                         simulation_risk: None,
                         is_simulation: false,
+                        analyzer_fields: fields.clone(),
                     });
                 }
 
@@ -992,6 +1284,7 @@ impl RuleEngine {
                             structural_risk: None,
                             simulation_risk: None,
                             is_simulation: false,
+                            analyzer_fields: fields.clone(),
                         });
                     }
                 }
@@ -1050,6 +1343,7 @@ impl RuleEngine {
             structural_risk: None,
             simulation_risk: None,
             is_simulation: false,
+            analyzer_fields: fields,
         })
     }
 
@@ -1064,16 +1358,34 @@ impl RuleEngine {
     ) -> Result<RuleDecision> {
         // Try to convert to legacy first - if possible, use regular evaluation
         if let Some(legacy_tx) = tx.clone().into_legacy_transaction() {
-            return self.evaluate_with_threshold(&legacy_tx, threshold).await;
+            return self
+                .evaluate_with_threshold_inner(&legacy_tx, threshold, None)
+                .await;
         }
 
         // For v0 transactions, try to resolve ALTs if we have a resolver
         if let Some(resolver) = &self.alt_resolver {
             log::info!("🔍 Resolving ALTs for v0 transaction");
-            match resolver.resolve_v0_transaction(tx).await {
+            let capture_alt = self.requires_any(BASIC_ALT_FIELDS);
+            let mut alt_meta = super::analyzer::ConfirmedTransactionMetadata {
+                capture_alt_details: capture_alt,
+                ..Default::default()
+            };
+            let meta_out = if capture_alt {
+                Some(&mut alt_meta)
+            } else {
+                None
+            };
+            match resolver.resolve_v0_transaction(tx, meta_out).await {
                 Ok(resolved_tx) => {
                     log::info!("✅ ALTs resolved successfully, evaluating transaction");
-                    return self.evaluate_with_threshold(&resolved_tx, threshold).await;
+                    return if capture_alt {
+                        self.evaluate_with_threshold_inner(&resolved_tx, threshold, Some(&alt_meta))
+                            .await
+                    } else {
+                        self.evaluate_with_threshold_inner(&resolved_tx, threshold, None)
+                            .await
+                    };
                 }
                 Err(e) => {
                     log::error!("❌ Failed to resolve ALTs: {}", e);
@@ -1104,23 +1416,28 @@ impl RuleEngine {
         threshold: u8,
     ) -> Result<RuleDecision> {
         let required_analyzers = self.get_required_analyzers();
+        let rf = Some(&self.required_fields);
+
+        let mut meta = metadata.clone();
+        if self.requires_any(BASIC_ALT_FIELDS) {
+            meta.capture_alt_details = true;
+        }
 
         #[cfg(feature = "reqwest")]
-        let fields = {
-            let mut fields = self
-                .registry
-                .analyze_selected_with_metadata(tx, &required_analyzers, metadata)
-                .await
-                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
-            self.add_enrichment_to_fields(&mut fields).await;
-            fields
-        };
+        let mut fields = self
+            .registry
+            .analyze_selected_with_metadata(tx, &required_analyzers, rf, &meta)
+            .await
+            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
         #[cfg(not(feature = "reqwest"))]
         let fields = self
             .registry
-            .analyze_selected_with_metadata(tx, &required_analyzers, metadata)
+            .analyze_selected_with_metadata(tx, &required_analyzers, rf, &meta)
             .await
             .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?;
+
+        #[cfg(feature = "reqwest")]
+        self.add_enrichment_to_fields(&mut fields).await;
 
         self.evaluate_fields(fields, threshold).await
     }
@@ -1143,6 +1460,7 @@ impl RuleEngine {
         let metadata = super::analyzer::ConfirmedTransactionMetadata {
             logs: logs.to_vec(),
             inner_instructions: vec![],
+            ..Default::default()
         };
         self.evaluate_with_metadata_and_threshold(tx, &metadata, threshold)
             .await
@@ -1307,6 +1625,18 @@ impl RuleEngine {
         fields: &HashMap<String, Value>,
         missing_field_override: Option<&str>,
     ) -> Result<bool> {
+        if condition.operator == ComparisonOperator::Regex {
+            let Some(pred) = condition.regex_predicate.as_ref() else {
+                return Err(ParapetCoreError::evaluation(
+                    "regex operator missing compiled predicate (internal)".to_string(),
+                ));
+            };
+            let field_value = fields.get(&condition.field).cloned().unwrap_or(Value::Null);
+            if field_value.is_null() {
+                return Ok(false);
+            }
+            return Self::regex_matches_value(&field_value, pred);
+        }
         if condition.operator == ComparisonOperator::IsNotSet {
             let present = fields.get(&condition.field).filter(|v| !v.is_null());
             return Ok(present.is_none());
@@ -1379,8 +1709,12 @@ impl RuleEngine {
             // Use case: "does identity contain 'scammer'?" (no data = not a known scammer)
             (ComparisonOperator::Contains, _) => false,
 
+            (ComparisonOperator::Regex, _) => false,
+
             // Checking if field is IN array → missing is not in anything (false)
             (ComparisonOperator::In, _) => false,
+
+            (ComparisonOperator::Intersects, _) => false,
 
             // Checking if field NOT equals something → depends on value
             (ComparisonOperator::NotEquals, Value::Array(arr)) if arr.is_empty() => false,
@@ -1499,6 +1833,11 @@ impl RuleEngine {
             ComparisonOperator::In => self.in_array(actual, expected),
             ComparisonOperator::NotIn => Ok(!self.in_array(actual, expected)?),
             ComparisonOperator::Contains => self.contains(actual, expected),
+            ComparisonOperator::SubsetOf => self.subset_of(actual, expected),
+            ComparisonOperator::Intersects => self.intersects(actual, expected),
+            ComparisonOperator::Regex => Err(ParapetCoreError::evaluation(
+                "regex should be handled in evaluate_simple".to_string(),
+            )),
             ComparisonOperator::IsNotSet => Ok(actual.is_null()),
             ComparisonOperator::Exists => Ok(!actual.is_null()),
         }
@@ -1536,6 +1875,32 @@ impl RuleEngine {
             Value::Array(arr) => Ok(arr.contains(needle)),
             _ => Err(ParapetCoreError::evaluation(
                 "Expected array for 'in' operator".to_string(),
+            )),
+        }
+    }
+
+    fn subset_of(&self, subset: &Value, superset: &Value) -> Result<bool> {
+        match (subset, superset) {
+            (Value::Array(subset_arr), Value::Array(superset_arr)) => {
+                // Check if all elements in subset_arr are in superset_arr
+                Ok(subset_arr.iter().all(|item| superset_arr.contains(item)))
+            }
+            (Value::Null, Value::Array(_)) => {
+                // Null subset is vacuously true (empty set is subset of any set)
+                Ok(true)
+            }
+            _ => Err(ParapetCoreError::evaluation(
+                "Expected both values to be arrays for 'subset_of' operator".to_string(),
+            )),
+        }
+    }
+
+    fn intersects(&self, left: &Value, right: &Value) -> Result<bool> {
+        match (left, right) {
+            (Value::Array(a), Value::Array(b)) => Ok(a.iter().any(|x| b.contains(x))),
+            (Value::Null, _) | (_, Value::Null) => Ok(false),
+            _ => Err(ParapetCoreError::evaluation(
+                "Expected both values to be arrays for 'intersects' operator".to_string(),
             )),
         }
     }
@@ -1592,23 +1957,58 @@ impl RuleEngine {
             required_analyzers.len()
         );
 
+        let rf = Some(&self.required_fields);
+        let capture_alt = self.requires_any(BASIC_ALT_FIELDS);
+
         // Convert to legacy transaction for analysis
         let structural_fields = if let Some(legacy_tx) = tx.clone().into_legacy_transaction() {
             // Already a legacy transaction, analyze directly
-            self.registry
-                .analyze_selected(&legacy_tx, &required_analyzers)
-                .await
-                .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+            if capture_alt {
+                let meta = super::analyzer::ConfirmedTransactionMetadata {
+                    capture_alt_details: true,
+                    ..Default::default()
+                };
+                self.registry
+                    .analyze_selected_with_metadata(&legacy_tx, &required_analyzers, rf, &meta)
+                    .await
+                    .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+            } else {
+                self.registry
+                    .analyze_selected(&legacy_tx, &required_analyzers, rf)
+                    .await
+                    .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+            }
         } else if let Some(resolver) = &self.alt_resolver {
             // V0 transaction - resolve ALTs and convert to legacy
             log::debug!("🔍 Resolving ALTs for V0 transaction");
-            match resolver.resolve_v0_transaction(tx).await {
+            let mut alt_meta = super::analyzer::ConfirmedTransactionMetadata {
+                capture_alt_details: capture_alt,
+                ..Default::default()
+            };
+            let meta_out = if capture_alt {
+                Some(&mut alt_meta)
+            } else {
+                None
+            };
+            match resolver.resolve_v0_transaction(tx, meta_out).await {
                 Ok(resolved_tx) => {
                     log::debug!("✅ ALT resolution successful, running structural analysis");
-                    self.registry
-                        .analyze_selected(&resolved_tx, &required_analyzers)
-                        .await
-                        .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+                    if capture_alt {
+                        self.registry
+                            .analyze_selected_with_metadata(
+                                &resolved_tx,
+                                &required_analyzers,
+                                rf,
+                                &alt_meta,
+                            )
+                            .await
+                            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+                    } else {
+                        self.registry
+                            .analyze_selected(&resolved_tx, &required_analyzers, rf)
+                            .await
+                            .map_err(|e| ParapetCoreError::analyzer(e.to_string()))?
+                    }
                 }
                 Err(e) => {
                     log::warn!("⚠️  ALT resolution failed: {}", e);
@@ -1671,6 +2071,11 @@ impl RuleEngine {
                 .await?
             {
                 let mut action = self.apply_action_override(rule_def, rule_def.rule.action);
+
+                // Pass rules explicitly allow traffic — same as `evaluate_fields`: no risk score.
+                if action == super::types::RuleAction::Pass {
+                    continue;
+                }
 
                 // Downgrade BLOCK to ALERT for simulations (except access control)
                 let is_access_control = rule_def
@@ -1773,6 +2178,7 @@ impl RuleEngine {
             structural_risk: Some(structural_risk_only),
             simulation_risk: Some(simulation_risk_only),
             is_simulation: true,
+            analyzer_fields: combined_fields,
         })
     }
 

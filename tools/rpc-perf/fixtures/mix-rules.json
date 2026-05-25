@@ -5,7 +5,9 @@
     "name": "RPC Perf Block (Compute Budget program present)",
     "author": "rpc-perf",
     "enabled": true,
-    "tags": ["rpc-perf"],
+    "tags": [
+      "rpc-perf"
+    ],
     "rule": {
       "action": "block",
       "conditions": {
@@ -22,8 +24,12 @@
     "name": "RPC Perf Alert (Memo program present)",
     "author": "rpc-perf",
     "enabled": true,
-    "tags": ["rpc-perf"],
-    "metadata": { "weight": 20 },
+    "tags": [
+      "rpc-perf"
+    ],
+    "metadata": {
+      "weight": 20
+    },
     "rule": {
       "action": "alert",
       "conditions": {

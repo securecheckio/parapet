@@ -302,7 +302,7 @@ impl InstructionDataAnalyzer {
 #[async_trait::async_trait]
 impl TransactionAnalyzer for InstructionDataAnalyzer {
     fn name(&self) -> &str {
-        "instruction_data"
+        "fingerprint"
     }
 
     fn fields(&self) -> Vec<String> {

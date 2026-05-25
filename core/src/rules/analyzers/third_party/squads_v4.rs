@@ -40,8 +40,30 @@ impl SquadsInstruction {
             return Self::Unknown;
         }
 
-        // Anchor uses first byte as discriminator for some instructions
-        // For v4, we check the first byte
+        // Try 8-byte Anchor discriminator first (if available)
+        if data.len() >= 8 {
+            let disc = &data[0..8];
+
+            // Known Anchor discriminators for Squads V4 (SHA256 of "global:method_name")
+            match disc {
+                [0xc2, 0x08, 0xa1, 0x57, 0x99, 0xa4, 0x19, 0xab] => {
+                    return Self::VaultTransactionExecute
+                }
+                [0x30, 0xfa, 0x4e, 0xa8, 0xd0, 0xe2, 0xda, 0xd3] => {
+                    return Self::VaultTransactionCreate
+                }
+                [0xdc, 0x3c, 0x49, 0xe0, 0x1e, 0x6c, 0x4f, 0x9f] => return Self::ProposalCreate,
+                [0x90, 0x25, 0xa4, 0x88, 0xbc, 0xd8, 0x2a, 0xf8] => return Self::ProposalApprove,
+                [0x0e, ..] if data[0] == 14 => return Self::MultisigSetTimeLock,
+                [0x0c, ..] if data[0] == 12 => return Self::MultisigAddMember,
+                [0x0d, ..] if data[0] == 13 => return Self::MultisigChangeThreshold,
+                _ => {
+                    // Fall through to single-byte check
+                }
+            }
+        }
+
+        // Fallback to single-byte discriminator for backward compatibility
         match data[0] {
             0 => Self::MultisigCreate,
             1 => Self::MultisigCreateV2,
@@ -276,6 +298,9 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
             "has_member_remove".to_string(),
             "has_threshold_change".to_string(),
             "has_time_lock_set".to_string(),
+            "new_timelock_value".to_string(),
+            "sets_timelock_to_zero".to_string(),
+            "removes_governance_delay".to_string(),
             "has_spending_limit_add".to_string(),
             "has_spending_limit_remove".to_string(),
             // Activity Patterns
@@ -408,6 +433,47 @@ impl TransactionAnalyzer for SquadsV4Analyzer {
                 .iter()
                 .any(|i| matches!(i, SquadsInstruction::MultisigSetTimeLock))),
         );
+
+        // Parse timelock value if MultisigSetTimeLock is present
+        let mut new_timelock_value: Option<u32> = None;
+        for inst in &tx.message.instructions {
+            if let Some(program_id) = tx.message.account_keys.get(inst.program_id_index as usize) {
+                if program_id.to_string() == SQUADS_V4_PROGRAM_ID {
+                    let squad_inst = SquadsInstruction::from_discriminator(&inst.data);
+                    if matches!(squad_inst, SquadsInstruction::MultisigSetTimeLock) {
+                        // Squads MultisigSetTimeLock instruction format:
+                        // [discriminator: 1 byte] + [timelock_seconds: u32 at offset 1]
+                        if inst.data.len() >= 5 {
+                            let timelock_bytes = &inst.data[1..5];
+                            new_timelock_value = Some(u32::from_le_bytes([
+                                timelock_bytes[0],
+                                timelock_bytes[1],
+                                timelock_bytes[2],
+                                timelock_bytes[3],
+                            ]));
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if let Some(timelock_val) = new_timelock_value {
+            fields.insert("new_timelock_value".to_string(), json!(timelock_val));
+            fields.insert(
+                "sets_timelock_to_zero".to_string(),
+                json!(timelock_val == 0),
+            );
+            fields.insert(
+                "removes_governance_delay".to_string(),
+                json!(timelock_val == 0),
+            );
+        } else {
+            fields.insert("new_timelock_value".to_string(), json!(null));
+            fields.insert("sets_timelock_to_zero".to_string(), json!(false));
+            fields.insert("removes_governance_delay".to_string(), json!(false));
+        }
+
         fields.insert(
             "has_spending_limit_add".to_string(),
             json!(instructions

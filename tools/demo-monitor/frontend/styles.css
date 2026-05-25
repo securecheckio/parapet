@@ -1,0 +1,463 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 16px;
+}
+
+body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: #0c0c0f;
+    color: #e8e8ec;
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+}
+
+.page {
+    max-width: 36rem;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem 3rem;
+}
+
+.top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    padding-bottom: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.brand img {
+    height: 48px;
+    width: auto;
+}
+
+.top-line {
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #f1f5f9;
+}
+
+.kpi {
+    margin: 1.25rem 0 1.75rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+.kpi-impact {
+    color: #fca5a5;
+    letter-spacing: -0.03em;
+}
+
+.kpi-sep {
+    margin: 0 0.35rem;
+    color: rgba(255, 255, 255, 0.25);
+}
+
+.kpi-dates {
+    color: #f1f5f9;
+}
+
+.cost-compare {
+    display: flex;
+    gap: 0.75rem;
+    margin: 0 0 1.75rem;
+}
+
+.cost-item {
+    flex: 1;
+    padding: 0.75rem 0.85rem;
+    border-radius: 8px;
+    border: 2px solid;
+}
+
+.cost-loss {
+    border-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.cost-prevention {
+    border-color: #22c55e;
+    background: rgba(34, 197, 94, 0.08);
+}
+
+.cost-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.5);
+    margin-bottom: 0.25rem;
+}
+
+.cost-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+
+.cost-loss .cost-value {
+    color: #ff6b6b;
+}
+
+.cost-prevention .cost-value {
+    color: #4ade80;
+}
+
+.deck {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.phase-label {
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.38);
+    margin: 1.25rem 0 0.5rem;
+}
+
+.phase-label:first-child {
+    margin-top: 0;
+}
+
+.phase-label-spaced {
+    margin-top: 1.75rem;
+}
+
+.stage {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 10px;
+    margin-bottom: 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    overflow: hidden;
+}
+
+.stage--team {
+    border-left: 3px solid #3b82f6;
+}
+
+.stage--attacker {
+    border-left: 3px solid rgba(239, 68, 68, 0.55);
+}
+
+.stage.is-busy {
+    opacity: 0.72;
+}
+
+.stage-head {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    gap: 0.15rem 0.65rem;
+    width: 100%;
+    padding: 0.85rem 0.9rem;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}
+
+.stage-head:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.stage-date {
+    grid-column: 1;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #f8fafc;
+}
+
+.stage-title {
+    grid-column: 1;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.stage-chev {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: center;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.stage-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    padding: 0 0.9rem 0.75rem;
+}
+
+.btn-analyze {
+    font: inherit;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.45);
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    cursor: pointer;
+}
+
+.btn-analyze:hover {
+    background: rgba(59, 130, 246, 0.2);
+}
+
+.tx-link-plain {
+    font-size: 0.75rem;
+    font-family: ui-monospace, monospace;
+    color: rgba(255, 255, 255, 0.45);
+    text-decoration: none;
+}
+
+.tx-link-plain:hover {
+    color: #93c5fd;
+}
+
+.verdict-chip {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    margin-left: auto;
+}
+
+.verdict-chip--alert {
+    color: #fbbf24;
+    border: 2px solid #f59e0b;
+    background: rgba(251, 146, 60, 0.15);
+}
+
+.verdict-chip--block {
+    color: #ff6b6b;
+    border: 2px solid #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+}
+
+.verdict-chip--pass {
+    color: #4ade80;
+    border: 2px solid #22c55e;
+    background: rgba(34, 197, 94, 0.12);
+}
+
+.stage-body {
+    display: none;
+    padding: 0 0.9rem 0.9rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stage-body.is-open {
+    display: block;
+}
+
+.compare-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.65rem;
+}
+
+.compare-row-simple {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+}
+
+.compare-row-simple p {
+    font-size: 0.8125rem;
+}
+
+.compare-cell {
+    padding: 0.65rem 0.7rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(0, 0, 0, 0.3);
+}
+
+.compare-signing {
+    border-color: rgba(239, 68, 68, 0.25);
+}
+
+.compare-engine {
+    border-color: rgba(34, 197, 94, 0.22);
+}
+
+.compare-label {
+    display: block;
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.36);
+    margin-bottom: 0.4rem;
+}
+
+.compare-mono {
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.65);
+    line-height: 1.4;
+}
+
+.compare-decode {
+    font-family: ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: #bfdbfe;
+    line-height: 1.45;
+}
+
+.compare-verdict {
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #fbbf24;
+}
+
+.muted {
+    color: rgba(255, 255, 255, 0.42);
+}
+
+.pending-hint {
+    font-size: 0.8125rem;
+    margin-top: 0.35rem;
+}
+
+.verdict-block {
+    margin-top: 0.85rem;
+}
+
+.verdict-msg {
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.68);
+    line-height: 1.5;
+}
+
+.tx-link {
+    display: inline-block;
+    margin-top: 0.45rem;
+    font-size: 0.75rem;
+    font-family: ui-monospace, monospace;
+    color: #93c5fd;
+    text-decoration: none;
+}
+
+.tx-link:hover {
+    text-decoration: underline;
+}
+
+.tech-fold {
+    margin-top: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 8px;
+    padding: 0.4rem 0.6rem;
+    background: rgba(0, 0, 0, 0.25);
+}
+
+.tech-fold summary {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+}
+
+.tech-fold[open] summary {
+    margin-bottom: 0.5rem;
+}
+
+.mono-block {
+    font-family: ui-monospace, monospace;
+    font-size: 0.65rem;
+    line-height: 1.4;
+    color: rgba(255, 255, 255, 0.72);
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-top: 0.35rem;
+}
+
+.rule-h {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.55);
+    margin-top: 0.5rem;
+}
+
+.fold {
+    margin-top: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.fold summary {
+    padding: 0.6rem 0.75rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.5);
+    cursor: pointer;
+    list-style-position: outside;
+}
+
+.rules-min {
+    padding: 0 0.75rem 0.65rem;
+    max-height: 10rem;
+    overflow-y: auto;
+}
+
+.rule-line {
+    padding: 0.2rem 0;
+    font-size: 0.68rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.rule-line:last-child {
+    border-bottom: none;
+}
+
+.console-output {
+    padding: 0.5rem 0.75rem 0.65rem;
+    max-height: 9rem;
+    overflow-y: auto;
+    font-size: 0.7rem;
+}
+
+.console-line.system {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.console-line.info {
+    color: #93c5fd;
+}
+
+.console-line.alert {
+    color: #fdba74;
+}
+
+.console-line.critical {
+    color: #fca5a5;
+}
+
+.log-actions {
+    padding: 0 0.75rem 0.5rem;
+}
+
+.linkish {
+    font: inherit;
+    font-size: 0.7rem;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    cursor: pointer;
+    text-decoration: underline;
+}

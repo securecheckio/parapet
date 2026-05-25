@@ -1,0 +1,29 @@
+[
+  {
+    "version": "1.0",
+    "id": "strict-program-allowlist",
+    "name": "Strict Program Allowlist",
+    "description": "Only allow transactions that use programs from your allowlist",
+    "enabled": true,
+    "tags": ["allowlist", "security"],
+    "rule": {
+      "action": "block",
+      "conditions": {
+        "not": {
+          "field": "programs:all_programs",
+          "operator": "subset_of",
+          "value": [
+            "11111111111111111111111111111111",
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+          ]
+        }
+      },
+      "message": "🚨 BLOCKED: Transaction uses programs not on the allowlist"
+    },
+    "metadata": {
+      "note": "The subset_of operator checks that ALL programs in the transaction are within your allowed set. Update the 'value' array with your approved program IDs."
+    }
+  }
+]

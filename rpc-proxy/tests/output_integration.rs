@@ -119,6 +119,7 @@ async fn test_blocked_transaction_event() -> Result<()> {
         structural_risk: Some(100),
         simulation_risk: None,
         is_simulation: false,
+        analyzer_fields: std::collections::HashMap::new(),
     };
 
     let event = parapet_rpc_proxy::output::EventBuilder::new(

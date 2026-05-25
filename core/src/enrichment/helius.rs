@@ -9,7 +9,6 @@ use std::time::Duration;
 use crate::rules::analyzers::third_party::rate_limiter::ApiRateLimiter;
 
 #[cfg(feature = "reqwest")]
-
 /// Helius API client
 pub struct HeliusClient {
     api_key: String,

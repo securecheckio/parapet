@@ -91,6 +91,8 @@ pub struct ServerConfig {
     pub prefetch_alts: Vec<String>,
     /// ALT cache TTL in seconds
     pub alt_cache_ttl_secs: u64,
+    /// Pre-seed ALT account data into the cache before RPC fetch (tests / rpc-perf).
+    pub alt_cache_preseed: Vec<(String, Vec<u8>)>,
 }
 
 /// Feed source configuration from environment
@@ -145,6 +147,7 @@ impl Default for ServerConfig {
             activity_feed_ttl_seconds: 86400,
             prefetch_alts: Vec::new(),
             alt_cache_ttl_secs: 3600,
+            alt_cache_preseed: Vec::new(),
         }
     }
 }
@@ -316,6 +319,16 @@ async fn build_app_router_internal(
 
         // Create ALT cache (TTL from config)
         let alt_cache = Arc::new(rules::alt_cache::AltCache::new(config.alt_cache_ttl_secs));
+
+        if !config.alt_cache_preseed.is_empty() {
+            alt_cache
+                .set_multiple(config.alt_cache_preseed.clone())
+                .await;
+            log::info!(
+                "✅ Pre-seeded {} ALT entries into cache (in-process)",
+                config.alt_cache_preseed.len()
+            );
+        }
 
         // Pre-fetch configured ALTs on startup
         if !config.prefetch_alts.is_empty() {
@@ -692,7 +705,7 @@ fn get_network_interfaces() -> Result<Vec<(String, String)>> {
                 let line = line.trim();
 
                 // Parse interface name (e.g., "2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP>")
-                if line.chars().next().map_or(false, |c| c.is_numeric()) {
+                if line.chars().next().is_some_and(|c| c.is_numeric()) {
                     if let Some(name_part) = line.split(':').nth(1) {
                         current_interface = name_part.trim().to_string();
                     }
@@ -762,28 +775,43 @@ fn initialize_rule_engine(
 
     // Register built-in analyzers
     if ac.should_register("basic") {
-        registry.register(Arc::new(BasicAnalyzer::new()));
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::BasicAnalyzer::new(),
+        ));
     }
 
-    // Register core security analyzer
-    if ac.should_register("core_security") {
-        registry.register(Arc::new(CoreSecurityAnalyzer::new(
-            std::collections::HashSet::new(),
-        )));
+    // Register security analyzer
+    if ac.should_register("security") {
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::CoreSecurityAnalyzer::new(
+                std::collections::HashSet::new(),
+            ),
+        ));
     }
 
     // Register extended instruction analyzers (no external deps)
     if ac.should_register("token_instructions") {
-        registry.register(Arc::new(TokenInstructionAnalyzer::new()));
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::TokenInstructionAnalyzer::new(),
+        ));
     }
     if ac.should_register("system") {
-        registry.register(Arc::new(SystemProgramAnalyzer::new()));
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::SystemProgramAnalyzer::new(),
+        ));
     }
-    if ac.should_register("complexity") {
-        registry.register(Arc::new(ProgramComplexityAnalyzer::new()));
+    if ac.should_register("programs") {
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::ProgramComplexityAnalyzer::new(),
+        ));
     }
-    if ac.should_register("program_analysis") {
-        if let Ok(analyzer) = ProgramAnalyzer::with_feed_poller(
+    if ac.should_register("accounts") {
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::AccountsAnalyzer::new(),
+        ));
+    }
+    if ac.should_register("program_scan") {
+        if let Ok(analyzer) = parapet_core::rules::analyzers::ProgramAnalyzer::with_feed_poller(
             upstream_rpc_url.to_string(),
             blocked_programs,
             blocked_hashes,
@@ -794,26 +822,29 @@ fn initialize_rule_engine(
         }
     }
     if ac.should_register("logs") {
-        registry.register(Arc::new(TransactionLogAnalyzer::new()));
+        registry.register(Arc::new(
+            parapet_core::rules::analyzers::TransactionLogAnalyzer::new(),
+        ));
     }
 
     // Register instruction padding analyzer (protection against padding attacks)
     if ac.should_register("padding") {
         registry.register(Arc::new(
-            parapet_core::rules::analyzers::core::InstructionPaddingAnalyzer::new(),
+            parapet_core::rules::analyzers::InstructionPaddingAnalyzer::new(),
         ));
     }
 
-    // Register inner instruction analyzer (CPI analysis)
-    if ac.should_register("inner_instruction") {
+    // Register CPI analyzer (Cross-Program Invocation analysis)
+    if ac.should_register("cpi") {
         registry.register(Arc::new(
             parapet_core::rules::analyzers::InnerInstructionAnalyzer::new(),
         ));
     }
 
     // Register instruction data fingerprint analyzer — loads from config file if present,
+    // Register fingerprint analyzer (instruction pattern matching)
     // falls back to built-in authority-change defaults
-    if ac.should_register("instruction_data") {
+    if ac.should_register("fingerprint") {
         // Derive fingerprint config path from rules_path (e.g. ./rules/presets/foo.json → ./rules/fingerprints/authority-change.json)
         let fingerprint_path = rules_path
             .and_then(|p| std::path::Path::new(p).parent())
@@ -822,14 +853,16 @@ fn initialize_rule_engine(
 
         let analyzer = match fingerprint_path.as_deref() {
             Some(path) if path.exists() => {
-                match InstructionDataAnalyzer::from_config_file(path.to_str().unwrap_or("")) {
+                match parapet_core::rules::analyzers::InstructionDataAnalyzer::from_config_file(
+                    path.to_str().unwrap_or(""),
+                ) {
                     Ok(a) => {
                         log::info!("✅ Loaded instruction fingerprints from {}", path.display());
                         a
                     }
                     Err(e) => {
                         log::warn!("⚠️  Failed to load fingerprint config '{}': {} — using parapet-core embed", path.display(), e);
-                        InstructionDataAnalyzer::with_authority_fingerprints_embedded()
+                        parapet_core::rules::analyzers::InstructionDataAnalyzer::with_authority_fingerprints_embedded()
                     }
                 }
             }
@@ -839,6 +872,12 @@ fn initialize_rule_engine(
             }
         };
         registry.register(Arc::new(analyzer));
+    }
+
+    // Register Squads V4 analyzer (no external deps)
+    if ac.should_register("squads_v4") {
+        use parapet_core::rules::analyzers::SquadsV4Analyzer;
+        registry.register(Arc::new(SquadsV4Analyzer::new()));
     }
 
     // Register Helius analyzers (check HELIUS_API_KEY env var via should_register / requirements_met)
@@ -887,7 +926,7 @@ fn initialize_rule_engine(
         if ac.should_register("wasm") {
             let wasm_config = parapet_core::rules::wasm_config::load_wasm_config_from_env();
 
-            if let Some(wasm_path) = std::env::var("WASM_ANALYZERS_PATH").ok() {
+            if let Ok(wasm_path) = std::env::var("WASM_ANALYZERS_PATH") {
                 if wasm_path != "none" && wasm_path != "disabled" {
                     log::info!("📦 Loading WASM analyzers from: {}", wasm_path);
                     match parapet_core::rules::load_wasm_analyzers_from_dir(

@@ -41,7 +41,7 @@
     },
     "metadata": {
       "attack_type": "runaway_behavior",
-      "false_positive_risk": "low",
+      
       "tuning_note": "Adjust threshold based on agent's normal activity level"
     }
   },
@@ -88,7 +88,7 @@
     },
     "metadata": {
       "attack_type": "rent_spam",
-      "false_positive_risk": "very_low",
+      
       "tuning_note": "Legitimate agents rarely create 5+ accounts in 5 minutes"
     }
   },
@@ -113,7 +113,7 @@
     },
     "metadata": {
       "attack_type": "persistent_malicious_behavior",
-      "false_positive_risk": "low",
+      
       "note": "blocked_transaction_count is auto-incremented by rule engine when any rule blocks"
     }
   }

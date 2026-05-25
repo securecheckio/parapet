@@ -17,6 +17,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
 
 /// Create an escalation for a blocked transaction
+#[allow(clippy::too_many_arguments)]
 pub async fn create_escalation(
     transaction: &VersionedTransaction,
     canonical_hash: String,

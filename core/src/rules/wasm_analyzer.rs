@@ -230,13 +230,13 @@ impl WasmAnalyzer {
                 let value = caller.data().config.get(key).cloned().unwrap_or_default();
                 let value_bytes = value.as_bytes();
 
-                if !value_bytes.is_empty() && value_ptr_out >= 0 {
-                    if memory
+                if !value_bytes.is_empty()
+                    && value_ptr_out >= 0
+                    && memory
                         .write(&mut caller, value_ptr_out as usize, value_bytes)
                         .is_err()
-                    {
-                        return 0;
-                    }
+                {
+                    return 0;
                 }
 
                 value_bytes.len() as i32

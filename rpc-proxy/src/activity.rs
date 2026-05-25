@@ -45,6 +45,7 @@ pub enum ActivityAction {
 }
 
 /// Publish activity event to Redis for dashboard consumption
+#[allow(clippy::too_many_arguments)]
 pub async fn publish_activity_event(
     wallet: &str,
     risk_score: u8,
@@ -75,6 +76,7 @@ pub async fn publish_activity_event(
 }
 
 /// Publish activity event with optional signature and network
+#[allow(clippy::too_many_arguments)]
 pub async fn publish_activity_event_with_details(
     wallet: &str,
     risk_score: u8,

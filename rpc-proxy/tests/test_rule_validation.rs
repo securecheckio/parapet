@@ -124,10 +124,10 @@ fn test_all_critical_fields_available() {
         "system:account_creation_count",
         "system:high_rent_spam",
         // Obfuscation
-        "complexity:complexity_score",
-        "complexity:non_core_program_count",
+        "programs:complexity_score",
+        "programs:non_core_program_count",
         // Account confusion
-        "complexity:writable_non_signer_count",
+        "programs:writable_non_signer_count",
     ];
 
     for field in &critical_fields {
