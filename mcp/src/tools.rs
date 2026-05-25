@@ -929,7 +929,7 @@ pub async fn check_transaction_structured(
     let (registry, engine) = initialize_analyzers_and_rules(None, custom_rules).await?;
     let required = engine.get_required_analyzers();
     let analyzer_field_map = registry
-        .analyze_selected(&transaction, &required)
+        .analyze_selected(&transaction, &required, None)
         .await
         .unwrap_or_default();
     let rule_decision = engine.evaluate(&transaction).await?;
