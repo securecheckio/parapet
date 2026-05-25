@@ -1008,15 +1008,43 @@ fn initialize_rule_engine(
         }
     }
 
-    // Load rules from file if specified, otherwise use default protection rules
+    // Load rules from file if present; feed-only deployments bootstrap empty then fetch feeds.
     let rules_file = rules_path.unwrap_or("./rules/presets/default-protection.json");
 
-    engine.load_rules_from_file(rules_file)?;
-    log::info!(
-        "✅ Rule engine initialized with {} rules from {}",
-        engine.enabled_rule_count(),
-        rules_file
-    );
+    if std::path::Path::new(rules_file).exists() {
+        engine.load_rules_from_file(rules_file)?;
+        log::info!(
+            "✅ Rule engine initialized with {} rules from {}",
+            engine.enabled_rule_count(),
+            rules_file
+        );
+    } else if rules_feed_configured_via_env() {
+        engine.load_rules(vec![])?;
+        log::info!(
+            "✅ Rule engine bootstrapped with 0 local rules (no file at {}; RULES_FEED_* will populate)",
+            rules_file
+        );
+    } else {
+        engine.load_rules_from_file(rules_file)?;
+        log::info!(
+            "✅ Rule engine initialized with {} rules from {}",
+            engine.enabled_rule_count(),
+            rules_file
+        );
+    }
 
     Ok(engine)
+}
+
+fn rules_feed_configured_via_env() -> bool {
+    if let Ok(v) = std::env::var("RULES_FEED_ENABLED") {
+        let v = v.to_ascii_lowercase();
+        if matches!(v.as_str(), "true" | "1" | "yes") {
+            return true;
+        }
+    }
+
+    std::env::var("RULES_FEED_URLS")
+        .map(|urls| urls.split(',').any(|u| !u.trim().is_empty()))
+        .unwrap_or(false)
 }

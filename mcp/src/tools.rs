@@ -872,8 +872,7 @@ pub fn rules_snapshot_from_engine(engine: &RuleEngine) -> crate::scan_coverage::
     let rule_count = engine.rules().len();
     let feeds = if let Ok(urls) = std::env::var("RULES_FEED_URLS") {
         urls.split(',')
-            .enumerate()
-            .map(|(i, url)| {
+            .map(|url| {
                 let url = url.trim().to_string();
                 let name = url
                     .rsplit('/')

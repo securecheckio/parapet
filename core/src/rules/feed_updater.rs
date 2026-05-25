@@ -325,8 +325,6 @@ impl FeedUpdater {
 
         tokio::spawn(async move {
             loop {
-                sleep(Duration::from_secs(updater.config.poll_interval)).await;
-
                 match updater.fetch_all_sources().await {
                     Ok(merged) => {
                         log::info!(
@@ -341,6 +339,8 @@ impl FeedUpdater {
                         log::warn!("Failed to fetch rule feeds: {}", e);
                     }
                 }
+
+                sleep(Duration::from_secs(updater.config.poll_interval)).await;
             }
         });
     }
