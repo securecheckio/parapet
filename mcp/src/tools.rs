@@ -148,6 +148,8 @@ pub async fn initialize_analyzers_and_rules(
             InstructionDataAnalyzer::with_authority_fingerprints_embedded(),
         ));
 
+        registry.register(Arc::new(SquadsV4Analyzer::new()));
+
         registry.register(Arc::new(HeliusIdentityAnalyzer::new()));
         registry.register(Arc::new(HeliusTransferAnalyzer::new()));
         registry.register(Arc::new(HeliusFundingAnalyzer::new()));
