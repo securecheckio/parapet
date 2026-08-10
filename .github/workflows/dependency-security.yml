@@ -73,7 +73,7 @@ jobs:
         run: cargo sbom --output-format cyclone_dx_json_1_6 > parapet-sbom.cdx.json
       
       - name: Attest SBOM
-        uses: actions/attest-sbom@v1
+        uses: actions/attest-sbom@v4
         with:
           subject-path: parapet-sbom.spdx.json
           sbom-path: parapet-sbom.spdx.json
