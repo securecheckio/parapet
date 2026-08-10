@@ -32,7 +32,7 @@ jobs:
       
       - name: Upload audit report
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: audit-report
           path: audit-report.json
@@ -79,7 +79,7 @@ jobs:
           sbom-path: parapet-sbom.spdx.json
       
       - name: Upload SBOM
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: sbom
           path: |
